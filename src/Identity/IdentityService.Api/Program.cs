@@ -7,6 +7,8 @@ using IdentityService.Infrastructure;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 const string ServiceName = "IdentityService.Api";
 
@@ -20,9 +22,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-//builder.Services.AddOpenTelemetry()
-//    .ConfigureResource(r => r.AddService(ServiceName))
-//    .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter());
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(ServiceName))
+    .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter());
 
 var app = builder.Build();
 
