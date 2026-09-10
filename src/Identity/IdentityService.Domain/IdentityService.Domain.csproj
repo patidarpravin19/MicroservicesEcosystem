@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>IdentityService.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>
