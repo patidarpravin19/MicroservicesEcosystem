@@ -13,10 +13,12 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.UserName).IsRequired().HasMaxLength(64);
         builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
+        builder.Property(u => u.Mobile).IsRequired().HasMaxLength(15);
         builder.Property(u => u.PasswordHash).IsRequired();
 
         builder.HasIndex(u => u.UserName).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();
+        builder.HasIndex(u => u.Mobile).IsUnique();
 
         builder.Property<List<string>>("_roles")
             .HasField("_roles")

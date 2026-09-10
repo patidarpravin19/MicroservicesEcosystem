@@ -28,7 +28,7 @@ public sealed class RegisterCommandHandler(
             throw new ConflictException("A user with that username or email already exists.");
         }
 
-        var user = User.Create(request.UserName, request.Email, passwordHash: "pending");
+        var user = User.Create(request.UserName, request.Email, request.Mobile, passwordHash: "pending");
         var hashed = passwordHasher.HashPassword(user, request.Password);
         user.SetPasswordHash(hashed);
 

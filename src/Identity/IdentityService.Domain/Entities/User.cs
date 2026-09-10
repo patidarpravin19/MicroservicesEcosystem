@@ -12,15 +12,15 @@ namespace IdentityService.Domain.Entities;
 public sealed class User : AuditableEntity
 {
     private readonly List<string> _roles = [];
-
     public required string UserName { get; init; }
     public required string Email { get; init; }
+    public required string Mobile { get; init; }
     public string PasswordHash { get; private set; } = string.Empty;
     public IReadOnlyCollection<string> Roles => _roles.AsReadOnly();
     public string? RefreshTokenHash { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAtUtc { get; private set; }
 
-    public static User Create(string userName, string email, string passwordHash)
+    public static User Create(string userName, string email, string mobile, string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(userName))
         {
@@ -32,11 +32,17 @@ public sealed class User : AuditableEntity
             throw new IdentityDomainException("Email cannot be empty.");
         }
 
+        if (string.IsNullOrWhiteSpace(mobile))
+        {
+            throw new IdentityDomainException("Mobile cannot be empty.");
+        }
+
         var user = new User
         {
             Id = Guid.NewGuid(),
             UserName = userName,
             Email = email,
+            Mobile = mobile
         };
 
         user.PasswordHash = passwordHash;
