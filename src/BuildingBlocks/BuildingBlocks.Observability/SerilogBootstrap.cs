@@ -1,11 +1,8 @@
+using BuildingBlocks.Observability.Middleware;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
-using BuildingBlocks.Observability.Middleware;
 
 namespace BuildingBlocks.Observability;
 

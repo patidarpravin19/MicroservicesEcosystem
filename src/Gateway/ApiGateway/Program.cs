@@ -1,8 +1,7 @@
-using System.Threading.RateLimiting;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Observability.Middleware;
-using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
+using System.Threading.RateLimiting;
 
 const string ServiceName = "ApiGateway";
 
