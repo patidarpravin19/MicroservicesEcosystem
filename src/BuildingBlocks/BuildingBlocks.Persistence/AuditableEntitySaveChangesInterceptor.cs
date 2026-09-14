@@ -45,7 +45,7 @@ public sealed class AuditableEntitySaveChangesInterceptor(
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entry.Property(e => e.CreatedAtUtc).CurrentValue = now;
+                    entry.Property(e => e.CreatedAt).CurrentValue = now;
                     entry.Property(e => e.CreatedBy).CurrentValue = actor;
 
                     if (entry.Entity is ITenantEntity tenantEntity && tenantContext.TenantId is { } tenantId)
@@ -55,15 +55,15 @@ public sealed class AuditableEntitySaveChangesInterceptor(
                     break;
 
                 case EntityState.Modified:
-                    entry.Property(e => e.LastModifiedAtUtc).CurrentValue = now;
-                    entry.Property(e => e.LastModifiedBy).CurrentValue = actor;
+                    entry.Property(e => e.ModifiedAt).CurrentValue = now;
+                    entry.Property(e => e.ModifiedBy).CurrentValue = actor;
                     break;
 
                 case EntityState.Deleted:
                     entry.State = EntityState.Modified;
                     entry.Property(e => e.IsDeleted).CurrentValue = true;
-                    entry.Property(e => e.LastModifiedAtUtc).CurrentValue = now;
-                    entry.Property(e => e.LastModifiedBy).CurrentValue = actor;
+                    entry.Property(e => e.ModifiedAt).CurrentValue = now;
+                    entry.Property(e => e.ModifiedBy).CurrentValue = actor;
                     break;
             }
         }

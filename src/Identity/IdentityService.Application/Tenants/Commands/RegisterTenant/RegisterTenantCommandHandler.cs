@@ -90,13 +90,14 @@ public sealed class RegisterTenantCommandHandler(
         tenant.Activate();
         await tenantDirectory.SaveChangesAsync(cancellationToken);
 
-        var domainEvent = tenant.DomainEvents.OfType<TenantCreatedDomainEvent>().Single();
-        tenant.ClearDomainEvents();
+        // TODO to enable integration events, uncomment the following lines and implement the event publishing logic
+        //var domainEvent = tenant.DomainEvents.OfType<TenantCreatedDomainEvent>().Single();
+        //tenant.ClearDomainEvents();
 
-        await eventPublisher.PublishAsync(
-            new TenantCreatedIntegrationEvent(
-                domainEvent.TenantId, domainEvent.Name, domainEvent.Slug, domainEvent.SchemaName, domainEvent.OccurredOnUtc),
-            cancellationToken);
+        //await eventPublisher.PublishAsync(
+        //    new TenantCreatedIntegrationEvent(
+        //        domainEvent.TenantId, domainEvent.Name, domainEvent.Slug, domainEvent.SchemaName, domainEvent.OccurredOnUtc),
+        //    cancellationToken);
 
         logger.LogInformation(
             "Tenant {TenantId} ({Name}) fully provisioned and activated: schema {SchemaName}, default roles Admin/User seeded.",

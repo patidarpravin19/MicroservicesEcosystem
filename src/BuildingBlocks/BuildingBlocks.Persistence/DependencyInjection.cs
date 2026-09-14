@@ -80,6 +80,7 @@ public static class DependencyInjection
             options.UseNpgsql(
                        configuration.GetConnectionString(connectionStringName),
                        npgsql => npgsql.MigrationsHistoryTable("__ControlPlaneHistory", schema))
+                    .UseSnakeCaseNamingConvention()
                    .AddInterceptors(sp.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         return services;

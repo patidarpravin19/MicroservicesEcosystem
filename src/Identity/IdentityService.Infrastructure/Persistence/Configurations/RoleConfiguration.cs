@@ -9,7 +9,7 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
     public void Configure(EntityTypeBuilder<Role> builder)
     {
         // Also unqualified/schema-less — lives in the current tenant's schema.
-        builder.ToTable("Roles");
+        builder.ToTable(Constants.DBConstants.DBTableNames.Roles);
         builder.HasKey(r => r.Id);
 
         builder.Property(r => r.Name).IsRequired().HasMaxLength(100);

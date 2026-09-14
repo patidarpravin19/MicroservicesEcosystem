@@ -15,7 +15,7 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         // one tenant's Users/Roles. An explicit schema here always wins over
         // whatever search_path the current request set, so this table stays
         // reachable no matter which tenant (if any) is in context.
-        builder.ToTable("Tenants", schema: "tenant");
+        builder.ToTable(Constants.DBConstants.DBTableNames.Tenants, schema: "tenant");
         builder.HasKey(t => t.Id);
 
         builder.Property(t => t.Name).IsRequired().HasMaxLength(200);

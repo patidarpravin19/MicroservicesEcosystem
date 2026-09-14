@@ -12,7 +12,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         // search_path currently points, i.e. inside the CURRENT tenant's schema (see
         // TenantSchemaConnectionInterceptor). Two different tenants can each have
         // their own physically separate "Users" table with overlapping usernames.
-        builder.ToTable("Users");
+        builder.ToTable(Constants.DBConstants.DBTableNames.Users);
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.UserName).IsRequired().HasMaxLength(64);

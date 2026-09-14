@@ -10,9 +10,9 @@ namespace BuildingBlocks.Domain;
 public abstract class AuditableEntity
 {
     public required Guid Id { get; init; }
-    public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
-    public DateTimeOffset? LastModifiedAtUtc { get; set; }
-    public string? LastModifiedBy { get; set; }
+    public DateTimeOffset? ModifiedAt { get; set; }
+    public string? ModifiedBy { get; set; }
     public bool IsDeleted { get; set; }
 }
