@@ -1,3 +1,4 @@
+using BuildingBlocks.Security;
 using InventoryService.Application.StockItems.Commands.AddStock;
 using InventoryService.Application.StockItems.Commands.CreateStockItem;
 using InventoryService.Application.StockItems.Queries.GetStock;
@@ -5,11 +6,6 @@ using MediatR;
 
 namespace InventoryService.Api.Endpoints;
 
-/// <summary>
-/// Maps the Gold Master vertical slice: creating a stock item, adding stock (write
-/// path — validation, persistence, event publish, cache invalidation), and reading
-/// stock (read path — transparent Redis caching via CachingBehavior).
-/// </summary>
 public static class StockEndpoints
 {
     public static RouteGroupBuilder MapStockEndpoints(this IEndpointRouteBuilder app)
@@ -22,7 +18,7 @@ public static class StockEndpoints
                 return Results.Created($"/api/stock-items/{result.Sku}", result);
             })
             .WithName("CreateStockItem")
-            .RequireAuthorization("AuthenticatedUser")
+            .RequirePermission("Inventory.StockItems.Create")
             .Produces<CreateStockItemResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -33,7 +29,7 @@ public static class StockEndpoints
                 return Results.Ok(result);
             })
             .WithName("AddStock")
-            .RequireAuthorization("AuthenticatedUser")
+            .RequirePermission("Inventory.StockItems.AddStock")
             .Produces<AddStockResult>()
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -41,7 +37,7 @@ public static class StockEndpoints
         group.MapGet("/{sku}", async (string sku, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetStockQuery(sku), ct)))
             .WithName("GetStock")
-            .RequireAuthorization("AuthenticatedUser")
+            .RequirePermission("Inventory.StockItems.Read")
             .Produces<GetStockResult>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 

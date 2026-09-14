@@ -6,6 +6,8 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
 {
     public RegisterCommandValidator()
     {
+        RuleFor(x => x.TenantSlug).NotEmpty().MaximumLength(48);
+
         RuleFor(x => x.UserName)
             .NotEmpty()
             .MinimumLength(3)

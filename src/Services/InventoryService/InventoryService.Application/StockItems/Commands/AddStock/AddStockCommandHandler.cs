@@ -1,5 +1,6 @@
 using InventoryService.Application.Abstractions;
-using InventoryService.Application.Common.Exceptions;
+using BuildingBlocks.Messaging;
+using BuildingBlocks.Application.Exceptions;
 using InventoryService.Application.Contracts;
 using InventoryService.Domain.Events;
 using MediatR;

@@ -1,52 +1,46 @@
+using BuildingBlocks.Messaging;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Observability.Middleware;
+using BuildingBlocks.Security;
+using BuildingBlocks.WebDefaults;
 using IdentityService.Api.Endpoints;
-using IdentityService.Api.ExceptionHandling;
 using IdentityService.Application;
 using IdentityService.Infrastructure;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 const string ServiceName = "IdentityService.Api";
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSharedLogging(ServiceName);
 
+builder.Services.AddPlatformSecurity(builder.Configuration);
+builder.Services.AddWebDefaults(ServiceName);
+builder.Services.AddPlatformMessaging(builder.Configuration, IdentityService.Application.DependencyInjection.ApplicationAssembly);
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService(ServiceName))
-    .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter());
 
 var app = builder.Build();
 
-app.UseExceptionHandler(_ => { });
+app.UseWebDefaults();
 app.UseCorrelationId();
 app.UseSharedRequestLogging();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseAuthentication();
-app.UseAuthorization();
+app.UsePlatformSecurity();
 
 app.MapAuthEndpoints();
+app.MapRoleEndpoints();
+app.MapTenantEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
+// Only the tenant registry ("tenant" schema) migrates eagerly at startup — each
+// tenant's own Users/Roles schema is created on demand by RegisterTenantCommandHandler
+// via TenantSchemaProvisioner the moment that tenant registers. Both share the same
+// "IdentityDb" database/connection string; only the schema differs.
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.Migrate();
+    scope.ServiceProvider.GetRequiredService<TenantDbContext>().Database.Migrate();
 }
 
 Log.Information("Starting {Service}", ServiceName);

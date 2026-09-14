@@ -1,5 +1,5 @@
 using InventoryService.Application.Abstractions;
-using InventoryService.Application.Common.Exceptions;
+using BuildingBlocks.Application.Exceptions;
 using InventoryService.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

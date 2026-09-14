@@ -1,16 +1,17 @@
-using InventoryService.Domain.Common;
+using BuildingBlocks.Domain;
 using InventoryService.Domain.Events;
 using InventoryService.Domain.Exceptions;
 
 namespace InventoryService.Domain.Entities;
 
 /// <summary>
-/// Aggregate root for the Inventory bounded context. All mutation of on-hand
-/// quantity happens through explicit behavior methods so invariants (quantity can
-/// never go negative, SKU is immutable) are enforced in exactly one place.
+/// Lives inside the current tenant's PostgreSQL schema (physical isolation — see
+/// InventoryDbContext / TenantSchemaConnectionInterceptor). TenantId is kept purely
+/// for informational/audit purposes, not as a query filter.
 /// </summary>
-public sealed class StockItem : AggregateRoot
+public sealed class StockItem : AggregateRoot, ITenantEntity
 {
+    public Guid TenantId { get; set; }
     public required string Sku { get; init; }
     public required string DisplayName { get; init; }
     public int QuantityOnHand { get; private set; }
@@ -40,9 +41,7 @@ public sealed class StockItem : AggregateRoot
         }
 
         QuantityOnHand += quantity;
-
-        RaiseDomainEvent(new StockAddedDomainEvent(
-            Id, Sku, quantity, QuantityOnHand, DateTimeOffset.UtcNow));
+        RaiseDomainEvent(new StockAddedDomainEvent(Id, Sku, quantity, QuantityOnHand, DateTimeOffset.UtcNow));
     }
 
     public void RemoveStock(int quantity)

@@ -1,4 +1,4 @@
-namespace IdentityService.Infrastructure.Security;
+namespace BuildingBlocks.Security;
 
 public sealed class JwtOptions
 {

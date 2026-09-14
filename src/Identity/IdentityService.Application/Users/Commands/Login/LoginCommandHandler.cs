@@ -1,5 +1,6 @@
+using BuildingBlocks.Application.Exceptions;
+using BuildingBlocks.Domain.MultiTenancy;
 using IdentityService.Application.Abstractions;
-using IdentityService.Application.Common.Exceptions;
 using IdentityService.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -10,19 +11,42 @@ namespace IdentityService.Application.Users.Commands.Login;
 
 public sealed class LoginCommandHandler(
     IIdentityDbContext db,
+    ITenantDirectoryContext tenantDirectory,
     ITokenService tokenService,
     IPasswordHasher<User> passwordHasher,
+    ITenantContextAccessor tenantContextAccessor,
     ILogger<LoginCommandHandler> logger)
     : IRequestHandler<LoginCommand, LoginResult>
 {
     public async Task<LoginResult> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
+        var normalizedSlug = request.TenantSlug.Trim().ToLowerInvariant();
+
+        var tenant = await tenantDirectory.Tenants
+            .AsNoTracking()
+            .SingleOrDefaultAsync(t => t.Slug == normalizedSlug, cancellationToken);
+
+        if (tenant is null)
+        {
+            logger.LogWarning("Login failed: unknown tenant slug {TenantSlug}.", normalizedSlug);
+            throw new UnauthorizedException("Invalid tenant, username, or password.");
+        }
+
+        if (tenant.Status != TenantStatus.Active)
+        {
+            logger.LogWarning("Login failed: tenant {TenantId} is not active ({Status}).", tenant.Id, tenant.Status);
+            throw new UnauthorizedException("This tenant is not currently active.");
+        }
+
+        await db.ResetConnectionAsync(cancellationToken);
+        tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
+
         var user = await db.Users.SingleOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
 
         if (user is null)
         {
-            logger.LogWarning("Login failed: no user found for username {UserName}.", request.UserName);
-            throw new UnauthorizedException("Invalid username or password.");
+            logger.LogWarning("Login failed: no user {UserName} for tenant {TenantId}.", request.UserName, tenant.Id);
+            throw new UnauthorizedException("Invalid tenant, username, or password.");
         }
 
         var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
@@ -30,17 +54,30 @@ public sealed class LoginCommandHandler(
         if (verification == PasswordVerificationResult.Failed)
         {
             logger.LogWarning(
-                "Login failed: bad password for user {UserId} ({UserName}).", user.Id, user.UserName);
-            throw new UnauthorizedException("Invalid username or password.");
+                "Login failed: bad password for user {UserId} ({UserName}) in tenant {TenantId}.",
+                user.Id, user.UserName, tenant.Id);
+            throw new UnauthorizedException("Invalid tenant, username, or password.");
         }
 
-        var pair = tokenService.GenerateTokenPair(user.Id, user.UserName, user.Roles);
+        var roles = await db.Roles
+            .Where(r => user.RoleIds.Contains(r.Id))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var roleNames = roles.Select(r => r.Name).ToArray();
+        var permissionCodes = roles.SelectMany(r => r.PermissionCodes).Distinct().ToArray();
+
+        var pair = tokenService.GenerateTokenPair(
+            user.Id, user.UserName, tenant.Id, tenant.SchemaName, roleNames, permissionCodes);
+
         user.SetRefreshToken(tokenService.HashRefreshToken(pair.RefreshToken), DateTimeOffset.UtcNow.AddDays(7));
 
         await db.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("User {UserId} ({UserName}) logged in successfully.", user.Id, user.UserName);
+        logger.LogInformation(
+            "User {UserId} ({UserName}) logged in to tenant {TenantId} with roles [{Roles}].",
+            user.Id, user.UserName, tenant.Id, string.Join(", ", roleNames));
 
-        return new LoginResult(user.Id, pair.AccessToken, pair.RefreshToken, pair.AccessTokenExpiresAtUtc);
+        return new LoginResult(user.Id, tenant.Id, pair.AccessToken, pair.RefreshToken, pair.AccessTokenExpiresAtUtc);
     }
 }

@@ -1,6 +1,6 @@
 using System.Reflection;
+using BuildingBlocks.Application.Behaviors;
 using FluentValidation;
-using IdentityService.Application.Common.Behaviors;
 using IdentityService.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -8,11 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityService.Application;
 
-/// <summary>
-/// Single entry point that registers everything the Application layer owns: MediatR
-/// handlers, FluentValidation validators, the validation pipeline behavior, and the
-/// framework-agnostic password hasher used by the Users command handlers.
-/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
@@ -26,4 +21,6 @@ public static class DependencyInjection
 
         return services;
     }
+
+    public static Assembly ApplicationAssembly => Assembly.GetExecutingAssembly();
 }

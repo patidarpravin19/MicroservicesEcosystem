@@ -1,14 +1,17 @@
 using System.Reflection;
 using InventoryService.Application.Abstractions;
 using InventoryService.Domain.Entities;
-using InventoryService.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryService.Infrastructure.Persistence;
 
-public sealed class InventoryDbContext(
-    DbContextOptions<InventoryDbContext> options,
-    AuditableEntitySaveChangesInterceptor auditInterceptor)
+/// <summary>
+/// Schema-per-tenant: StockItems. No HasDefaultSchema call — which physical schema
+/// this context's queries land in is decided by TenantSchemaConnectionInterceptor
+/// (BuildingBlocks.Persistence) at connection-open time, from the caller's JWT
+/// tenant_schema claim.
+/// </summary>
+public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options)
     : DbContext(options), IInventoryDbContext
 {
     public DbSet<StockItem> StockItems => Set<StockItem>();
@@ -18,7 +21,4 @@ public sealed class InventoryDbContext(
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
     }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.AddInterceptors(auditInterceptor);
 }

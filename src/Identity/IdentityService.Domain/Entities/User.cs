@@ -1,26 +1,32 @@
-using IdentityService.Domain.Common;
+using BuildingBlocks.Domain;
 using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Domain.Entities;
 
 /// <summary>
-/// Aggregate root for the Identity bounded context. Encapsulates password-hash storage,
-/// role assignment, and refresh-token rotation behind explicit behavior methods so that
-/// invariants (e.g. "a user always has at least one role") can never be violated from
-/// outside the aggregate.
+/// Aggregate root for a tenant's user. Lives inside that tenant's PostgreSQL schema
+/// (physical isolation — see IdentityDbContext / TenantSchemaConnectionInterceptor),
+/// so two different tenants can both have a user named "admin" without collision; the
+/// TenantId column here is kept purely for informational/audit purposes (e.g. cross-
+/// schema reporting tooling), not as a query filter.
+///
+/// Role assignment is by reference (RoleIds) rather than embedding role names
+/// directly, because roles — and the permissions they grant — are database-managed
+/// and can change independently of any given user (see the Role aggregate).
 /// </summary>
-public sealed class User : AuditableEntity
+public sealed class User : AggregateRoot, ITenantEntity
 {
-    private readonly List<string> _roles = [];
+    private readonly List<Guid> _roleIds = [];
+
+    public Guid TenantId { get; set; }
     public required string UserName { get; init; }
     public required string Email { get; init; }
-    public required string Mobile { get; init; }
     public string PasswordHash { get; private set; } = string.Empty;
-    public IReadOnlyCollection<string> Roles => _roles.AsReadOnly();
+    public IReadOnlyCollection<Guid> RoleIds => _roleIds.AsReadOnly();
     public string? RefreshTokenHash { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAtUtc { get; private set; }
 
-    public static User Create(string userName, string email, string mobile, string passwordHash)
+    public static User Create(Guid tenantId, string userName, string email)
     {
         if (string.IsNullOrWhiteSpace(userName))
         {
@@ -32,22 +38,13 @@ public sealed class User : AuditableEntity
             throw new IdentityDomainException("Email cannot be empty.");
         }
 
-        if (string.IsNullOrWhiteSpace(mobile))
-        {
-            throw new IdentityDomainException("Mobile cannot be empty.");
-        }
-
-        var user = new User
+        return new User
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             UserName = userName,
             Email = email,
-            Mobile = mobile
         };
-
-        user.PasswordHash = passwordHash;
-        user._roles.Add("User");
-        return user;
     }
 
     public void SetPasswordHash(string passwordHash)
@@ -59,6 +56,16 @@ public sealed class User : AuditableEntity
 
         PasswordHash = passwordHash;
     }
+
+    public void AssignRole(Guid roleId)
+    {
+        if (!_roleIds.Contains(roleId))
+        {
+            _roleIds.Add(roleId);
+        }
+    }
+
+    public void RemoveRole(Guid roleId) => _roleIds.Remove(roleId);
 
     public void SetRefreshToken(string refreshTokenHash, DateTimeOffset expiresAtUtc)
     {
@@ -75,14 +82,6 @@ public sealed class User : AuditableEntity
     {
         RefreshTokenHash = null;
         RefreshTokenExpiresAtUtc = null;
-    }
-
-    public void PromoteToAdmin()
-    {
-        if (!_roles.Contains("Admin"))
-        {
-            _roles.Add("Admin");
-        }
     }
 
     private User() { }

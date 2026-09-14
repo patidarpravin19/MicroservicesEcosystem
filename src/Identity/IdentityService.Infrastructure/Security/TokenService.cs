@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using BuildingBlocks.Security;
 using IdentityService.Application.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -9,11 +10,20 @@ namespace IdentityService.Infrastructure.Security;
 
 /// <summary>
 /// Concrete implementation of the Application layer's ITokenService abstraction.
-/// Issues short-lived HS256 access tokens and opaque, hashed-at-rest refresh tokens.
+/// Issues short-lived HS256 access tokens carrying tenant identity, role names, and
+/// the union of every permission code those roles grant — computed by the caller
+/// (LoginCommandHandler / RefreshTokenCommandHandler) directly from the database
+/// immediately before the token is minted, and opaque, hashed-at-rest refresh tokens.
 /// </summary>
 public sealed class TokenService(JwtOptions options) : ITokenService
 {
-    public TokenPair GenerateTokenPair(Guid userId, string userName, IEnumerable<string> roles)
+    public TokenPair GenerateTokenPair(
+        Guid userId,
+        string userName,
+        Guid tenantId,
+        string tenantSchema,
+        IEnumerable<string> roleNames,
+        IEnumerable<string> permissionCodes)
     {
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(options.AccessTokenMinutes);
 
@@ -26,9 +36,12 @@ public sealed class TokenService(JwtOptions options) : ITokenService
             new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                 ClaimValueTypes.Integer64),
+            new(TenantClaimTypes.TenantId, tenantId.ToString()),
+            new(TenantClaimTypes.TenantSchema, tenantSchema),
         ];
 
-        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(roleNames.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(permissionCodes.Select(code => new Claim(PermissionClaimTypes.Permission, code)));
 
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
@@ -52,7 +65,7 @@ public sealed class TokenService(JwtOptions options) : ITokenService
         return Convert.ToBase64String(bytes);
     }
 
-    public Guid? GetUserIdFromExpiredAccessToken(string expiredAccessToken)
+    public ExpiredTokenPrincipal? GetPrincipalFromExpiredToken(string expiredAccessToken)
     {
         var validationParameters = new TokenValidationParameters
         {
@@ -77,7 +90,17 @@ public sealed class TokenService(JwtOptions options) : ITokenService
             }
 
             var sub = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            return Guid.TryParse(sub, out var userId) ? userId : null;
+            var tenantIdClaim = principal.FindFirst(TenantClaimTypes.TenantId)?.Value;
+            var schemaClaim = principal.FindFirst(TenantClaimTypes.TenantSchema)?.Value;
+
+            if (!Guid.TryParse(sub, out var userId) ||
+                !Guid.TryParse(tenantIdClaim, out var tenantId) ||
+                string.IsNullOrWhiteSpace(schemaClaim))
+            {
+                return null;
+            }
+
+            return new ExpiredTokenPrincipal(userId, tenantId, schemaClaim);
         }
         catch (SecurityTokenException)
         {

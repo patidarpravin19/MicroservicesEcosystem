@@ -1,13 +1,15 @@
 using FluentValidation;
 using MediatR;
 
-namespace InventoryService.Application.Common.Behaviors;
+namespace BuildingBlocks.Application.Behaviors;
 
 /// <summary>
 /// MediatR pipeline behavior that runs every registered FluentValidation validator for
 /// a request before its handler executes. On failure it throws FluentValidation's
-/// ValidationException, which InventoryService.Api's GlobalExceptionHandler converts
-/// into an RFC 7807 ProblemDetails response — handlers never need try/catch for this.
+/// ValidationException, which the shared GlobalExceptionHandler (BuildingBlocks.
+/// WebDefaults) converts into an RFC 7807 ProblemDetails response — handlers never
+/// need try/catch for this. One implementation, shared by every service's MediatR
+/// pipeline (Identity, Inventory, Tenant, and any Gold-Master clone).
 /// </summary>
 public sealed class ValidationBehavior<TRequest, TResponse>(
     IEnumerable<IValidator<TRequest>> validators)

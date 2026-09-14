@@ -1,3 +1,4 @@
+using BuildingBlocks.Messaging;
 using InventoryService.Application.Abstractions;
 using MassTransit;
 
