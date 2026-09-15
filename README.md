@@ -1,7 +1,7 @@
 # Microservices Ecosystem — .NET 10 / C# 14
 
 Multi-tenant, Clean Architecture, DDD, event-driven microservices reference solution.
-Tenant management lives inside **IdentityService** — alongside Users and Roles, not
+Tenant management lives inside **AccountingInventory** — alongside Users and Roles, not
 as a separate microservice — because tenants, users, and roles are one bounded
 context (Identity & Access Management), and putting them together avoids a cross-
 service network hop and an eventual-consistency window for the one thing that must
@@ -15,15 +15,15 @@ deploy/                                              Docker + Compose for both d
 src/
 ├── BuildingBlocks/            Shared kernel — see "Shared building blocks" below
 ├── Gateway/ApiGateway/        YARP reverse proxy, rate limiting, correlation-id propagation
-├── Identity/                  IdentityService: Tenants, Users, DB-managed Roles/Permissions, JWT issuance
-│   ├── IdentityService.Domain / .Application / .Infrastructure / .Api
+├── Identity/                  AccountingInventory: Tenants, Users, DB-managed Roles/Permissions, JWT issuance
+│   ├── AccountingInventory.Domain / .Application / .Infrastructure / .Api
 └── Services/
     └── InventoryService/      THE GOLD MASTER TEMPLATE — clone this to add a new business module
 ```
 
 ## Multi-tenancy
 
-**Two databases, two different isolation strategies, both owned by IdentityService:**
+**Two databases, two different isolation strategies, both owned by AccountingInventory:**
 
 - **`TenantDb`** — one shared, non-tenant-scoped database holding the `Tenants`
   table itself (Name, Slug, SchemaName, Status). This is genuinely global data — the
@@ -72,13 +72,13 @@ completes — no waiting on other services.
   `POST/GET /api/roles`, `PUT /api/roles/{id}/permissions`, `DELETE /api/roles/{id}`.
 - **`User`** references roles by id, also DB-managed via
   `POST/DELETE /api/roles/{roleId}/users/{userId}`.
-- At **login** (and again at every **token refresh**), IdentityService reads the
+- At **login** (and again at every **token refresh**), AccountingInventory reads the
   current user's roles straight from the database, unions every permission code
   those roles grant, and embeds them as `role`/`permission` claims on the JWT.
 - Every protected endpoint in every service declares the permission it needs in one
   line — `.RequirePermission("Inventory.StockItems.Create")`
   (`BuildingBlocks.Security`) — a fast local claim check, no network call to
-  IdentityService per request. But the claims themselves are 100% computed from the
+  AccountingInventory per request. But the claims themselves are 100% computed from the
   database, so editing a role's permissions changes what its users can do the next
   time they log in or refresh (≤ 15 minutes by default), with no code change or
   redeploy anywhere.
@@ -121,7 +121,7 @@ Both modes build and run the exact same Dockerfiles/images.
    your own commands/queries.
 3. Keep the `TenantProvisioningConsumer` pattern (copy Inventory's — one line
    changes: your DbContext type) so the new service's schema gets created per tenant
-   automatically when IdentityService publishes `TenantCreatedIntegrationEvent`.
+   automatically when AccountingInventory publishes `TenantCreatedIntegrationEvent`.
 4. Protect your endpoints with `.RequirePermission("OrderService.Orders.Create")` and
    grant that code to whichever roles should have it via `/api/roles`.
 5. Add a Dockerfile + gateway route + compose entries following Inventory's pattern.

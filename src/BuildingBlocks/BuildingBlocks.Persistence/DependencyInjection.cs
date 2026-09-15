@@ -51,7 +51,7 @@ public static class DependencyInjection
 
     /// <summary>
     /// Registers a DbContext for a service's control-plane data — data that is NOT
-    /// tenant-scoped (e.g. IdentityService's tenant registry). Gets the shared audit
+    /// tenant-scoped (e.g. AccountingInventory's tenant registry). Gets the shared audit
     /// interceptor (created/modified stamps, soft delete) but deliberately NOT the
     /// tenant-schema connection interceptor, since control-plane tables always live
     /// in one fixed schema regardless of which tenant the caller belongs to.

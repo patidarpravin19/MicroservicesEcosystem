@@ -42,7 +42,7 @@ public static partial class TenantSchemaNameValidator
     /// <summary>
     /// Derives a safe, guaranteed-unique schema name from a tenant's name and id
     /// (e.g. "Acme Corp" + 3f2a1b4c-... → "tenant_acme_corp_3f2a1b4c"). Used once, at
-    /// tenant-creation time, by IdentityService. Including a slice of the tenant's id
+    /// tenant-creation time, by AccountingInventory. Including a slice of the tenant's id
     /// guarantees uniqueness even if two tenants normalize to the same name (e.g.
     /// "Acme" and "Acme!!!" both become "acme") — slug uniqueness is still enforced
     /// separately at the database level as a human-facing safeguard, but the schema

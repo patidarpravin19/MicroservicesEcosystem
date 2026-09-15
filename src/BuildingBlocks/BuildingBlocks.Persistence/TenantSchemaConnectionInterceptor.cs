@@ -18,7 +18,7 @@ namespace BuildingBlocks.Persistence;
 /// while their data is physically isolated in ten different PostgreSQL schemas.
 ///
 /// One entity type is deliberately exempt from this: any DbContext that also needs a
-/// control-plane table shared across all tenants (e.g. IdentityService's
+/// control-plane table shared across all tenants (e.g. AccountingInventory's
 /// TenantDirectory, used to resolve a tenant slug to its schema name BEFORE the
 /// caller is authenticated) maps that specific entity to an explicit schema
 /// (`.ToTable("TenantDirectory", schema: "public")`) — an explicit schema always wins

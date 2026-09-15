@@ -29,7 +29,7 @@ internal sealed class TenantContext : ITenantContext, ITenantContextAccessor
 
 /// <summary>
 /// Resolves the current tenant from the authenticated user's JWT (the "tenant_id" /
-/// "tenant_schema" claims set by IdentityService at login) and makes it available for
+/// "tenant_schema" claims set by AccountingInventory at login) and makes it available for
 /// the rest of the request via the scoped ITenantContextAccessor. Must run after
 /// UseAuthentication so HttpContext.User is already populated — see
 /// BuildingBlocks.Security.DependencyInjection.UsePlatformSecurity for the correct

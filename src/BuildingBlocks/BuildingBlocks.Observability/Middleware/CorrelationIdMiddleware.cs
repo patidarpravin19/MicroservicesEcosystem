@@ -11,7 +11,7 @@ namespace BuildingBlocks.Observability.Middleware;
 /// downstream — onto outbound HttpClient calls, YARP-proxied requests, or MassTransit
 /// message headers.
 ///
-/// This is the single implementation shared by ApiGateway, IdentityService.Api, and
+/// This is the single implementation shared by ApiGateway, AccountingInventory.Api, and
 /// InventoryService.Api (and any new service cloned from the Gold Master) via a
 /// project reference to BuildingBlocks.Observability — it is written once here rather
 /// than copy-pasted per service.

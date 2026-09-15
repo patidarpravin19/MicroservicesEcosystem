@@ -8,7 +8,7 @@ namespace BuildingBlocks.Persistence;
 /// <summary>
 /// Provisions a brand-new PostgreSQL schema for a tenant and runs that service's EF
 /// Core migrations into it. Called by each tenant-scoped service's
-/// TenantCreatedIntegrationEvent consumer (see IdentityService's and
+/// TenantCreatedIntegrationEvent consumer (see AccountingInventory's and
 /// InventoryService's own consumers) the moment a new tenant is created in
 /// TenantService — so by the time anyone tries to register a user or add stock for
 /// that tenant, the schema and its tables already exist.

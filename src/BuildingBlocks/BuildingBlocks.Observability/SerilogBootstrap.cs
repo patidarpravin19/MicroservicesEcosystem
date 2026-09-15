@@ -11,7 +11,7 @@ namespace BuildingBlocks.Observability;
 
 /// <summary>
 /// The one place structured logging is configured for the whole ecosystem. Every API
-/// (ApiGateway, IdentityService.Api, InventoryService.Api) calls
+/// (ApiGateway, AccountingInventory.Api, InventoryService.Api) calls
 /// <see cref="AddSharedLogging"/> from Program.cs instead of hand-rolling its own
 /// Serilog pipeline — this keeps sinks, enrichers, and output format identical across
 /// every service, which matters when you're correlating logs across a distributed
