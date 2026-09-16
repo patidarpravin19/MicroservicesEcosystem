@@ -32,6 +32,7 @@ app.UsePlatformSecurity();
 app.MapAuthEndpoints();
 //app.MapRoleEndpoints();
 app.MapTenantEndpoints();
+app.MapVendorEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
 // Only the tenant registry ("tenant" schema) migrates eagerly at startup — each
