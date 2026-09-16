@@ -21,12 +21,13 @@ public sealed class AccountingInventoryDbContext(DbContextOptions<AccountingInve
     : DbContext(options), IAccountingInventoryDbContext
 {
     public DbSet<User> Users => Set<User>();
-    public DbSet<Role> Roles => Set<Role>();
+
+    //public DbSet<Role> Roles => Set<Role>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new UserConfiguration());
-        modelBuilder.ApplyConfiguration(new RoleConfiguration());
+        //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }
 

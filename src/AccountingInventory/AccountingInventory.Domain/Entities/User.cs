@@ -14,23 +14,27 @@ namespace AccountingInventory.Domain.Entities;
 /// directly, because roles — and the permissions they grant — are database-managed
 /// and can change independently of any given user (see the Role aggregate).
 /// </summary>
-public sealed class User : AggregateRoot, ITenantEntity
+public sealed class User : AggregateRoot
 {
-    private readonly List<Guid> _roleIds = [];
-
-    public Guid TenantId { get; set; }
+    //private readonly List<Guid> _roleIds = [];
     public required string UserName { get; init; }
+    public required string Mobile { get; init; }
     public required string Email { get; init; }
     public string PasswordHash { get; private set; } = string.Empty;
-    public IReadOnlyCollection<Guid> RoleIds => _roleIds.AsReadOnly();
+    //public IReadOnlyCollection<Guid> RoleIds => _roleIds.AsReadOnly();
     public string? RefreshTokenHash { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAtUtc { get; private set; }
 
-    public static User Create(Guid tenantId, string userName, string email)
+    public static User Create(string userName, string mobile, string email)
     {
         if (string.IsNullOrWhiteSpace(userName))
         {
             throw new AccountingInventoryDomainException("Username cannot be empty.");
+        }
+
+        if (string.IsNullOrWhiteSpace(mobile))
+        {
+            throw new AccountingInventoryDomainException("Mobile cannot be empty.");
         }
 
         if (string.IsNullOrWhiteSpace(email))
@@ -41,8 +45,8 @@ public sealed class User : AggregateRoot, ITenantEntity
         return new User
         {
             Id = Guid.NewGuid(),
-            TenantId = tenantId,
             UserName = userName,
+            Mobile = mobile,
             Email = email,
         };
     }
@@ -57,15 +61,15 @@ public sealed class User : AggregateRoot, ITenantEntity
         PasswordHash = passwordHash;
     }
 
-    public void AssignRole(Guid roleId)
-    {
-        if (!_roleIds.Contains(roleId))
-        {
-            _roleIds.Add(roleId);
-        }
-    }
+    //public void AssignRole(Guid roleId)
+    //{
+    //    if (!_roleIds.Contains(roleId))
+    //    {
+    //        _roleIds.Add(roleId);
+    //    }
+    //}
 
-    public void RemoveRole(Guid roleId) => _roleIds.Remove(roleId);
+    //public void RemoveRole(Guid roleId) => _roleIds.Remove(roleId);
 
     public void SetRefreshToken(string refreshTokenHash, DateTimeOffset expiresAtUtc)
     {

@@ -10,7 +10,7 @@ namespace AccountingInventory.Application.Abstractions;
 public interface IAccountingInventoryDbContext
 {
     DbSet<User> Users { get; }
-    DbSet<Role> Roles { get; }
+    //DbSet<Role> Roles { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>

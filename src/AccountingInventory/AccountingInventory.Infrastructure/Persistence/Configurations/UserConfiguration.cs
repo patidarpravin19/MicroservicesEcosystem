@@ -16,6 +16,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.UserName).IsRequired().HasMaxLength(64);
+        builder.Property(u => u.Mobile).IsRequired().HasMaxLength(20);
         builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
         builder.Property(u => u.PasswordHash).IsRequired();
 
@@ -24,16 +25,17 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         // index (not a composite with TenantId) is correct and sufficient here.
         builder.HasIndex(u => u.UserName).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();
+        //builder.HasIndex(u => u.Mobile).IsUnique();
 
-        builder.Property<List<Guid>>("_roleIds")
-            .HasField("_roleIds")
-            .UsePropertyAccessMode(PropertyAccessMode.Field)
-            .HasColumnName("RoleIds")
-            .HasConversion(
-                roleIds => string.Join(',', roleIds),
-                value => value.Length == 0
-                    ? new List<Guid>()
-                    : value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse).ToList());
+        //builder.Property<List<Guid>>("_roleIds")
+        //    .HasField("_roleIds")
+        //    .UsePropertyAccessMode(PropertyAccessMode.Field)
+        //    .HasColumnName("RoleIds")
+        //    .HasConversion(
+        //        roleIds => string.Join(',', roleIds),
+        //        value => value.Length == 0
+        //            ? new List<Guid>()
+        //            : value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse).ToList());
 
         builder.Property(u => u.RefreshTokenHash).HasMaxLength(512);
         builder.Property(u => u.RefreshTokenExpiresAtUtc);

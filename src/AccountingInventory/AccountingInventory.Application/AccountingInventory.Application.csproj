@@ -5,6 +5,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Roles\**" />
+    <Compile Remove="Users\Commands\AssignRole\**" />
+    <Compile Remove="Users\Commands\RemoveRole\**" />
+    <EmbeddedResource Remove="Roles\**" />
+    <EmbeddedResource Remove="Users\Commands\AssignRole\**" />
+    <EmbeddedResource Remove="Users\Commands\RemoveRole\**" />
+    <None Remove="Roles\**" />
+    <None Remove="Users\Commands\AssignRole\**" />
+    <None Remove="Users\Commands\RemoveRole\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />

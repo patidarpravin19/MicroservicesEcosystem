@@ -6,6 +6,7 @@ public sealed record RegisterCommand(
     string TenantSlug,
     string UserName,
     string Email,
+    string Mobile,
     string Password) : IRequest<RegisterResult>;
 
 public sealed record RegisterResult(

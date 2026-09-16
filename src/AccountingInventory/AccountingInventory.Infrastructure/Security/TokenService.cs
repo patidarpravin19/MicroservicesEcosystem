@@ -40,8 +40,8 @@ public sealed class TokenService(JwtOptions options) : ITokenService
             new(TenantClaimTypes.TenantSchema, tenantSchema),
         ];
 
-        claims.AddRange(roleNames.Select(role => new Claim(ClaimTypes.Role, role)));
-        claims.AddRange(permissionCodes.Select(code => new Claim(PermissionClaimTypes.Permission, code)));
+        //claims.AddRange(roleNames.Select(role => new Claim(ClaimTypes.Role, role)));
+        //claims.AddRange(permissionCodes.Select(code => new Claim(PermissionClaimTypes.Permission, code)));
 
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);

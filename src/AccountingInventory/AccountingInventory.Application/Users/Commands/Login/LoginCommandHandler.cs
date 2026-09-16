@@ -59,13 +59,13 @@ public sealed class LoginCommandHandler(
             throw new UnauthorizedException("Invalid tenant, username, or password.");
         }
 
-        var roles = await db.Roles
-            .Where(r => user.RoleIds.Contains(r.Id))
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        //var roles = await db.Roles
+        //    .Where(r => user.RoleIds.Contains(r.Id))
+        //    .AsNoTracking()
+        //    .ToListAsync(cancellationToken);
 
-        var roleNames = roles.Select(r => r.Name).ToArray();
-        var permissionCodes = roles.SelectMany(r => r.PermissionCodes).Distinct().ToArray();
+        var roleNames = new string[] { };
+        var permissionCodes = new string[] { };
 
         var pair = tokenService.GenerateTokenPair(
             user.Id, user.UserName, tenant.Id, tenant.SchemaName, roleNames, permissionCodes);

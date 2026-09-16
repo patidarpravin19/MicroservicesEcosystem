@@ -3,6 +3,10 @@
 	<PropertyGroup>
 		<RootNamespace>AccountingInventory.Api</RootNamespace>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Endpoints\RoleEndpoints.cs" />
+	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\AccountingInventory.Application\AccountingInventory.Application.csproj" />
 		<ProjectReference Include="..\AccountingInventory.Infrastructure\AccountingInventory.Infrastructure.csproj" />

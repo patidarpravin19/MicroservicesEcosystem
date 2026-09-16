@@ -59,19 +59,19 @@ public sealed class RegisterCommandHandler(
             throw new ConflictException("A user with that username or email already exists.");
         }
 
-        var defaultRole = await db.Roles.SingleOrDefaultAsync(r => r.Name == DefaultRoleName, cancellationToken)
-            ?? throw new ConflictException(
-                "This tenant is still being provisioned. Please try registering again in a few seconds.");
+        //var defaultRole = await db.Roles.SingleOrDefaultAsync(r => r.Name == DefaultRoleName, cancellationToken)
+        //    ?? throw new ConflictException(
+        //        "This tenant is still being provisioned. Please try registering again in a few seconds.");
 
-        var user = User.Create(tenant.Id, request.UserName, request.Email);
+        var user = User.Create(request.UserName, request.Email, request.Mobile);
         var hashed = passwordHasher.HashPassword(user, request.Password);
         user.SetPasswordHash(hashed);
-        user.AssignRole(defaultRole.Id);
+        //user.AssignRole(defaultRole.Id);
 
         var pair = tokenService.GenerateTokenPair(
             user.Id, user.UserName, tenant.Id, tenant.SchemaName,
-            roleNames: [defaultRole.Name],
-            permissionCodes: defaultRole.PermissionCodes);
+            roleNames: [],
+            permissionCodes: []);
 
         user.SetRefreshToken(tokenService.HashRefreshToken(pair.RefreshToken), DateTimeOffset.UtcNow.AddDays(7));
 

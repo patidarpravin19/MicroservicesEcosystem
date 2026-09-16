@@ -75,16 +75,16 @@ public sealed class RegisterTenantCommandHandler(
         // needed here.
         await schemaProvisioner.ProvisionAsync(tenant.Id, tenant.SchemaName, cancellationToken);
 
-        var adminRole = Role.Create(tenant.Id, "Admin", isSystemDefined: true);
-        foreach (var permission in DefaultAdminPermissions)
-        {
-            adminRole.GrantPermission(permission);
-        }
+        //var adminRole = Role.Create("Admin", "Admin", isSystemDefined: true);
+        //foreach (var permission in DefaultAdminPermissions)
+        //{
+        //    adminRole.GrantPermission(permission);
+        //}
 
-        var userRole = Role.Create(tenant.Id, "User", isSystemDefined: true);
+        //var userRole = Role.Create("User", "User", isSystemDefined: true);
 
-        db.Roles.Add(adminRole);
-        db.Roles.Add(userRole);
+        //db.Roles.Add(adminRole);
+        //db.Roles.Add(userRole);
         await db.SaveChangesAsync(cancellationToken);
 
         tenant.Activate();

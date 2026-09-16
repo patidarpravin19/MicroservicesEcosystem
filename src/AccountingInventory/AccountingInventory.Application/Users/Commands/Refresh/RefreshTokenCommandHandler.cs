@@ -56,13 +56,13 @@ public sealed class RefreshTokenCommandHandler(
         // mechanism by which a role or permission change made in the database (e.g.
         // an admin revoking a permission from a role) reaches an already-logged-in
         // user: within one access-token lifetime (15 minutes by default).
-        var roles = await db.Roles
-            .Where(r => user.RoleIds.Contains(r.Id))
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        //var roles = await db.Roles
+        //    .Where(r => user.RoleIds.Contains(r.Id))
+        //    .AsNoTracking()
+        //    .ToListAsync(cancellationToken);
 
-        var roleNames = roles.Select(r => r.Name).ToArray();
-        var permissionCodes = roles.SelectMany(r => r.PermissionCodes).Distinct().ToArray();
+        var roleNames = new string[] { };
+        var permissionCodes = new string[] { };
 
         var pair = tokenService.GenerateTokenPair(
             user.Id, user.UserName, principal.TenantId, principal.TenantSchema, roleNames, permissionCodes);

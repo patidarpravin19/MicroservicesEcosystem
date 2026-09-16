@@ -30,7 +30,7 @@ app.UseSharedRequestLogging();
 app.UsePlatformSecurity();
 
 app.MapAuthEndpoints();
-app.MapRoleEndpoints();
+//app.MapRoleEndpoints();
 app.MapTenantEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 

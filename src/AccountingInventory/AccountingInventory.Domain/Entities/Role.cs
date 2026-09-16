@@ -11,26 +11,30 @@ namespace AccountingInventory.Domain.Entities;
 /// this role picks up its current permission codes as JWT claims the next time they
 /// log in or refresh their token (see LoginCommandHandler / RefreshTokenCommandHandler).
 /// </summary>
-public sealed class Role : AggregateRoot, ITenantEntity
+public sealed class Role : AggregateRoot
 {
     private readonly List<string> _permissionCodes = [];
-
-    public Guid TenantId { get; set; }
+    public required string Code { get; init; }
     public required string Name { get; init; }
     public bool IsSystemDefined { get; private set; }
     public IReadOnlyCollection<string> PermissionCodes => _permissionCodes.AsReadOnly();
 
-    public static Role Create(Guid tenantId, string name, bool isSystemDefined = false)
+    public static Role Create(string name, string code, bool isSystemDefined = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new AccountingInventoryDomainException("Role name cannot be empty.");
         }
 
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new AccountingInventoryDomainException("Role code cannot be empty.");
+        }
+
         return new Role
         {
+            Code = code.Trim(),
             Id = Guid.NewGuid(),
-            TenantId = tenantId,
             Name = name.Trim(),
             IsSystemDefined = isSystemDefined,
         };
