@@ -30,6 +30,7 @@ public static class DependencyInjection
         {
             options.SwaggerDoc("v1", new OpenApiInfo { Title = serviceName, Version = "v1" });
 
+            options.OperationFilter<TenantIdHeaderOperationFilter>();
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",

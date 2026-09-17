@@ -44,7 +44,11 @@ public static class AuthEndpoints
                 return Results.Ok(new { userId, tenantId, roles, permissions });
             })
             .WithName("Me")
-            .RequireAuthorization("AuthenticatedUser");
+            .RequireAuthorization("AuthenticatedUser")
+            // Unlike login/register/refresh, this is a tenant-scoped operation.
+            // Resolve the schema from the tenant registry rather than trusting the
+            // schema claim embedded in the access token.
+            .AddEndpointFilter<TenantHeaderEndpointFilter>();
 
         return group;
     }

@@ -152,6 +152,12 @@ curl -X POST http://localhost:8080/api/identity/api/auth/login \
 curl -X POST http://localhost:8080/api/inventory/api/stock-items \
   -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
   -d '{"sku":"WIDGET-1","displayName":"Widget","warehouseLocation":"MAIN"}'
+
+# 5. Add a vendor to that tenant's schema. Use the tenantId returned at step 1;
+#    the API resolves the database schema itself, so never send a schema name.
+curl -X POST http://localhost:8080/api/identity/api/vendors/add \
+  -H 'X-Tenant-Id: <tenantId>' -H 'Content-Type: application/json' \
+  -d '{"name":"Acme Supplies","code":"ACME-SUP","mobile":"5550100","email":"sales@acme.test","description":"Preferred supplier","address":"1 Market Street"}'
 ```
 
 Logs land in the console (structured JSON) and under

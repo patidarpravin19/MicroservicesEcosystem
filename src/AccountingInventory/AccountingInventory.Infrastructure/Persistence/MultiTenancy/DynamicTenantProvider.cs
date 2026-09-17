@@ -1,35 +1,24 @@
 using BuildingBlocks.Domain;
 using BuildingBlocks.Domain.MultiTenancy;
-using Microsoft.AspNetCore.Http;
 
 namespace AccountingInventory.Infrastructure.Persistence.MultiTenancy;
 
 /// <summary>
-/// Resolves the tenant schema from the request header. Background work and requests
-/// without a header use the supplied safe fallback schema.
+/// Resolves the tenant schema established for the current operation. HTTP callers
+/// are resolved from their tenant id by the API endpoint filter; they never supply a
+/// database schema themselves. Background work can establish the same context
+/// directly through <see cref="ITenantContextAccessor"/>.
 /// </summary>
-public sealed class DynamicTenantProvider(
-    IHttpContextAccessor httpContextAccessor,
-    ITenantContext tenantContext) : ITenantProvider
+public sealed class DynamicTenantProvider(ITenantContext tenantContext) : ITenantProvider
 {
-    public const string TenantSchemaHeader = "X-Tenant-Schema";
     public const string DefaultSchema = "public";
 
     public string SchemaName
     {
         get
         {
-            var schema = httpContextAccessor.HttpContext?
-                .Request.Headers[TenantSchemaHeader]
-                .FirstOrDefault();
-
-            if (!string.IsNullOrWhiteSpace(schema))
-            {
-                return TenantSchemaNameValidator.EnsureValid(schema);
-            }
-
-            // Supports non-HTTP flows that explicitly establish a tenant context,
-            // such as registration/provisioning consumers.
+            // Supports both HTTP flows, after their tenant id has been resolved
+            // against the control-plane registry, and non-HTTP provisioning flows.
             return tenantContext.SchemaName is { Length: > 0 } contextSchema
                 ? TenantSchemaNameValidator.EnsureValid(contextSchema)
                 : DefaultSchema;

@@ -19,7 +19,10 @@ public static class RoleEndpoints
 {
     public static RouteGroupBuilder MapRoleEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/roles").WithTags("Roles");
+        var group = app.MapGroup("/api/roles")
+            .WithTags("Roles")
+            .RequireAuthorization("AuthenticatedUser")
+            .AddEndpointFilter<TenantHeaderEndpointFilter>();
 
         group.MapPost("/", async (CreateRoleCommand command, ISender sender, CancellationToken ct) =>
             {
