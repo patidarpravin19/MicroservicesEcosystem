@@ -16,7 +16,7 @@ namespace AccountingInventory.Application.Tenants.Commands.RegisterTenant;
 ///
 ///   1. Reserve the tenant's slug in the shared tenant registry ("TenantDb").
 ///   2. Provision a brand-new PostgreSQL schema for it — named from the tenant's
-///      name AND id (e.g. "tenant_acme_corp_3f2a1b4c") — inside the "EcosystemDb"
+///      name AND id (e.g. "tenant_acme_corp_3f2a1b4c") — inside the "AccountingInventoryDb"
 ///      database, and run Users/Roles migrations into that schema.
 ///   3. Seed the tenant's two default, system-defined roles ("Admin" with every
 ///      built-in permission, "User" with none) directly into that new schema.
@@ -38,14 +38,14 @@ public sealed class RegisterTenantCommandHandler(
     ILogger<RegisterTenantCommandHandler> logger)
     : IRequestHandler<RegisterTenantCommand, RegisterTenantResult>
 {
-    private static readonly string[] DefaultAdminPermissions =
-    [
-        "Roles.Manage",
-        "Users.Manage",
-        "Inventory.StockItems.Create",
-        "Inventory.StockItems.Read",
-        "Inventory.StockItems.AddStock",
-    ];
+    //private static readonly string[] DefaultAdminPermissions =
+    //[
+    //    "Roles.Manage",
+    //    "Users.Manage",
+    //    "Inventory.StockItems.Create",
+    //    "Inventory.StockItems.Read",
+    //    "Inventory.StockItems.AddStock",
+    //];
 
     public async Task<RegisterTenantResult> Handle(RegisterTenantCommand request, CancellationToken cancellationToken)
     {

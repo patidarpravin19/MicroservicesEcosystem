@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AccountingInventory.Application.Abstractions;
 
 /// <summary>
-/// Schema-per-tenant data (backed by the "EcosystemDb" database): Users and Roles for
+/// Schema-per-tenant data (backed by the "AccountingInventoryDb" database): Users and Roles for
 /// the CURRENT tenant, whichever schema that resolves to via ITenantContext.
 /// </summary>
 public interface IAccountingInventoryDbContext
@@ -26,7 +26,7 @@ public interface IAccountingInventoryDbContext
 
 /// <summary>
 /// Shared, non-tenant-scoped data: the tenant registry itself (backed by its own,
-/// separate "TenantDb" database — not a schema inside "EcosystemDb"). This is where a
+/// separate "TenantDb" database — not a schema inside "AccountingInventoryDb"). This is where a
 /// tenant's Name/Slug/SchemaName/Status live, reachable before any tenant schema is
 /// known (Login/Register both resolve a slug through here first) and reachable no
 /// matter how many per-tenant schemas exist in the other database.

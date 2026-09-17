@@ -28,9 +28,9 @@ src/
 - **`TenantDb`** — one shared, non-tenant-scoped database holding the `Tenants`
   table itself (Name, Slug, SchemaName, Status). This is genuinely global data — the
   list of tenants can't live "inside" a tenant — so it gets its own dedicated
-  database rather than a schema inside `EcosystemDb`, which also sidesteps any
+  database rather than a schema inside `AccountingInventoryDb`, which also sidesteps any
   possibility of it colliding with a tenant's own schema.
-- **`EcosystemDb`** — schema-per-tenant. Every tenant gets its own PostgreSQL schema,
+- **`AccountingInventoryDb`** — schema-per-tenant. Every tenant gets its own PostgreSQL schema,
   named from **both its name and its id** (e.g. `tenant_acme_corp_3f2a1b4c` —
   `TenantSchemaNameValidator.BuildSchemaName`), containing that tenant's `Users` and
   `Roles` tables. Two tenants can have identically-named users with zero collision
@@ -52,7 +52,7 @@ involved:
 
 1. Reserve the slug in `TenantDb` (`Tenant.Create` derives the schema name from the
    new tenant's name + generated id).
-2. Provision the new schema in `EcosystemDb` and run migrations into it
+2. Provision the new schema in `AccountingInventoryDb` and run migrations into it
    (`TenantSchemaProvisioner`).
 3. Seed the tenant's two default, system-defined roles directly into that schema:
    `Admin` (every built-in permission) and `User` (none by default).

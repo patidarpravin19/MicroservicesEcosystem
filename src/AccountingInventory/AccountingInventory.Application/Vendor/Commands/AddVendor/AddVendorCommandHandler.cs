@@ -14,8 +14,8 @@ namespace AccountingInventory.Application.Vendors.Commands.AddVendor;
 /// </summary>
 public sealed class AddVendorCommandHandler(
     //ITenantDirectoryContext tenantDirectory,
-    IAccountingInventoryDbContext db,
-    ITenantSchemaProvisioner schemaProvisioner,
+    IAccountingInventoryDbContext accountingInventoryDbContext,
+    //ITenantSchemaProvisioner schemaProvisioner,
     //ITenantContextAccessor tenantContextAccessor,
     //IEventPublisher eventPublisher,
     ILogger<AddVendorCommandHandler> logger)
@@ -26,7 +26,7 @@ public sealed class AddVendorCommandHandler(
     {
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
 
-        var vendorTaken = await db.Vendors.AnyAsync(t => t.Code == normalizedCode || t.Name == request.Name, cancellationToken);
+        var vendorTaken = await accountingInventoryDbContext.Vendors.AnyAsync(t => t.Code == normalizedCode || t.Name == request.Name, cancellationToken);
 
         if (vendorTaken)
         {
@@ -36,8 +36,8 @@ public sealed class AddVendorCommandHandler(
 
         var vendor = Vendor.Create(request.Name, request.Code, request.Mobile, request.Email, request.Description, request.Address);
 
-        db.Vendors.Add(vendor);
-        await db.SaveChangesAsync(cancellationToken);
+        accountingInventoryDbContext.Vendors.Add(vendor);
+        await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Vendor {VendorId} - ({Name}) - {Code} added successfully.",

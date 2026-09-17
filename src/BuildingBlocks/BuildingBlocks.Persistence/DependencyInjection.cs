@@ -40,6 +40,7 @@ public static class DependencyInjection
             options.UseNpgsql(
                        configuration.GetConnectionString(connectionStringName),
                        npgsql => npgsql.MigrationsHistoryTable("__TenantSchemaHistory"))
+            .UseSnakeCaseNamingConvention()
                    .AddInterceptors(
                        sp.GetRequiredService<AuditableEntitySaveChangesInterceptor>(),
                        sp.GetRequiredService<TenantSchemaConnectionInterceptor>()));

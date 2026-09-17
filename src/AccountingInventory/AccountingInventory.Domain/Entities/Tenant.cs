@@ -68,6 +68,7 @@ public sealed class Tenant : AggregateRoot
         }
 
         Status = TenantStatus.Active;
+        IsActive = true;
     }
 
     public void Suspend()

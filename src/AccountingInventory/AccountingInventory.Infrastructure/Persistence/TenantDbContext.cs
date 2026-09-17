@@ -7,7 +7,7 @@ namespace AccountingInventory.Infrastructure.Persistence;
 
 /// <summary>
 /// The shared tenant registry — lives in the "tenant" schema of the SAME
-/// "EcosystemDb" PostgreSQL database that every tenant's own schema
+/// "AccountingInventoryDb" PostgreSQL database that every tenant's own schema
 /// (IdentityDbContext) also lives in. One database, multiple schemas:
 ///   - "tenant"                     → this context: the registry itself (shared/master data)
 ///   - "tenant_acme_3f2a1b4c", ...  → IdentityDbContext, one schema per tenant

@@ -8,10 +8,8 @@ public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
 {
     public void Configure(EntityTypeBuilder<Vendor> builder)
     {
-        // No schema specified deliberately: this table lives wherever PostgreSQL's
-        // search_path currently points, i.e. inside the CURRENT tenant's schema (see
-        // TenantSchemaConnectionInterceptor). Two different tenants can each have
-        // their own physically separate "Vendors" table with overlapping usernames.
+        // The Npgsql connection Search Path selects the tenant schema. Keeping this
+        // unqualified is essential: the same migration is reused for every tenant.
         builder.ToTable(Constants.DBConstants.DBTableNames.Vendors);
         builder.HasKey(u => u.Id);
 

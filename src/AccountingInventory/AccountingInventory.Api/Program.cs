@@ -35,14 +35,12 @@ app.MapTenantEndpoints();
 app.MapVendorEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
-// Only the tenant registry ("tenant" schema) migrates eagerly at startup — each
-// tenant's own Users/Roles schema is created on demand by RegisterTenantCommandHandler
-// via TenantSchemaProvisioner the moment that tenant registers. Both share the same
-// "IdentityDb" database/connection string; only the schema differs.
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<TenantDbContext>().Database.Migrate();
+    await scope.ServiceProvider.GetRequiredService<TenantDbContext>().Database.MigrateAsync();
 }
+
+await app.Services.ApplyTenantSchemaMigrationsAsync();
 
 Log.Information("Starting {Service}", ServiceName);
 app.Run();
