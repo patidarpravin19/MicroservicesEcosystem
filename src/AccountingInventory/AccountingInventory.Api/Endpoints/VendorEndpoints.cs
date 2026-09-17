@@ -1,11 +1,7 @@
-using BuildingBlocks.Security;
-using AccountingInventory.Application.Tenants.Commands.ReactivateTenant;
-using AccountingInventory.Application.Tenants.Commands.RegisterTenant;
-using AccountingInventory.Application.Tenants.Commands.SuspendTenant;
 using AccountingInventory.Application.Tenants.Queries.GetTenantBySlug;
 using AccountingInventory.Application.Tenants.Queries.GetTenants;
-using MediatR;
 using AccountingInventory.Application.Vendors.Commands.AddVendor;
+using MediatR;
 
 namespace AccountingInventory.Api.Endpoints;
 

@@ -36,15 +36,15 @@ public static class TenantEndpoints
 
         group.MapGet("/", async (ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetTenantsQuery(), ct)))
-            .WithName("GetTenants").RequirePermission("Tenants.Manage");
+            .WithName("GetTenants");//.RequirePermission("Tenants.Manage");
 
         group.MapPost("/{id:guid}/suspend", async (Guid id, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new SuspendTenantCommand(id), ct)))
-            .WithName("SuspendTenant").RequirePermission("Tenants.Manage");
+            .WithName("SuspendTenant");//.RequirePermission("Tenants.Manage");
 
         group.MapPost("/{id:guid}/reactivate", async (Guid id, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new ReactivateTenantCommand(id), ct)))
-            .WithName("ReactivateTenant").RequirePermission("Tenants.Manage");
+            .WithName("ReactivateTenant");//.RequirePermission("Tenants.Manage");
 
         return group;
     }

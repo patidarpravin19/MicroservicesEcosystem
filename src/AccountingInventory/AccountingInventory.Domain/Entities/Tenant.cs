@@ -44,8 +44,8 @@ public sealed class Tenant : AggregateRoot
             Status = TenantStatus.PendingProvisioning,
         };
 
-        tenant.RaiseDomainEvent(new TenantCreatedDomainEvent(
-            tenant.Id, tenant.Name, tenant.Slug, tenant.SchemaName, DateTimeOffset.UtcNow));
+        //tenant.RaiseDomainEvent(new TenantCreatedDomainEvent(
+        //    tenant.Id, tenant.Name, tenant.Slug, tenant.SchemaName, DateTimeOffset.UtcNow));
 
         return tenant;
     }

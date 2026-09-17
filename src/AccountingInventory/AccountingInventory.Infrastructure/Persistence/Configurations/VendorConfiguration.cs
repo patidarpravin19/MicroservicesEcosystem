@@ -18,9 +18,6 @@ public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
         builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
         builder.Property(u => u.Code).IsRequired();
 
-        // Uniqueness only needs to hold WITHIN a schema — since schema-per-tenant
-        // already guarantees physical separation between tenants, a plain unique
-        // index (not a composite with TenantId) is correct and sufficient here.
         builder.HasIndex(u => u.Code).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();
         builder.HasIndex(u => u.Mobile).IsUnique();
