@@ -38,7 +38,7 @@ public static class VendorEndpoints
 
         group.MapGet("/", async (ISender sender, CancellationToken ct) => 
                 Results.Ok(await sender.Send(new GetTenantsQuery(), ct)))
-            .WithName("GetVendors");
+            .WithName("GetVendors").AllowAnonymous();
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateVendorCommand command, ISender sender, CancellationToken ct) =>
         {           

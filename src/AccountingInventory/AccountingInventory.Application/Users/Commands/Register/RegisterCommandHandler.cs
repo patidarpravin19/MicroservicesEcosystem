@@ -24,8 +24,6 @@ public sealed class RegisterCommandHandler(
     ILogger<RegisterCommandHandler> logger)
     : IRequestHandler<RegisterCommand, RegisterResult>
 {
-    private const string DefaultRoleName = "User";
-
     public async Task<RegisterResult> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
         var tenantId = tenantContext.TenantId
@@ -49,6 +47,7 @@ public sealed class RegisterCommandHandler(
         //        "This tenant is still being provisioned. Please try registering again in a few seconds.");
 
         var user = User.Create(request.UserName, request.Email, request.Mobile);
+        user.Activate();
         var hashed = passwordHasher.HashPassword(user, request.Password);
         user.SetPasswordHash(hashed);
         //user.AssignRole(defaultRole.Id);

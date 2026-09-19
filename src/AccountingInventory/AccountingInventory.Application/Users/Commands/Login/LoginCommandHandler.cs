@@ -10,11 +10,12 @@ using Microsoft.Extensions.Logging;
 namespace AccountingInventory.Application.Users.Commands.Login;
 
 public sealed class LoginCommandHandler(
-    IAccountingInventoryDbContext accountingInventoryDbContext,
+    IAccountingInventoryDbContext accInvDbContext,
     ITenantDirectoryContext tenantDirectory,
+     ITenantContext tenantContext,
     ITokenService tokenService,
-    IPasswordHasher<User> passwordHasher,
     ITenantContextAccessor tenantContextAccessor,
+    IPasswordHasher<User> passwordHasher,
     ILogger<LoginCommandHandler> logger)
     : IRequestHandler<LoginCommand, LoginResult>
 {
@@ -38,10 +39,10 @@ public sealed class LoginCommandHandler(
             throw new UnauthorizedException("This tenant is not currently active.");
         }
 
-        //await db.ResetConnectionAsync(cancellationToken);
-        //tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
-
-        var user = await accountingInventoryDbContext.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
+        await accInvDbContext.ResetConnectionAsync(cancellationToken);
+        tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
+       
+        var user = await accInvDbContext.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
 
         if (user is null)
         {
@@ -72,7 +73,7 @@ public sealed class LoginCommandHandler(
 
         user.SetRefreshToken(tokenService.HashRefreshToken(pair.RefreshToken), DateTimeOffset.UtcNow.AddDays(7));
 
-        await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
+        await accInvDbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "User {UserId} ({UserName}) logged in to tenant {TenantId} with roles [{Roles}].",

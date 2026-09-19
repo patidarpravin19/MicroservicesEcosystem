@@ -61,6 +61,19 @@ public sealed class User : AggregateRoot
         PasswordHash = passwordHash;
     }
 
+    public void Activate()
+    {
+        IsActive = true;
+    }
+    public void DeActivate()
+    {
+        IsActive = false;
+    }
+    public void Delete()
+    {
+        IsDeleted = true;
+    }
+
     //public void AssignRole(Guid roleId)
     //{
     //    if (!_roleIds.Contains(roleId))
