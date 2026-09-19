@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AccountingInventory.Application.Users.Commands.Login;
 using AccountingInventory.Application.Users.Commands.Refresh;
 using AccountingInventory.Application.Users.Commands.Register;
+using BuildingBlocks.WebDefaults;
 using MediatR;
 
 namespace AccountingInventory.Api.Endpoints;
@@ -17,7 +18,13 @@ public static class AuthEndpoints
                 var result = await sender.Send(command, ct);
                 return Results.Created($"/api/auth/users/{result.UserId}", result);
             })
-            .WithName("Register").AllowAnonymous()
+            .WithName("Register")
+            .AllowAnonymous()
+            // Registration has no access token yet, but still needs a tenant. This
+            // filter resolves X-Tenant-Id to the registry-owned schema before the
+            // MediatR handler resolves its tenant DbContext.
+            .AddEndpointFilter<TenantHeaderEndpointFilter>()
+            .WithMetadata(new RequiresTenantIdHeaderAttribute())
             .Produces<RegisterResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);

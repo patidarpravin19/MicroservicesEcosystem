@@ -10,20 +10,17 @@ using Microsoft.Extensions.Logging;
 namespace AccountingInventory.Application.Users.Commands.Register;
 
 /// <summary>
-/// Registers a new user for an existing, active tenant. The tenant is identified by
-/// its slug, resolved through the shared tenant registry (ITenantDirectoryContext,
-/// backed by the "TenantDb" database), since this endpoint runs before the caller has
-/// any credentials at all. Every new user is assigned the tenant's default "User"
+/// Registers a new user for the active tenant established from <c>X-Tenant-Id</c>
+/// by the API endpoint filter. Every new user is assigned the tenant's default "User"
 /// role, seeded synchronously when the tenant was registered
 /// (RegisterTenantCommandHandler) — so it is always present by the time anyone can
 /// reach this handler.
 /// </summary>
 public sealed class RegisterCommandHandler(
     IAccountingInventoryDbContext db,
-    ITenantDirectoryContext tenantDirectory,
+    ITenantContext tenantContext,
     ITokenService tokenService,
     IPasswordHasher<User> passwordHasher,
-    ITenantContextAccessor tenantContextAccessor,
     ILogger<RegisterCommandHandler> logger)
     : IRequestHandler<RegisterCommand, RegisterResult>
 {
@@ -31,22 +28,10 @@ public sealed class RegisterCommandHandler(
 
     public async Task<RegisterResult> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
-        var normalizedSlug = request.TenantSlug.Trim().ToLowerInvariant();
-
-        var tenant = await tenantDirectory.Tenants
-            .AsNoTracking()
-            .SingleOrDefaultAsync(t => t.Slug == normalizedSlug, cancellationToken)
-            ?? throw new NotFoundException($"Unknown tenant '{normalizedSlug}'.");
-
-        if (tenant.Status != TenantStatus.Active)
-        {
-            throw new ConflictException($"Tenant '{tenant.Name}' is not currently active.");
-        }
-
-        // Force a fresh connection so the schema we're about to set actually takes
-        // effect for every query from here on — see IIdentityDbContext.ResetConnectionAsync.
-        await db.ResetConnectionAsync(cancellationToken);
-        tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
+        var tenantId = tenantContext.TenantId
+            ?? throw new InvalidOperationException("A tenant must be established before registering a user.");
+        var schemaName = tenantContext.SchemaName
+            ?? throw new InvalidOperationException("The established tenant does not have a schema.");
 
         var exists = await db.Users.AnyAsync(
             u => u.UserName == request.UserName || u.Email == request.Email, cancellationToken);
@@ -55,7 +40,7 @@ public sealed class RegisterCommandHandler(
         {
             logger.LogWarning(
                 "Registration rejected for tenant {TenantId}: username or email already in use ({UserName}, {Email}).",
-                tenant.Id, request.UserName, request.Email);
+                tenantId, request.UserName, request.Email);
             throw new ConflictException("A user with that username or email already exists.");
         }
 
@@ -69,7 +54,7 @@ public sealed class RegisterCommandHandler(
         //user.AssignRole(defaultRole.Id);
 
         var pair = tokenService.GenerateTokenPair(
-            user.Id, user.UserName, tenant.Id, tenant.SchemaName,
+            user.Id, user.UserName, tenantId, schemaName,
             roleNames: [],
             permissionCodes: []);
 
@@ -79,8 +64,8 @@ public sealed class RegisterCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "User {UserId} ({UserName}) registered for tenant {TenantId}.", user.Id, user.UserName, tenant.Id);
+            "User {UserId} ({UserName}) registered for tenant {TenantId}.", user.Id, user.UserName, tenantId);
 
-        return new RegisterResult(user.Id, tenant.Id, pair.AccessToken, pair.RefreshToken, pair.AccessTokenExpiresAtUtc);
+        return new RegisterResult(user.Id, tenantId, pair.AccessToken, pair.RefreshToken, pair.AccessTokenExpiresAtUtc);
     }
 }

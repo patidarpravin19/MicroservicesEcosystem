@@ -10,11 +10,13 @@ namespace BuildingBlocks.Persistence;
 /// </summary>
 public interface ICurrentUserProvider
 {
-    string? UserId { get; }
+    Guid? UserId { get; }
 }
 
 public sealed class HttpCurrentUserProvider(IHttpContextAccessor httpContextAccessor) : ICurrentUserProvider
 {
-    public string? UserId =>
-        httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public Guid? UserId =>
+        Guid.TryParse(httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+            ? userId
+            : null;
 }

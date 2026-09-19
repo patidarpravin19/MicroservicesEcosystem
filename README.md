@@ -62,7 +62,7 @@ involved:
    schema for this tenant asynchronously — that part necessarily stays event-driven,
    since Identity has no visibility into another service's database.
 
-A user can register (`POST /api/auth/register { tenantSlug, ... }`) the moment step 4
+A user can register (`POST /api/auth/register` with `X-Tenant-Id` and user details) the moment step 4
 completes — no waiting on other services.
 
 ## Roles and permissions: managed entirely from the database
@@ -140,8 +140,8 @@ curl -X POST http://localhost:8080/api/identity/api/tenants/register \
 
 # 2. Register the first user for that tenant (gets the seeded "User" role)
 curl -X POST http://localhost:8080/api/identity/api/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"tenantSlug":"acme","userName":"jane","email":"jane@acme.test","password":"Passw0rd!"}'
+  -H 'Content-Type: application/json' -H 'X-Tenant-Id: <tenantId>' \
+  -d '{"userName":"jane","email":"jane@acme.test","password":"Passw0rd!"}'
 
 # 3. Log in
 curl -X POST http://localhost:8080/api/identity/api/auth/login \

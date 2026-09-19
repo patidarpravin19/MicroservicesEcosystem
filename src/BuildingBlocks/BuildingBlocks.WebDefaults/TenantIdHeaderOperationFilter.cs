@@ -16,9 +16,15 @@ public sealed class TenantIdHeaderOperationFilter : IOperationFilter
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
         var metadata = context.ApiDescription.ActionDescriptor.EndpointMetadata;
-        if (metadata is null ||
-            metadata.OfType<IAllowAnonymous>().Any() ||
-            !metadata.OfType<IAuthorizeData>().Any())
+        if (metadata is null)
+        {
+            return;
+        }
+
+        var explicitlyRequiresTenantHeader = metadata.OfType<RequiresTenantIdHeaderAttribute>().Any();
+        var requiresAuthenticatedTenant = !metadata.OfType<IAllowAnonymous>().Any() &&
+                                          metadata.OfType<IAuthorizeData>().Any();
+        if (!explicitlyRequiresTenantHeader && !requiresAuthenticatedTenant)
         {
             return;
         }
@@ -42,3 +48,7 @@ public sealed class TenantIdHeaderOperationFilter : IOperationFilter
         });
     }
 }
+
+/// <summary>Marks an anonymous endpoint that still selects a tenant by header.</summary>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
+public sealed class RequiresTenantIdHeaderAttribute : Attribute;

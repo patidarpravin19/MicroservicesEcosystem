@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace AccountingInventory.Application.Users.Commands.Login;
 
 public sealed class LoginCommandHandler(
-    IAccountingInventoryDbContext db,
+    IAccountingInventoryDbContext accountingInventoryDbContext,
     ITenantDirectoryContext tenantDirectory,
     ITokenService tokenService,
     IPasswordHasher<User> passwordHasher,
@@ -38,10 +38,10 @@ public sealed class LoginCommandHandler(
             throw new UnauthorizedException("This tenant is not currently active.");
         }
 
-        await db.ResetConnectionAsync(cancellationToken);
-        tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
+        //await db.ResetConnectionAsync(cancellationToken);
+        //tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
 
-        var user = await db.Users.SingleOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
+        var user = await accountingInventoryDbContext.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
 
         if (user is null)
         {
@@ -72,7 +72,7 @@ public sealed class LoginCommandHandler(
 
         user.SetRefreshToken(tokenService.HashRefreshToken(pair.RefreshToken), DateTimeOffset.UtcNow.AddDays(7));
 
-        await db.SaveChangesAsync(cancellationToken);
+        await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "User {UserId} ({UserName}) logged in to tenant {TenantId} with roles [{Roles}].",

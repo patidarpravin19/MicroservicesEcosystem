@@ -13,15 +13,86 @@ namespace AccountingInventory.Domain.Entities;
 /// </summary>
 public sealed class Vendor : AggregateRoot
 {
-    public required string Name { get; init; }
-    public required string Code { get; init; }
-    public required string Mobile { get; init; }
-    public required string Email { get; init; }
-    public string? Description { get; init; }
-    public string? Address { get; init; }
+    // Properties changed from 'init' to 'private set' to support mutations via domain methods
+    public string Name { get; private set; } = null!;
+    public string Code { get; private set; } = null!;
+    public string Mobile { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string? Description { get; private set; }
+    public string? Address { get; private set; }
 
     public static Vendor Create(string name, string code, string mobile, string email,
-        string description = null, string address = null)
+        string? description = null, string? address = null)
+    {
+        ValidateInput(name, code, mobile, email);
+
+        return new Vendor
+        {
+            Id = Guid.NewGuid(),
+            Name = name.Trim(),
+            Code = code.Trim(),
+            Mobile = mobile.Trim(),
+            Email = email.Trim(),
+            Description = description?.Trim(),
+            Address = address?.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Updates the vendor's core details with validation constraints.
+    /// </summary>
+    public static Vendor Update(Guid id, string name, string code, string mobile, string email,
+        string? description = null, string? address = null)
+    {
+        //if (IsDeleted)
+        //{
+        //    throw new AccountingInventoryDomainException("Cannot update a deleted vendor.");
+        //}
+
+        ValidateInput(name, code, mobile, email);
+
+        return new Vendor
+        {
+            Id = id,
+            Name = name.Trim(),
+            Code = code.Trim(),
+            Mobile = mobile.Trim(),
+            Email = email.Trim(),
+            Description = description?.Trim(),
+            Address = address?.Trim()
+        };
+        // If your AggregateRoot base class has a tracked modified date, update it here
+        // UpdatedAt = DateTime.UtcNow; 
+    }
+
+    /// <summary>
+    /// Soft deletes the vendor.
+    /// </summary>
+    public void Delete()
+    {
+        if (IsDeleted) return; // Idempotent check
+
+        IsDeleted = true;
+        IsActive = false; // Usually, deleting should also deactivate the entity
+    }
+
+    public void Activate()
+    {
+        if (IsDeleted)
+        {
+            throw new AccountingInventoryDomainException("Cannot activate a deleted vendor.");
+        }
+        IsActive = true;
+    }
+
+    public void InActivate()
+    {
+        if (IsDeleted) return;
+        IsActive = false;
+    }
+
+    // Shared input validation helper used by both Create and Update
+    private static void ValidateInput(string name, string code, string mobile, string email)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -39,32 +110,8 @@ public sealed class Vendor : AggregateRoot
         {
             throw new AccountingInventoryDomainException("Vendor email cannot be empty.");
         }
-        return new Vendor
-        {
-            Id = Guid.NewGuid(),
-            Name = name.Trim(),
-            Code = code.Trim(),
-            Mobile = mobile.Trim(),
-            Email = email.Trim(),
-            Description = description?.Trim(),
-            Address = address?.Trim()
-        };
-    }
-
-    public void Delete()
-    {
-        IsDeleted = true;
-    }
-
-    public void Activate()
-    {
-        IsActive = true;
-    }
-
-    public void InActivate()
-    {
-        IsActive = false;
     }
 
     private Vendor() { }
 }
+

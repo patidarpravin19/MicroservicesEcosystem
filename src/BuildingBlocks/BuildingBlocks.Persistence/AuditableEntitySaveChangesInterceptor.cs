@@ -37,7 +37,7 @@ public sealed class AuditableEntitySaveChangesInterceptor(
     {
         if (context is null) return;
 
-        var actor = currentUserProvider.UserId ?? "system";
+        var actor = currentUserProvider.UserId;
         var now = DateTimeOffset.UtcNow;
 
         foreach (var entry in context.ChangeTracker.Entries<AuditableEntity>())

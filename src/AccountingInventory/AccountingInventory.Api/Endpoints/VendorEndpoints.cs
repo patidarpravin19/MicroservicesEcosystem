@@ -1,6 +1,7 @@
 using AccountingInventory.Application.Tenants.Queries.GetTenantBySlug;
 using AccountingInventory.Application.Tenants.Queries.GetTenants;
 using AccountingInventory.Application.Vendors.Commands.AddVendor;
+using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
 using MediatR;
 
 namespace AccountingInventory.Api.Endpoints;
@@ -35,13 +36,28 @@ public static class VendorEndpoints
             .Produces<TenantSummary>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        group.MapGet("/", async (ISender sender, CancellationToken ct) => 
                 Results.Ok(await sender.Send(new GetTenantsQuery(), ct)))
             .WithName("GetVendors");
 
-        //group.MapPost("/{id:guid}/suspend", async (Guid id, ISender sender, CancellationToken ct) =>
-        //        Results.Ok(await sender.Send(new SuspendTenantCommand(id), ct)))
-        //    .WithName("SuspendVendor");
+        group.MapPut("/{id:guid}", async (Guid id, UpdateVendorCommand command, ISender sender, CancellationToken ct) =>
+        {           
+            if (id != command.Id)
+            {
+                return Results.BadRequest("ID in route does not match ID in body.");
+            }
+
+            var result = await sender.Send(command, ct);
+
+            // 2. Return 200 OK or 204 No Content for a successful update
+            return Results.Ok(result);
+        })
+            .WithName("UpdateVendor")
+            .Produces<UpdateVendorResult>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+    
 
         //group.MapPost("/{id:guid}/reactivate", async (Guid id, ISender sender, CancellationToken ct) =>
         //        Results.Ok(await sender.Send(new ReactivateTenantCommand(id), ct)))

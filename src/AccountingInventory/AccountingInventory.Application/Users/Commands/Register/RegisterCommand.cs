@@ -3,7 +3,6 @@ using MediatR;
 namespace AccountingInventory.Application.Users.Commands.Register;
 
 public sealed record RegisterCommand(
-    string TenantSlug,
     string UserName,
     string Email,
     string Mobile,

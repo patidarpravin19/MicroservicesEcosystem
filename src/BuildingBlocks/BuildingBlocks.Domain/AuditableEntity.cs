@@ -11,9 +11,9 @@ public abstract class AuditableEntity
 {
     public required Guid Id { get; init; }
     public DateTimeOffset CreatedAt { get; set; }
-    public string? CreatedBy { get; set; }
+    public Guid? CreatedBy { get; set; }
     public DateTimeOffset? ModifiedAt { get; set; }
-    public string? ModifiedBy { get; set; }
+    public Guid? ModifiedBy { get; set; }
     public bool IsActive { get; set; }
     public bool IsDeleted { get; set; }
 }
