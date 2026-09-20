@@ -12,7 +12,6 @@ namespace AccountingInventory.Application.Users.Commands.Login;
 public sealed class LoginCommandHandler(
     IAccountingInventoryDbContext accInvDbContext,
     ITenantDirectoryContext tenantDirectory,
-     ITenantContext tenantContext,
     ITokenService tokenService,
     ITenantContextAccessor tenantContextAccessor,
     IPasswordHasher<User> passwordHasher,
@@ -39,8 +38,13 @@ public sealed class LoginCommandHandler(
             throw new UnauthorizedException("This tenant is not currently active.");
         }
 
-        await accInvDbContext.ResetConnectionAsync(cancellationToken);
+        //if (tenantContext.TenantId is { } headerTenantId && headerTenantId != tenant.Id)
+        //{
+        //    throw new UnauthorizedException("Tenant header does not match tenant slug.");
+        //}
+
         tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
+        await accInvDbContext.ResetConnectionAsync(cancellationToken);
        
         var user = await accInvDbContext.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
 

@@ -36,7 +36,7 @@ public static class TenantEndpoints
 
         group.MapGet("/", async (ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetTenantsQuery(), ct)))
-            .WithName("GetTenants");//.RequirePermission("Tenants.Manage");
+            .WithName("GetTenants");
 
         group.MapPost("/{id:guid}/suspend", async (Guid id, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new SuspendTenantCommand(id), ct)))

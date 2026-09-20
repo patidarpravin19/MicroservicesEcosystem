@@ -22,6 +22,7 @@ public static class DependencyInjection
         //                               Tenant.Create / TenantSchemaNameValidator)
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, DynamicTenantProvider>();
+        services.AddScoped<TenantSchemaConnectionInterceptor>();
         services.AddDbContext<AccountingInventoryDbContext>((sp, options) =>
         {
             var tenantProvider = sp.GetRequiredService<ITenantProvider>();
@@ -32,9 +33,10 @@ public static class DependencyInjection
 
             options.UseNpgsql(
                        tenantConnectionString,
-                       npgsql => npgsql.MigrationsHistoryTable("__TenantSchemaHistory", tenantProvider.SchemaName))
+                   npgsql => npgsql.MigrationsHistoryTable("__TenantSchemaHistory", tenantProvider.SchemaName))
                    .UseSnakeCaseNamingConvention()
-                   .ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
+                   .ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>()
+                   .AddInterceptors(sp.GetRequiredService<TenantSchemaConnectionInterceptor>());
         });
         services.AddScoped<IAccountingInventoryDbContext>(sp => sp.GetRequiredService<AccountingInventoryDbContext>());
 

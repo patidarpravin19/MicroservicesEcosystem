@@ -32,6 +32,8 @@ public static class AuthEndpoints
         group.MapPost("/login", async (LoginCommand command, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(command, ct)))
             .WithName("Login").AllowAnonymous()
+            //.AddEndpointFilter<TenantHeaderEndpointFilter>()
+            //.WithMetadata(new RequiresTenantIdHeaderAttribute())
             .Produces<LoginResult>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 

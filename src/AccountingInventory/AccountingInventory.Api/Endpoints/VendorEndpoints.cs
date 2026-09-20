@@ -2,6 +2,8 @@ using AccountingInventory.Application.Tenants.Queries.GetTenantBySlug;
 using AccountingInventory.Application.Tenants.Queries.GetTenants;
 using AccountingInventory.Application.Vendors.Commands.AddVendor;
 using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
+using AccountingInventory.Application.Vendors.Queries.GetVendors;
+using BuildingBlocks.WebDefaults;
 using MediatR;
 
 namespace AccountingInventory.Api.Endpoints;
@@ -16,7 +18,8 @@ public static class VendorEndpoints
             // Tenant-specific vendor data always requires X-Tenant-Id. The filter
             // resolves its schema from the tenant registry before MediatR creates a
             // tenant-scoped DbContext.
-            .AddEndpointFilter<TenantHeaderEndpointFilter>();
+            .AddEndpointFilter<TenantHeaderEndpointFilter>()
+            .WithMetadata(new RequiresTenantIdHeaderAttribute());
 
         // The tenant is selected by X-Tenant-Id and resolved server-side by the
         // group filter. The header must match the authenticated user's tenant.
@@ -37,8 +40,8 @@ public static class VendorEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/", async (ISender sender, CancellationToken ct) => 
-                Results.Ok(await sender.Send(new GetTenantsQuery(), ct)))
-            .WithName("GetVendors").AllowAnonymous();
+                Results.Ok(await sender.Send(new GetVendorsQuery(), ct)))
+            .WithName("GetVendors");
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateVendorCommand command, ISender sender, CancellationToken ct) =>
         {           
