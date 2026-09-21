@@ -45,7 +45,30 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
+// 1. Define a string constant for your policy name
+const string myCorsPolicy = "_myAllowSpecificOrigins";
+
+// 2. Fetch the allowed origins array from appsettings.json
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+// 3. Add CORS services and define the policy rules
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: myCorsPolicy, policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+// 4. Crucial: app.UseCors must be placed AFTER app.UseRouting() (if explicitly declared) 
+// but BEFORE app.UseAuthorization() and endpoint mapping middleware.
+app.UseCors(myCorsPolicy);
 
 app.UseCorrelationId();
 app.UseSharedRequestLogging();
