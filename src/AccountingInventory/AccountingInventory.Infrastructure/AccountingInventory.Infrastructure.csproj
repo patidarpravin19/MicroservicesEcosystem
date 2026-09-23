@@ -6,6 +6,7 @@
 
 	<ItemGroup>
 	  <Compile Remove="Persistence\Configurations\RoleConfiguration.cs" />
+	  <Compile Remove="Persistence\Interceptors\AuditableEntitySaveChangesInterceptor.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -25,6 +26,10 @@
 		<ProjectReference Include="..\..\BuildingBlocks\BuildingBlocks.Security\BuildingBlocks.Security.csproj" />
 		<ProjectReference Include="..\AccountingInventory.Application\AccountingInventory.Application.csproj" />
 		<ProjectReference Include="..\AccountingInventory.Domain\AccountingInventory.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Persistence\Interceptors\" />
 	</ItemGroup>
 
 </Project>

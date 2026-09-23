@@ -1,12 +1,13 @@
-using AccountingInventory.Domain.Common;
+using BuildingBlocks.Domain;
+using BuildingBlocks.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace AccountingInventory.Infrastructure.Persistence.Interceptors;
 
 /// <summary>
-/// EF Core SaveChanges interceptor that stamps CreatedAtUtc/CreatedBy on insert and
-/// LastModifiedAtUtc/LastModifiedBy on update for every AuditableEntity — automatically,
+/// EF Core SaveChanges interceptor that stamps CreatedAt/CreatedBy on insert and
+/// ModifiedAt/ModifiedBy on update for every AuditableEntity — automatically,
 /// with zero code required in Application-layer handlers. Deletes are converted to
 /// soft-deletes so audit history is never lost.
 /// </summary>
@@ -33,7 +34,7 @@ public sealed class AuditableEntitySaveChangesInterceptor(ICurrentUserProvider c
     {
         if (context is null) return;
 
-        var actor = currentUserProvider.UserId ?? "system";
+        var actor = currentUserProvider.UserId;
         var now = DateTimeOffset.UtcNow;
 
         foreach (var entry in context.ChangeTracker.Entries<AuditableEntity>())
@@ -41,31 +42,22 @@ public sealed class AuditableEntitySaveChangesInterceptor(ICurrentUserProvider c
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entry.Property(e => e.CreatedAtUtc).CurrentValue = now;
+                    entry.Property(e => e.CreatedAt).CurrentValue = now;
                     entry.Property(e => e.CreatedBy).CurrentValue = actor;
                     break;
 
                 case EntityState.Modified:
-                    entry.Property(e => e.LastModifiedAtUtc).CurrentValue = now;
-                    entry.Property(e => e.LastModifiedBy).CurrentValue = actor;
+                    entry.Property(e => e.ModifiedAt).CurrentValue = now;
+                    entry.Property(e => e.ModifiedBy).CurrentValue = actor;
                     break;
 
                 case EntityState.Deleted:
                     entry.State = EntityState.Modified;
                     entry.Property(e => e.IsDeleted).CurrentValue = true;
-                    entry.Property(e => e.LastModifiedAtUtc).CurrentValue = now;
-                    entry.Property(e => e.LastModifiedBy).CurrentValue = actor;
+                    entry.Property(e => e.ModifiedAt).CurrentValue = now;
+                    entry.Property(e => e.ModifiedBy).CurrentValue = actor;
                     break;
             }
         }
     }
-}
-
-/// <summary>
-/// Abstraction the interceptor uses to discover "who" performed the change, without
-/// the Infrastructure persistence code depending directly on IHttpContextAccessor.
-/// </summary>
-public interface ICurrentUserProvider
-{
-    string? UserId { get; }
 }
