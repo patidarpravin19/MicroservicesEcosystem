@@ -36,6 +36,7 @@ public sealed class AccountingInventoryDbContext(
         // the same migration can run in every tenant schema.
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new VendorConfiguration());
+        modelBuilder.ApplyConfiguration(new BrandConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }
