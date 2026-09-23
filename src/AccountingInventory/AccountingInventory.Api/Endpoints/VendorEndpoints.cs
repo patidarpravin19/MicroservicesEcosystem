@@ -1,7 +1,6 @@
-using AccountingInventory.Application.Tenants.Queries.GetTenantBySlug;
-using AccountingInventory.Application.Tenants.Queries.GetTenants;
 using AccountingInventory.Application.Vendors.Commands.AddVendor;
 using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
+using AccountingInventory.Application.Vendors.Queries.GetVendorById;
 using AccountingInventory.Application.Vendors.Queries.GetVendors;
 using BuildingBlocks.WebDefaults;
 using MediatR;
@@ -23,7 +22,7 @@ public static class VendorEndpoints
 
         // The tenant is selected by X-Tenant-Id and resolved server-side by the
         // group filter. The header must match the authenticated user's tenant.
-        group.MapPost("/add", async (AddVendorCommand command, ISender sender, CancellationToken ct) =>
+        group.MapPost("/", async (AddVendorCommand command, ISender sender, CancellationToken ct) =>
             {
                 var result = await sender.Send(command, ct);
                 return Results.Created($"/api/vendors", result);
@@ -33,15 +32,15 @@ public static class VendorEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        group.MapGet("/by-slug/{slug}", async (string slug, ISender sender, CancellationToken ct) =>
-                Results.Ok(await sender.Send(new GetTenantBySlugQuery(slug), ct)))
-            .WithName("GetVendorBySlug")
-            .Produces<TenantSummary>()
+        group.MapGet("/{id}", async (Guid id, ISender sender, CancellationToken ct) =>
+                 Results.Ok(await sender.Send(new GetVendorByIdQuery(id), ct)))
+            .WithName("GetVendorById")
+            .Produces<Application.Vendors.Queries.GetVendorById.VendorSummary>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/", async (ISender sender, CancellationToken ct) => 
                 Results.Ok(await sender.Send(new GetVendorsQuery(), ct)))
-            .WithName("GetVendors");
+            .WithName("GetVendors");     
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateVendorCommand command, ISender sender, CancellationToken ct) =>
         {           

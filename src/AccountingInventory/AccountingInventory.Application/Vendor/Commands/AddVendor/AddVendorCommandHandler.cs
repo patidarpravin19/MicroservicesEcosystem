@@ -54,6 +54,6 @@ public sealed class AddVendorCommandHandler(
         //    "Vendor {VendorId} ({Name}) fully provisioned and activated: schema {SchemaName}, default roles Admin/User seeded.",
         //    tenant.Id, tenant.Name, tenant.SchemaName);
 
-        return new AddVendorResult(vendor.Id, vendor.Name, vendor.Code, vendor.Mobile, vendor.Email, vendor.Description, vendor.Address);
+        return new AddVendorResult(vendor.Id, vendor.Name, vendor.Code, vendor.Mobile, vendor.Email, vendor.Description!, vendor.Address!);
     }
 }

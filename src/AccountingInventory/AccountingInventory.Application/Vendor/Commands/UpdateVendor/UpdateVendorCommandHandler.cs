@@ -37,7 +37,7 @@ public sealed class UpdateVendorCommandHandler(
         var vendor = Vendor.Update(request.Id, request.Name, request.Code, request.Mobile, request.Email,
             request.Description, request.Address);
 
-        accountingInventoryDbContext.Vendors.Add(vendor);
+        accountingInventoryDbContext.Vendors.Update(vendor);
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
