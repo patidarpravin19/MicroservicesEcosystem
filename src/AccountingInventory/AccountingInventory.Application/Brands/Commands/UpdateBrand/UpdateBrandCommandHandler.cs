@@ -1,14 +1,15 @@
 using AccountingInventory.Application.Abstractions;
+using AccountingInventory.Application.Brands.Commands.UpdateBrandCommand;
 using AccountingInventory.Domain.Entities;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AccountingInventory.Application.Vendors.Commands.UpdateVendor;
+namespace AccountingInventory.Application.Brands.Commands.UpdateBrandCommand;
 
 /// <summary>
-/// The entire vendor add flow, in one handler, entirely inside AccountingInventory:
+/// The entire brand update flow, in one handler, entirely inside AccountingInventory:
 /// </summary>
 public sealed class UpdateBrandCommandHandler(
     IAccountingInventoryDbContext accountingInventoryDbContext,

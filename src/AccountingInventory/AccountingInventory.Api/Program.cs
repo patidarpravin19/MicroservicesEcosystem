@@ -33,6 +33,7 @@ app.MapAuthEndpoints();
 //app.MapRoleEndpoints();
 app.MapTenantEndpoints();
 app.MapVendorEndpoints();
+app.MapBrandEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
 using (var scope = app.Services.CreateScope())

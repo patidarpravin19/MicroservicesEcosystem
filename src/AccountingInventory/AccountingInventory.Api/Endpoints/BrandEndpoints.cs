@@ -1,14 +1,11 @@
-using AccountingInventory.Application.Vendors.Commands.AddVendor;
-using AccountingInventory.Application.Vendors.Commands.DeleteVendor;
-using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
+using AccountingInventory.Application.Brands.Commands.AddBrand;
+using AccountingInventory.Application.Brands.Commands.DeleteBrand;
+using AccountingInventory.Application.Brands.Commands.UpdateBrandCommand;
+using AccountingInventory.Application.Brands.Queries.GetBrandById;
 using AccountingInventory.Application.Common.Models;
-using AccountingInventory.Application.Vendors.Queries.GetVendorById;
-using AccountingInventory.Application.Vendors.Queries.GetVendors;
 using BuildingBlocks.WebDefaults;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using AccountingInventory.Application.Brands.Commands.AddBrand;
-using AccountingInventory.Application.Brands.Commands.DeleteBrand;
 
 namespace AccountingInventory.Api.Endpoints;
 
@@ -19,7 +16,7 @@ public static class BrandEndpoints
         var group = app.MapGroup("/api/brands")
             .WithTags("Brands")
             .RequireAuthorization("AuthenticatedUser")
-            // Tenant-specific vendor data always requires X-Tenant-Id. The filter
+            // Tenant-specific brand data always requires X-Tenant-Id. The filter
             // resolves its schema from the tenant registry before MediatR creates a
             // tenant-scoped DbContext.
             .AddEndpointFilter<TenantHeaderEndpointFilter>()
@@ -27,7 +24,7 @@ public static class BrandEndpoints
 
         // The tenant is selected by X-Tenant-Id and resolved server-side by the
         // group filter. The header must match the authenticated user's tenant.
-        group.MapPost("/", async (AddVendorCommand command, ISender sender, CancellationToken ct) =>
+        group.MapPost("/", async (AddBrandCommand command, ISender sender, CancellationToken ct) =>
             {
                 var result = await sender.Send(command, ct);
                 return Results.Created($"/api/brands", result);

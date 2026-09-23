@@ -26,7 +26,14 @@ public sealed class GetBrandsQueryHandler(IAccountingInventoryDbContext accounti
         var items = await ApplySort(query, request.SortBy, descending)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(v => new BrandSummary(v.VendorId, v.Name, v.Description!))
+            .Select(brand => new BrandSummary(
+                brand.Id,
+                accountingInventoryDbContext.Vendors
+                    .Where(vendor => vendor.Id == brand.VendorId)
+                    .Select(vendor => vendor.Name)
+                    .FirstOrDefault() ?? string.Empty,
+                brand.Name,
+                brand.Description ?? string.Empty))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<BrandSummary>(items, page, pageSize, totalCount,

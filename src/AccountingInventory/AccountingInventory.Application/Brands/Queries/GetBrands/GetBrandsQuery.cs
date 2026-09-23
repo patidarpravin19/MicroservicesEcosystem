@@ -10,4 +10,4 @@ public sealed record GetBrandsQuery(
     string? SortDirection = null,
     string? Search = null) : IRequest<PagedResult<BrandSummary>>;
 
-public sealed record BrandSummary(Guid Id, string Name, string Description);
+public sealed record BrandSummary(Guid Id, string vendorName, string Name, string Description);

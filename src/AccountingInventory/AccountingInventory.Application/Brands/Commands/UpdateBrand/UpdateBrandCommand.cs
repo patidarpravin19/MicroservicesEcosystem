@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace AccountingInventory.Application.Vendors.Commands.UpdateVendor;
+namespace AccountingInventory.Application.Brands.Commands.UpdateBrandCommand;
 
 /// <summary>Self-service brand update — deliberately anonymous at the API layer
 /// this in a production deployment.</summary>
