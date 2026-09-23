@@ -1,4 +1,5 @@
 using AccountingInventory.Application.Abstractions;
+using AccountingInventory.Application.Common.Models;
 using AccountingInventory.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -6,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 namespace AccountingInventory.Application.Vendors.Queries.GetVendors;
 
 public sealed class GetVendorsQueryHandler(IAccountingInventoryDbContext accountingInventoryDbContext)
-    : IRequestHandler<GetVendorsQuery, PagedVendors>
+    : IRequestHandler<GetVendorsQuery, PagedResult<VendorSummary>>
 {
-    public async Task<PagedVendors> Handle(GetVendorsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<VendorSummary>> Handle(GetVendorsQuery request, CancellationToken cancellationToken)
     {
         var query = accountingInventoryDbContext.Vendors.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -31,7 +32,7 @@ public sealed class GetVendorsQueryHandler(IAccountingInventoryDbContext account
             .Select(v => new VendorSummary(v.Id, v.Name, v.Code, v.Mobile, v.Email, v.Description!, v.Address!, v.IsActive))
             .ToListAsync(cancellationToken);
 
-        return new PagedVendors(items, page, pageSize, totalCount,
+        return new PagedResult<VendorSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
 
