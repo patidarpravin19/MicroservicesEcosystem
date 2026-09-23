@@ -25,6 +25,7 @@ public sealed class AccountingInventoryDbContext(
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<Brand> Brands => Set<Brand>();
 
     //public DbSet<Role> Roles => Set<Role>();
 
