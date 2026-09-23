@@ -33,7 +33,8 @@ public sealed class GetBrandsQueryHandler(IAccountingInventoryDbContext accounti
                     .Select(vendor => vendor.Name)
                     .FirstOrDefault() ?? string.Empty,
                 brand.Name,
-                brand.Description ?? string.Empty))
+                brand.Description ?? string.Empty,
+                brand.IsActive))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<BrandSummary>(items, page, pageSize, totalCount,

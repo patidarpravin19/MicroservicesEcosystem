@@ -28,7 +28,7 @@ public sealed class UpdateVendorCommandHandler(
             throw new NotFoundException($"A vendor with ID '{request.Id}' was not found.");
         }
 
-        var vendor = Vendor.Update(request.Id, request.Name, request.Code, request.Mobile, request.Email,
+        var vendor = Vendor.Update(request.Id, request.Name, request.Code, request.Mobile, request.Email, request.IsActive,
             request.Description, request.Address);
 
         accountingInventoryDbContext.Vendors.Update(vendor);
@@ -38,6 +38,6 @@ public sealed class UpdateVendorCommandHandler(
             "Vendor {VendorId} - ({Name}) - {Code} update successfully.",
             vendor.Id, vendor.Name, vendor.Code);
 
-        return new UpdateVendorResult(vendor.Id, vendor.Name, vendor.Code, vendor.Mobile, vendor.Email, vendor.Description, vendor.Address);
+        return new UpdateVendorResult(vendor.Id, vendor.Name, vendor.Code, vendor.Mobile, vendor.Email, vendor.IsActive, vendor.Description!, vendor.Address!);
     }
 }

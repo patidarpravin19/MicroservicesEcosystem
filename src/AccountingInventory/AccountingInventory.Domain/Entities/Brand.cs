@@ -25,6 +25,8 @@ public sealed class Brand : AggregateRoot
         return new Brand
         {
             Id = Guid.NewGuid(),
+            IsActive = true,
+            VendorId = vendorId,
             Name = name.Trim(),
             Description = description?.Trim(),
         };
@@ -32,7 +34,7 @@ public sealed class Brand : AggregateRoot
     /// <summary>
     /// Updates the brand's core details with validation constraints.
     /// </summary>
-    public static Brand Update(Guid id, Guid vendorId, string name, string? description = null)
+    public static Brand Update(Guid id, Guid vendorId, string name, string? description, bool isActive)
     {
         ValidateInput(vendorId, name, description);
 
@@ -40,6 +42,7 @@ public sealed class Brand : AggregateRoot
         {
             Id = id,
             VendorId = vendorId,
+            IsActive = isActive,
             Name = name.Trim(),
             Description = description?.Trim()
         };

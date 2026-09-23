@@ -33,6 +33,7 @@ public sealed class Vendor : AggregateRoot
             Code = code.Trim(),
             Mobile = mobile.Trim(),
             Email = email.Trim(),
+            IsActive = true,
             Description = description?.Trim(),
             Address = address?.Trim()
         };
@@ -41,7 +42,7 @@ public sealed class Vendor : AggregateRoot
     /// <summary>
     /// Updates the vendor's core details with validation constraints.
     /// </summary>
-    public static Vendor Update(Guid id, string name, string code, string mobile, string email,
+    public static Vendor Update(Guid id, string name, string code, string mobile, string email, bool isActive,
         string? description = null, string? address = null)
     {
         //if (IsDeleted)
@@ -58,6 +59,7 @@ public sealed class Vendor : AggregateRoot
             Code = code.Trim(),
             Mobile = mobile.Trim(),
             Email = email.Trim(),
+            IsActive = isActive,
             Description = description?.Trim(),
             Address = address?.Trim()
         };

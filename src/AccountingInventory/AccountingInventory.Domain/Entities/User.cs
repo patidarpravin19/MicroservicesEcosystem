@@ -46,6 +46,7 @@ public sealed class User : AggregateRoot
         {
             Id = Guid.NewGuid(),
             UserName = userName,
+            IsActive = true,
             Mobile = mobile,
             Email = email,
         };

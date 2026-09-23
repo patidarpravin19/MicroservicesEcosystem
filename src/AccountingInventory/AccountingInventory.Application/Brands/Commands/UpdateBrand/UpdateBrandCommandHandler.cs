@@ -29,7 +29,7 @@ public sealed class UpdateBrandCommandHandler(
             throw new NotFoundException($"A brand with ID '{request.Id}' was not found.");
         }
 
-        var brand = Brand.Update(request.Id, request.VendorId, request.Name, request.Description);
+        var brand = Brand.Update(request.Id, request.VendorId, request.Name, request.Description, request.IsActive);
 
         accountingInventoryDbContext.Brands.Update(brand);
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
@@ -38,6 +38,6 @@ public sealed class UpdateBrandCommandHandler(
             "Brand {BrandId} - ({Name}) - {Description} update successfully.",
             brand.Id, brand.Name, brand.Description);
 
-        return new UpdateBrandResult(brand.Id, brand.VendorId, brand.Name, brand.Description!);
+        return new UpdateBrandResult(brand.Id, brand.VendorId, brand.Name, brand.Description!, brand.IsActive);
     }
 }
