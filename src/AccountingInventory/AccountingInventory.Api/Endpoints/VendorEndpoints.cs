@@ -1,9 +1,11 @@
 using AccountingInventory.Application.Vendors.Commands.AddVendor;
+using AccountingInventory.Application.Vendors.Commands.DeleteVendor;
 using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
 using AccountingInventory.Application.Vendors.Queries.GetVendorById;
 using AccountingInventory.Application.Vendors.Queries.GetVendors;
 using BuildingBlocks.WebDefaults;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AccountingInventory.Api.Endpoints;
 
@@ -32,15 +34,30 @@ public static class VendorEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapGet("/", async (
+             [FromQuery] int? page,
+             [FromQuery] int? pageSize,
+             [FromQuery] string? sortBy,
+             [FromQuery] string? sortDirection,
+             [FromQuery] string? search,
+             ISender sender,
+             CancellationToken ct) =>
+             Results.Ok(await sender.Send(new GetVendorsQuery(
+                 page ?? 1,
+                 pageSize ?? 20,
+                 sortBy,
+                 sortDirection ?? "asc",
+                 search), ct)))
+         .WithName("GetVendors")
+         .Produces<PagedVendors>();
+
         group.MapGet("/{id}", async (Guid id, ISender sender, CancellationToken ct) =>
                  Results.Ok(await sender.Send(new GetVendorByIdQuery(id), ct)))
             .WithName("GetVendorById")
-            .Produces<Application.Vendors.Queries.GetVendorById.VendorSummary>()
+            //.Produces<Application.Vendors.Queries.GetVendorById.VendorSummary>()
+            .Produces(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapGet("/", async (ISender sender, CancellationToken ct) => 
-                Results.Ok(await sender.Send(new GetVendorsQuery(), ct)))
-            .WithName("GetVendors");     
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateVendorCommand command, ISender sender, CancellationToken ct) =>
         {           
@@ -59,12 +76,16 @@ public static class VendorEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                await sender.Send(new DeleteVendorCommand(id), ct);
+                return Results.NoContent();
+            })
+            .WithName("DeleteVendor")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     
-
-        //group.MapPost("/{id:guid}/reactivate", async (Guid id, ISender sender, CancellationToken ct) =>
-        //        Results.Ok(await sender.Send(new ReactivateTenantCommand(id), ct)))
-        //    .WithName("ReactivateVendor");
-
         return group;
     }
 }

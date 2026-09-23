@@ -1,8 +1,6 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
 using BuildingBlocks.Application.Exceptions;
-using BuildingBlocks.Domain.MultiTenancy;
-using BuildingBlocks.Messaging;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,11 +11,7 @@ namespace AccountingInventory.Application.Vendors.Commands.UpdateVendor;
 /// The entire vendor add flow, in one handler, entirely inside AccountingInventory:
 /// </summary>
 public sealed class UpdateVendorCommandHandler(
-    //ITenantDirectoryContext tenantDirectory,
     IAccountingInventoryDbContext accountingInventoryDbContext,
-    //ITenantSchemaProvisioner schemaProvisioner,
-    //ITenantContextAccessor tenantContextAccessor,
-    //IEventPublisher eventPublisher,
     ILogger<UpdateVendorCommandHandler> logger)
     : IRequestHandler<UpdateVendorCommand, UpdateVendorResult>
 {
