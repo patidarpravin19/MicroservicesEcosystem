@@ -21,9 +21,10 @@ public sealed class AddProductTypeCommandHandler(
     {
         var normalizedCode = request.Name.Trim().ToLowerInvariant();
 
-        var ProductTypeTaken = await accountingInventoryDbContext.ProductTypes.AnyAsync(b => b.Name == request.Name, cancellationToken);
+        var productTypeTaken = await accountingInventoryDbContext.ProductTypes.AnyAsync(p => p.VendorId == request.VendorId
+        && p.BrandId == request.BrandId && p.Name == request.Name, cancellationToken);
 
-        if (ProductTypeTaken)
+        if (productTypeTaken)
         {
             logger.LogWarning("ProductType registration rejected: name {Name} already in use.", request.Name);
             throw new ConflictException($"A ProductType with name '{request.Name}' already exists.");
