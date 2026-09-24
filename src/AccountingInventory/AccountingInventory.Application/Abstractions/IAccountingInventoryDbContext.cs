@@ -12,6 +12,7 @@ public interface IAccountingInventoryDbContext
     DbSet<User> Users { get; }
     DbSet<Vendor> Vendors { get; }
     DbSet<Brand> Brands { get; }
+    DbSet<ProductType> ProductTypes { get; }
     //DbSet<Role> Roles { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

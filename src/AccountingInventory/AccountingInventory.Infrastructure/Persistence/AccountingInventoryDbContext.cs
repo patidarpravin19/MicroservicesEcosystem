@@ -26,6 +26,7 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<User> Users => Set<User>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<ProductType> ProductTypes => Set<ProductType>();
 
     //public DbSet<Role> Roles => Set<Role>();
 
@@ -37,6 +38,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new VendorConfiguration());
         modelBuilder.ApplyConfiguration(new BrandConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductTypeConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }

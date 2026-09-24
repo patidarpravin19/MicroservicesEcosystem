@@ -1,8 +1,7 @@
-using AccountingInventory.Application.Brands.Commands.AddBrand;
-using AccountingInventory.Application.Brands.Commands.DeleteBrand;
-using AccountingInventory.Application.Brands.Commands.UpdateBrandCommand;
-using AccountingInventory.Application.Brands.Queries.GetBrandById;
-using AccountingInventory.Application.Brands.Queries.GetBrandsForDDL;
+using AccountingInventory.Application.ProductTypes.Commands.AddProductType;
+using AccountingInventory.Application.ProductTypes.Commands.DeleteProductType;
+using AccountingInventory.Application.ProductTypes.Commands.UpdateProductTypeCommand;
+using AccountingInventory.Application.ProductTypes.Queries.GetProductTypeById;
 using AccountingInventory.Application.Common.Models;
 using BuildingBlocks.WebDefaults;
 using MediatR;
@@ -10,14 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccountingInventory.Api.Endpoints;
 
-public static class BrandEndpoints
+public static class ProductTypeEndpoints
 {
-    public static RouteGroupBuilder MapBrandEndpoints(this IEndpointRouteBuilder app)
+    public static RouteGroupBuilder MapProductTypeEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/brands")
-            .WithTags("Brands")
+        var group = app.MapGroup("/api/product-types")
+            .WithTags("ProductTypes")
             .RequireAuthorization("AuthenticatedUser")
-            // Tenant-specific brand data always requires X-Tenant-Id. The filter
+            // Tenant-specific product type data always requires X-Tenant-Id. The filter
             // resolves its schema from the tenant registry before MediatR creates a
             // tenant-scoped DbContext.
             .AddEndpointFilter<TenantHeaderEndpointFilter>()
@@ -25,21 +24,15 @@ public static class BrandEndpoints
 
         // The tenant is selected by X-Tenant-Id and resolved server-side by the
         // group filter. The header must match the authenticated user's tenant.
-        group.MapPost("/", async (AddBrandCommand command, ISender sender, CancellationToken ct) =>
+        group.MapPost("/", async (AddProductTypeCommand command, ISender sender, CancellationToken ct) =>
             {
                 var result = await sender.Send(command, ct);
-                return Results.Created($"/api/brands", result);
+                return Results.Created($"/api/product-types", result);
             })
-            .WithName("AddBrand")
-            .Produces<AddBrandResult>(StatusCodes.Status201Created)
+            .WithName("AddProductType")
+            .Produces<AddProductTypeResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
-
-        group.MapGet("/all/{vendorId}", async (Guid vendorId, ISender sender,
-             CancellationToken ct) =>
-             Results.Ok(await sender.Send(new GetBrandsForDDL(vendorId), ct)))
-                 .WithName("GetBrandsForDDL")
-                 .Produces<IEnumerable<GetBrandsForDDLSummary>>();
 
         group.MapGet("/", async (
              [FromQuery] int? page,
@@ -49,24 +42,24 @@ public static class BrandEndpoints
              [FromQuery] string? search,
              ISender sender,
              CancellationToken ct) =>
-             Results.Ok(await sender.Send(new Application.Brands.Queries.GetBrands.GetBrandsQuery(
+             Results.Ok(await sender.Send(new Application.ProductTypes.Queries.GetProductTypes.GetProductTypesQuery(
                  page ?? 1,
                  pageSize ?? 20,
                  sortBy,
                  sortDirection ?? "asc",
                  search), ct)))
-         .WithName("GetBrands")
-         .Produces<PagedResult<Application.Brands.Queries.GetBrands.BrandSummary>>();
+         .WithName("GetProductTypes")
+         .Produces<PagedResult<Application.ProductTypes.Queries.GetProductTypes.ProductTypeSummary>>();
 
         group.MapGet("/{id}", async (Guid id, ISender sender, CancellationToken ct) =>
-                 Results.Ok(await sender.Send(new GetBrandByIdQuery(id), ct)))
-            .WithName("GetBrandById")
-            //.Produces<Application.Brands.Queries.GetBrandById.BrandSummary>()
+                 Results.Ok(await sender.Send(new GetProductTypeByIdQuery(id), ct)))
+            .WithName("GetProductTypeById")
+            //.Produces<Application.ProductTypes.Queries.GetProductTypeById.ProductTypeSummary>()
             .Produces(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        group.MapPut("/{id:guid}", async (Guid id, UpdateBrandCommand command, ISender sender, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, UpdateProductTypeCommand command, ISender sender, CancellationToken ct) =>
         {           
             if (id != command.Id)
             {
@@ -78,18 +71,18 @@ public static class BrandEndpoints
             // 2. Return 200 OK or 204 No Content for a successful update
             return Results.Ok(result);
         })
-            .WithName("UpdateBrand")
-            .Produces<UpdateBrandResult>(StatusCodes.Status200OK)
+            .WithName("UpdateProductType")
+            .Produces<UpdateProductTypeResult>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
             {
-                await sender.Send(new DeleteBrandCommand(id), ct);
+                await sender.Send(new DeleteProductTypeCommand(id), ct);
                 return Results.NoContent();
             })
-            .WithName("DeleteBrand")
+            .WithName("DeleteProductType")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
     

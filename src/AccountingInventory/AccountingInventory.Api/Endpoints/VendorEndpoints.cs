@@ -39,8 +39,8 @@ public static class VendorEndpoints
         group.MapGet("/all", async (ISender sender,
            CancellationToken ct) =>
            Results.Ok(await sender.Send(new GetVendorsForDDL(), ct)))
-       .WithName("GetVendorsForDDL")
-       .Produces<IEnumerable<GetVendorsForDDLSummary>>();
+           .WithName("GetVendorsForDDL")
+           .Produces<IEnumerable<GetVendorsForDDLSummary>>();
 
         group.MapGet("/", async (
              [FromQuery] int? page,

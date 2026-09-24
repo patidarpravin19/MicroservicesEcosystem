@@ -1,0 +1,99 @@
+using BuildingBlocks.Domain;
+using AccountingInventory.Domain.Exceptions;
+
+namespace AccountingInventory.Domain.Entities;
+
+/// <summary>
+/// A database-managed product type, scoped to one tenant. This is the ENTIRE mechanism behind
+/// "which vendors can access which screen/controller": a Vendor simply owns a list of
+/// permission codes (e.g. "Inventory.StockItems.Create"), editable at any time via
+/// VendorEndpoints without touching code or redeploying anything. Every user assigned
+/// this product type picks up its current permission codes as JWT claims the next time they
+/// log in or refresh their token (see LoginCommandHandler / RefreshTokenCommandHandler).
+/// </summary>
+public sealed class ProductType : AggregateRoot
+{
+    // Properties changed from 'init' to 'private set' to support mutations via domain methods
+    public Guid VendorId { get; private set; }
+    public Guid BrandId { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string? Description { get; private set; } = null!;
+
+    public static ProductType Create(Guid vendorId, Guid brandId, string name, string? description = null)
+    {
+        ValidateInput(vendorId, brandId, name, description);
+
+        return new ProductType
+        {
+            Id = Guid.NewGuid(),
+            IsActive = true,
+            VendorId = vendorId,
+            BrandId = brandId,
+            Name = name.Trim(),
+            Description = description?.Trim(),
+        };
+    }
+    /// <summary>
+    /// Updates the product type's core details with validation constraints.
+    /// </summary>
+    public static ProductType Update(Guid id, Guid vendorId, Guid brandId, string name, string? description, bool isActive)
+    {
+        ValidateInput(vendorId, brandId, name, description);
+
+        return new ProductType
+        {
+            Id = id,
+            VendorId = vendorId,
+            BrandId = brandId,
+            IsActive = isActive,
+            Name = name.Trim(),
+            Description = description?.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Soft deletes the product type.
+    /// </summary>
+    public void Delete()
+    {
+        if (IsDeleted) return; // Idempotent check
+
+        IsDeleted = true;
+        IsActive = false; // Usually, deleting should also deactivate the entity
+    }
+
+    public void Activate()
+    {
+        if (IsDeleted)
+        {
+            throw new AccountingInventoryDomainException("Cannot activate a deleted product type.");
+        }
+        IsActive = true;
+    }
+
+    public void InActivate()
+    {
+        if (IsDeleted) return;
+        IsActive = false;
+    }
+
+    // Shared input validation helper used by both Create and Update
+    private static void ValidateInput(Guid vendorId, Guid brandId, string name, string? description)
+    {
+        if (vendorId == Guid.Empty)
+        {
+            throw new AccountingInventoryDomainException("Product Type Vendor ID cannot be empty.");
+        }
+        if (brandId == Guid.Empty)
+        {
+            throw new AccountingInventoryDomainException("Product Type Brand ID cannot be empty.");
+        }
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new AccountingInventoryDomainException("Product Type name cannot be empty.");
+        }
+    }
+
+    private ProductType() { }
+}
+

@@ -9,7 +9,8 @@
             public const string Roles = "roles";
             public const string Vendors = "vendors";
             public const string Brands = "brands";
-            
+            public const string ProductTypes = "product_types";
+
         }
     }
 }
