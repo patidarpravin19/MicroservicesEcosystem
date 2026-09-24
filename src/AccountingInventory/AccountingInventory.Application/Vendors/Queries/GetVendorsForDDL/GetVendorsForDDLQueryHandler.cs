@@ -11,6 +11,7 @@ public sealed class GetVendorsForDDLQueryHandler(IAccountingInventoryDbContext a
     {
         var vendors = await accountingInventoryDbContext.Vendors
             .AsNoTracking()
+            .Where(v => v.IsActive)
             .Select(v => new GetVendorsForDDLSummary(v.Id, v.Name))
             .ToListAsync(cancellationToken);
 
