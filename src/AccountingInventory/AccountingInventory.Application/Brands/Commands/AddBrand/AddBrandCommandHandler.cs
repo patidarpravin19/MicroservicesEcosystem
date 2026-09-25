@@ -29,7 +29,7 @@ public sealed class AddBrandCommandHandler(
             throw new ConflictException($"A brand with name '{request.Name}' already exists.");
         }
 
-        var brand = Brand.Create(request.VendorId, request.Name, request.Description);
+        var brand = Brand.Create (request.Name, request.Description);
 
         brand.Activate();
         accountingInventoryDbContext.Brands.Add(brand);
@@ -39,6 +39,6 @@ public sealed class AddBrandCommandHandler(
             "Brand {BrandId} - ({Name}) added successfully.",
             brand.Id, brand.Name);
 
-        return new AddBrandResult(brand.Id, brand.VendorId, brand.Name, brand.Description!);
+        return new AddBrandResult(brand.Id, brand.Name, brand.Description!);
     }
 }

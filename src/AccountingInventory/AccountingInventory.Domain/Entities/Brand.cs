@@ -14,19 +14,19 @@ namespace AccountingInventory.Domain.Entities;
 public sealed class Brand : AggregateRoot
 {
     // Properties changed from 'init' to 'private set' to support mutations via domain methods
-    public Guid VendorId { get; private set; }
+    //public Guid VendorId { get; private set; }
     public string Name { get; private set; } = null!;
     public string? Description { get; private set; } = null!;
 
-    public static Brand Create(Guid vendorId, string name, string? description = null)
+    public static Brand Create(string name, string? description = null)
     {
-        ValidateInput(vendorId, name, description);
+        //ValidateInput(name, description);
 
         return new Brand
         {
             Id = Guid.NewGuid(),
             IsActive = true,
-            VendorId = vendorId,
+            //VendorId = vendorId,
             Name = name.Trim(),
             Description = description?.Trim(),
         };
@@ -34,14 +34,14 @@ public sealed class Brand : AggregateRoot
     /// <summary>
     /// Updates the brand's core details with validation constraints.
     /// </summary>
-    public static Brand Update(Guid id, Guid vendorId, string name, string? description, bool isActive)
+    public static Brand Update(Guid id, string name, string? description, bool isActive)
     {
-        ValidateInput(vendorId, name, description);
+        //ValidateInput(name, description);
 
         return new Brand
         {
             Id = id,
-            VendorId = vendorId,
+            ////VendorId = vendorId,
             IsActive = isActive,
             Name = name.Trim(),
             Description = description?.Trim()
@@ -75,12 +75,8 @@ public sealed class Brand : AggregateRoot
     }
 
     // Shared input validation helper used by both Create and Update
-    private static void ValidateInput(Guid vendorId, string name, string? description)
+    private static void ValidateInput(string name, string? description)
     {
-        if (vendorId == Guid.Empty)
-        {
-            throw new AccountingInventoryDomainException("Brand Vendor ID cannot be empty.");
-        }
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new AccountingInventoryDomainException("Brand name cannot be empty.");

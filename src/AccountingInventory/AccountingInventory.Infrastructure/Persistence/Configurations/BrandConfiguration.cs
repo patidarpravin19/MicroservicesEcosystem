@@ -13,7 +13,6 @@ public sealed class BrandConfiguration : IEntityTypeConfiguration<Brand>
         builder.ToTable(Constants.DBConstants.DBTableNames.Brands);
         builder.HasKey(u => u.Id);
 
-        builder.Property(u => u.VendorId).IsRequired();
         builder.Property(u => u.Name).IsRequired().HasMaxLength(50);
         builder.Property(u => u.Description).HasMaxLength(500);
 

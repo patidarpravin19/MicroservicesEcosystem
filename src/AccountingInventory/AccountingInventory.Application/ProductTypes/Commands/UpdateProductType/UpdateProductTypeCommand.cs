@@ -6,5 +6,5 @@ namespace AccountingInventory.Application.ProductTypes.Commands.UpdateProductTyp
 /// this in a production deployment.</summary>
 public sealed record UpdateProductTypeCommand(Guid Id, Guid VendorId, Guid BrandId, string Name, string Description, bool IsActive) : IRequest<UpdateProductTypeResult>;
 
-public sealed record UpdateProductTypeResult(Guid Id, Guid VendorId, Guid BrandId, string Name, string Description, bool IsActive);
+public sealed record UpdateProductTypeResult(Guid Id, Guid BrandId, string Name, string Description, bool IsActive);
 

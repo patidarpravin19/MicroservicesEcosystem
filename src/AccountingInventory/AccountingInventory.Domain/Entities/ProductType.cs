@@ -14,20 +14,20 @@ namespace AccountingInventory.Domain.Entities;
 public sealed class ProductType : AggregateRoot
 {
     // Properties changed from 'init' to 'private set' to support mutations via domain methods
-    public Guid VendorId { get; private set; }
+    //public Guid VendorId { get; private set; }
     public Guid BrandId { get; private set; }
     public string Name { get; private set; } = null!;
     public string? Description { get; private set; } = null!;
 
-    public static ProductType Create(Guid vendorId, Guid brandId, string name, string? description = null)
+    public static ProductType Create(Guid brandId, string name, string? description = null)
     {
-        ValidateInput(vendorId, brandId, name, description);
+        //ValidateInput(brandId, name, description);
 
         return new ProductType
         {
             Id = Guid.NewGuid(),
             IsActive = true,
-            VendorId = vendorId,
+            //VendorId = vendorId,
             BrandId = brandId,
             Name = name.Trim(),
             Description = description?.Trim(),
@@ -36,14 +36,14 @@ public sealed class ProductType : AggregateRoot
     /// <summary>
     /// Updates the product type's core details with validation constraints.
     /// </summary>
-    public static ProductType Update(Guid id, Guid vendorId, Guid brandId, string name, string? description, bool isActive)
+    public static ProductType Update(Guid id, Guid brandId, string name, string? description, bool isActive)
     {
-        ValidateInput(vendorId, brandId, name, description);
+        //ValidateInput(brandId, name, description);
 
         return new ProductType
         {
             Id = id,
-            VendorId = vendorId,
+            //VendorId = vendorId,
             BrandId = brandId,
             IsActive = isActive,
             Name = name.Trim(),
@@ -78,12 +78,12 @@ public sealed class ProductType : AggregateRoot
     }
 
     // Shared input validation helper used by both Create and Update
-    private static void ValidateInput(Guid vendorId, Guid brandId, string name, string? description)
+    private static void ValidateInput(Guid brandId, string name, string? description)
     {
-        if (vendorId == Guid.Empty)
-        {
-            throw new AccountingInventoryDomainException("Product Type Vendor ID cannot be empty.");
-        }
+        //if (vendorId == Guid.Empty)
+        //{
+        //    throw new AccountingInventoryDomainException("Product Type Vendor ID cannot be empty.");
+        //}
         if (brandId == Guid.Empty)
         {
             throw new AccountingInventoryDomainException("Product Type Brand ID cannot be empty.");

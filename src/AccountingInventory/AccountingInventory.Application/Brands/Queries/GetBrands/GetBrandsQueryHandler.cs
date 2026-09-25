@@ -27,11 +27,7 @@ public sealed class GetBrandsQueryHandler(IAccountingInventoryDbContext accounti
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(brand => new BrandSummary(
-                brand.Id,
-                accountingInventoryDbContext.Vendors
-                    .Where(vendor => vendor.Id == brand.VendorId)
-                    .Select(vendor => vendor.Name)
-                    .FirstOrDefault() ?? string.Empty,
+                brand.Id,               
                 brand.Name,
                 brand.Description ?? string.Empty,
                 brand.IsActive))

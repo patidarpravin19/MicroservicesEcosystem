@@ -35,9 +35,9 @@ public static class BrandEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        group.MapGet("/all/{vendorId}", async (Guid? vendorId, ISender sender,
+        group.MapGet("/all", async (ISender sender,
              CancellationToken ct) =>
-             Results.Ok(await sender.Send(new GetBrandsForDDL(vendorId), ct)))
+             Results.Ok(await sender.Send(new GetBrandsForDDL(), ct)))
                  .WithName("GetBrandsForDDL")
                  .Produces<IEnumerable<GetBrandsForDDLSummary>>();
 

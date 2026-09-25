@@ -9,13 +9,9 @@ public sealed class GetBrandsForDDLQueryHandler(IAccountingInventoryDbContext ac
 {
     public async Task<IEnumerable<GetBrandsForDDLSummary>> Handle(GetBrandsForDDL request, CancellationToken cancellationToken)
     {
-        if (request.VendorId == null || request.VendorId == Guid.Empty)
-        {
-            return new List<GetBrandsForDDLSummary>();
-        }
         var brands = await accountingInventoryDbContext.Brands
             .AsNoTracking()
-            .Where(b => b.VendorId == request.VendorId && b.IsActive)
+            .Where(b => b.IsActive)
             .Select(b => new GetBrandsForDDLSummary(b.Id, b.Name))
             .ToListAsync(cancellationToken);
 

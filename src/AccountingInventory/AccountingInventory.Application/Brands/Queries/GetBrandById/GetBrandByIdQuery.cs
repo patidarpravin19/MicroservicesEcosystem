@@ -6,4 +6,4 @@ namespace AccountingInventory.Application.Brands.Queries.GetBrandById;
 /// info before authentication.</summary>
 public sealed record GetBrandByIdQuery(Guid Id) : IRequest<BrandSummary>;
 
-public sealed record BrandSummary(Guid Id, Guid VendorId, string Name, string Description, bool IsActive);
+public sealed record BrandSummary(Guid Id, string Name, string Description, bool IsActive);

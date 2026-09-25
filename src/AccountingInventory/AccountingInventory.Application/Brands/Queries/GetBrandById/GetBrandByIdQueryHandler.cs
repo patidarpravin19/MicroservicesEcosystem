@@ -15,7 +15,7 @@ public sealed class GetBrandByIdQueryHandler(IAccountingInventoryDbContext accou
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"No brand exists.");
 
-        return new BrandSummary(brand.Id, brand.VendorId, brand.Name, brand.Description!, brand.IsActive);
+        return new BrandSummary(brand.Id, brand.Name, brand.Description!, brand.IsActive);
     }
 
 }

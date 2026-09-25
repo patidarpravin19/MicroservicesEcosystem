@@ -2,6 +2,7 @@ using AccountingInventory.Application.ProductTypes.Commands.AddProductType;
 using AccountingInventory.Application.ProductTypes.Commands.DeleteProductType;
 using AccountingInventory.Application.ProductTypes.Commands.UpdateProductTypeCommand;
 using AccountingInventory.Application.ProductTypes.Queries.GetProductTypeById;
+using AccountingInventory.Application.ProductTypes.Queries.GetProductTypesForDDL;
 using AccountingInventory.Application.Common.Models;
 using BuildingBlocks.WebDefaults;
 using MediatR;
@@ -33,6 +34,12 @@ public static class ProductTypeEndpoints
             .Produces<AddProductTypeResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapGet("/all", async (ISender sender,
+          CancellationToken ct) =>
+          Results.Ok(await sender.Send(new GetProductTypesForDDL(), ct)))
+              .WithName("GetProductTypesForDDL")
+              .Produces<IEnumerable<GetProductTypesForDDLSummary>>();
 
         group.MapGet("/", async (
              [FromQuery] int? page,

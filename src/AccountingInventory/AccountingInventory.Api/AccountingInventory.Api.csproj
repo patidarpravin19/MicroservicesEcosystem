@@ -15,5 +15,8 @@
 		<ProjectReference Include="..\..\BuildingBlocks\BuildingBlocks.WebDefaults\BuildingBlocks.WebDefaults.csproj" />
 		<ProjectReference Include="..\..\BuildingBlocks\BuildingBlocks.Messaging\BuildingBlocks.Messaging.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="logs\" />
+	</ItemGroup>
 
 </Project>

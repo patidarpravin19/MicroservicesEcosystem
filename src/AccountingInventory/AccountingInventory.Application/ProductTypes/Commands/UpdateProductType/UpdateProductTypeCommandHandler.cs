@@ -29,7 +29,7 @@ public sealed class UpdateProductTypeCommandHandler(
             throw new NotFoundException($"A ProductType with ID '{request.Id}' was not found.");
         }
 
-        var productType = ProductType.Update(request.Id, request.VendorId, request.BrandId, request.Name, request.Description, request.IsActive);
+        var productType = ProductType.Update(request.Id, request.BrandId, request.Name, request.Description, request.IsActive);
 
         accountingInventoryDbContext.ProductTypes.Update(productType);
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
@@ -38,7 +38,7 @@ public sealed class UpdateProductTypeCommandHandler(
             "ProductType {ProductTypeId} - ({Name}) - {Description} update successfully.",
             productType.Id, productType.Name, productType.Description);
 
-        return new UpdateProductTypeResult(productType.Id, productType.VendorId, productType.BrandId, productType.Name, productType.Description!, productType.IsActive);
+        return new UpdateProductTypeResult(productType.Id, productType.BrandId, productType.Name, productType.Description!, productType.IsActive);
     }
 }
 
