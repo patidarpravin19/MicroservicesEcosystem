@@ -28,11 +28,6 @@ public sealed class GetProductTypesQueryHandler(IAccountingInventoryDbContext ac
             .Take(pageSize)
             .Select(ProductType => new ProductTypeSummary(
                 ProductType.Id,
-                brandName : 
-                accountingInventoryDbContext.Brands
-                    .Where(brand => brand.Id == ProductType.BrandId)
-                    .Select(brand => brand.Name)
-                    .FirstOrDefault() ?? string.Empty,
                 ProductType.Name,
                 ProductType.Description ?? string.Empty,
                 ProductType.IsActive))

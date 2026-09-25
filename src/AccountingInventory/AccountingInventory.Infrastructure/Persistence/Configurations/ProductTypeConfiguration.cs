@@ -13,12 +13,10 @@ public sealed class ProductTypeConfiguration : IEntityTypeConfiguration<ProductT
         builder.ToTable(Constants.DBConstants.DBTableNames.ProductTypes);
         builder.HasKey(u => u.Id);
 
-        //builder.Property(u => u.VendorId).IsRequired();
-        builder.Property(u => u.BrandId).IsRequired();
         builder.Property(u => u.Name).IsRequired().HasMaxLength(50);
         builder.Property(u => u.Description).HasMaxLength(500);
 
-        builder.HasIndex(u => new { u.BrandId, u.Name }).IsUnique();
+        builder.HasIndex(u => u.Name).IsUnique();
 
         builder.Ignore(u => u.DomainEvents);
         builder.HasQueryFilter(u => !u.IsDeleted);

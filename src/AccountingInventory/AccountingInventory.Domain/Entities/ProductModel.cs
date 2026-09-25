@@ -4,44 +4,51 @@ using AccountingInventory.Domain.Exceptions;
 namespace AccountingInventory.Domain.Entities;
 
 /// <summary>
-/// A database-managed product type, scoped to one tenant. This is the ENTIRE mechanism behind
+/// A database-managed product model, scoped to one tenant. This is the ENTIRE mechanism behind
 /// "which vendors can access which screen/controller": a Vendor simply owns a list of
 /// permission codes (e.g. "Inventory.StockItems.Create"), editable at any time via
 /// VendorEndpoints without touching code or redeploying anything. Every user assigned
-/// this product type picks up its current permission codes as JWT claims the next time they
+/// this product model picks up its current permission codes as JWT claims the next time they
 /// log in or refresh their token (see LoginCommandHandler / RefreshTokenCommandHandler).
 /// </summary>
-public sealed class ProductType : AggregateRoot
+public sealed class ProductModel : AggregateRoot
 {
-    // Properties changed from 'init' to 'private set' to support mutations via domain methods
-    //public Guid VendorId { get; private set; }
+    public Guid BrandId { get; private set; }
+    public Guid ProductTypeId { get; private set; }
     public string Name { get; private set; } = null!;
+    public string Code { get; private set; } = null!;
     public string? Description { get; private set; } = null!;
 
-    public static ProductType Create(string name, string? description = null)
+    public static ProductModel Create(Guid brandId, Guid productTypeId,string code, string name, string? description = null)
     {
         //ValidateInput(brandId, name, description);
 
-        return new ProductType
+        return new ProductModel
         {
             Id = Guid.NewGuid(),
             IsActive = true,
+            BrandId = brandId,
+            ProductTypeId = productTypeId,
             Name = name.Trim(),
+            Code = code.Trim(),
             Description = description?.Trim(),
         };
     }
     /// <summary>
-    /// Updates the product type's core details with validation constraints.
+    /// Updates the product model's core details with validation constraints.
     /// </summary>
-    public static ProductType Update(Guid id, string name, string? description, bool isActive)
+    public static ProductModel Update(Guid id, Guid brandId, Guid productTypeId, string code, string name, string? description, bool isActive)
     {
         //ValidateInput(brandId, name, description);
 
-        return new ProductType
+        return new ProductModel
         {
             Id = id,
+            BrandId = brandId,
+            ProductTypeId = productTypeId,
             IsActive = isActive,
             Name = name.Trim(),
+            Code = code.Trim(),
             Description = description?.Trim()
         };
     }
@@ -72,6 +79,6 @@ public sealed class ProductType : AggregateRoot
         IsActive = false;
     }
 
-    private ProductType() { }
+    private ProductModel() { }
 }
 

@@ -35,6 +35,7 @@ app.MapTenantEndpoints();
 app.MapVendorEndpoints();
 app.MapBrandEndpoints();
 app.MapProductTypeEndpoints();
+app.MapProductModelEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
 using (var scope = app.Services.CreateScope())

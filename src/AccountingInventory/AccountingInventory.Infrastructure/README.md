@@ -10,7 +10,7 @@
 
 # To Migrate tables in Accounting and Inventory DB Context
 
-1. Open the terminal and navigate to the project directory. e.g. src/Identity
+1. Open the terminal and navigate to the project directory. e.g. cd src/AccountingInventory
 2. Run the following command to apply migrations:
 		dotnet ef migrations add InitialCreate --project AccountingInventory.Infrastructure --startup-project AccountingInventory.API --context AccountingInventoryDbContext
 		OR

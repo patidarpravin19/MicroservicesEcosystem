@@ -13,6 +13,8 @@ public interface IAccountingInventoryDbContext
     DbSet<Vendor> Vendors { get; }
     DbSet<Brand> Brands { get; }
     DbSet<ProductType> ProductTypes { get; }
+    DbSet<ProductModel> ProductModels { get; }
+
     //DbSet<Role> Roles { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

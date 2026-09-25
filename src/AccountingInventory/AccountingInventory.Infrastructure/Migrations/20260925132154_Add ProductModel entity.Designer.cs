@@ -3,6 +3,7 @@ using System;
 using AccountingInventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
 {
     [DbContext(typeof(AccountingInventoryDbContext))]
-    partial class AccountingInventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925132154_Add ProductModel entity")]
+    partial class AddProductModelentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -140,6 +143,10 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("brand_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -178,9 +185,9 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.HasKey("Id")
                         .HasName("pk_product_types");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("BrandId", "Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_product_types_name");
+                        .HasDatabaseName("ix_product_types_brand_id_name");
 
                     b.ToTable("product_types", (string)null);
                 });

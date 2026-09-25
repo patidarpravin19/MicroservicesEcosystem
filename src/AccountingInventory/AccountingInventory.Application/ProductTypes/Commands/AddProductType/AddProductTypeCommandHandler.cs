@@ -21,7 +21,7 @@ public sealed class AddProductTypeCommandHandler(
     {
         var normalizedCode = request.Name.Trim().ToLowerInvariant();
 
-        var productTypeTaken = await accountingInventoryDbContext.ProductTypes.AnyAsync(p => p.BrandId == request.BrandId && p.Name == request.Name, cancellationToken);
+        var productTypeTaken = await accountingInventoryDbContext.ProductTypes.AnyAsync(p => p.Name == request.Name, cancellationToken);
 
         if (productTypeTaken)
         {
@@ -29,7 +29,7 @@ public sealed class AddProductTypeCommandHandler(
             throw new ConflictException($"A ProductType with name '{request.Name}' already exists.");
         }
 
-        var productType = ProductType.Create(request.BrandId, request.Name, request.Description);
+        var productType = ProductType.Create( request.Name, request.Description);
 
         productType.Activate();
         accountingInventoryDbContext.ProductTypes.Add(productType);
@@ -39,7 +39,7 @@ public sealed class AddProductTypeCommandHandler(
             "ProductType {ProductTypeId} - ({Name}) added successfully.",
             productType.Id, productType.Name);
 
-        return new AddProductTypeResult(productType.Id, productType.BrandId, productType.Name, productType.Description!);
+        return new AddProductTypeResult(productType.Id, productType.Name, productType.Description!);
     }
 }
 
