@@ -40,6 +40,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new VendorConfiguration());
         modelBuilder.ApplyConfiguration(new BrandConfiguration());
         modelBuilder.ApplyConfiguration(new ProductTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductModelConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }

@@ -10,6 +10,6 @@ public sealed record GetProductModelsQuery(
     string? SortDirection = null,
     string? Search = null) : IRequest<PagedResult<ProductModelSummary>>;
 
-public sealed record ProductModelSummary(Guid Id, string brandName,string productTypeName, string Name, string Description, bool IsActive);
+public sealed record ProductModelSummary(Guid Id, string brandName,string productTypeName,string code, string Name, string Description, bool IsActive);
 
 

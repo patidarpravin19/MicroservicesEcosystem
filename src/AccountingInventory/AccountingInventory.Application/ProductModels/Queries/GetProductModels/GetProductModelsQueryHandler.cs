@@ -26,23 +26,24 @@ public sealed class GetProductModelsQueryHandler(IAccountingInventoryDbContext a
         var items = await ApplySort(query, request.SortBy, descending)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(ProductModel => new ProductModelSummary(
-                ProductModel.Id,
+            .Select(productModel => new ProductModelSummary(
+                productModel.Id,
                 brandName : 
                 accountingInventoryDbContext.Brands
-                    .Where(brand => brand.Id == ProductModel.BrandId)
+                    .Where(brand => brand.Id == productModel.BrandId)
                     .Select(brand => brand.Name)
                     .FirstOrDefault() ?? string.Empty,
                 
                 productTypeName : 
                 accountingInventoryDbContext.ProductTypes
-                    .Where(productType => productType.Id == ProductModel.ProductTypeId)
+                    .Where(productType => productType.Id == productModel.ProductTypeId)
                     .Select(productType => productType.Name)
                     .FirstOrDefault() ?? string.Empty,
 
-                ProductModel.Name,
-                ProductModel.Description ?? string.Empty,
-                ProductModel.IsActive))
+                productModel.Code,
+                productModel.Name,
+                productModel.Description ?? string.Empty,
+                productModel.IsActive))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ProductModelSummary>(items, page, pageSize, totalCount,
