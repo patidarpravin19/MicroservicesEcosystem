@@ -12,6 +12,8 @@ public interface IAccountingInventoryDbContext
     DbSet<User> Users { get; }
     DbSet<Vendor> Vendors { get; }
     DbSet<Brand> Brands { get; }
+    DbSet<Variant> Variants { get; }
+    DbSet<Color> Colors { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<ProductModel> ProductModels { get; }
 

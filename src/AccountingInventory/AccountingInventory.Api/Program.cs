@@ -34,6 +34,8 @@ app.MapAuthEndpoints();
 app.MapTenantEndpoints();
 app.MapVendorEndpoints();
 app.MapBrandEndpoints();
+app.MapVariantEndpoints();
+app.MapColorEndpoints();
 app.MapProductTypeEndpoints();
 app.MapProductModelEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
