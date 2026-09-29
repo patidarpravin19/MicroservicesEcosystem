@@ -30,6 +30,7 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<Color> Colors => Set<Color>();
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<ProductModel> ProductModels => Set<ProductModel>();
+    public DbSet<Product> Products => Set<Product>();
 
     //public DbSet<Role> Roles => Set<Role>();
 
@@ -45,6 +46,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new ColorConfiguration());
         modelBuilder.ApplyConfiguration(new ProductTypeConfiguration());
         modelBuilder.ApplyConfiguration(new ProductModelConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }

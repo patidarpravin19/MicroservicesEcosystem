@@ -13,6 +13,7 @@
             public const string Colors = "colors";
             public const string ProductTypes = "product_types";
             public const string ProductModels = "product_models";            
+            public const string Products = "products";
 
         }
     }

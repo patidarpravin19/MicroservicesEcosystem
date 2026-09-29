@@ -16,6 +16,7 @@ public interface IAccountingInventoryDbContext
     DbSet<Color> Colors { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<ProductModel> ProductModels { get; }
+    DbSet<Product> Products { get; }
 
     //DbSet<Role> Roles { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
