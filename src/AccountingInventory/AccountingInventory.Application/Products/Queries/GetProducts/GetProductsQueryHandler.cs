@@ -1,6 +1,5 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.Common.Models;
-using AccountingInventory.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +23,13 @@ public sealed class GetProductsQueryHandler(IAccountingInventoryDbContext dbCont
         var items = await query.OrderBy(x => x.SerialNumber).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(x => new ProductSummary(x.Id, x.VendorId, x.BrandId, x.ProductTypeId, x.ProductModelId,
                 x.VariantId, x.ColorId, x.SerialNumber, x.SerialNumber1, x.Quantity, x.PurchasePrice,
-                x.Discount, x.Cgst, x.Sgst, x.Tax, x.IsActive)).ToListAsync(cancellationToken);
+                x.Discount, x.Cgst, x.Sgst, x.Tax, x.IsActive,
+                dbContext.Vendors.Where(v => v.Id == x.VendorId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
+                dbContext.Brands.Where(v => v.Id == x.BrandId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
+                dbContext.ProductTypes.Where(v => v.Id == x.ProductTypeId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
+                dbContext.ProductModels.Where(v => v.Id == x.ProductModelId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
+                dbContext.Variants.Where(v => v.Id == x.VariantId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
+                dbContext.Colors.Where(v => v.Id == x.ColorId).Select(v => v.Name).FirstOrDefault() ?? string.Empty)).ToListAsync(cancellationToken);
         return new PagedResult<ProductSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
