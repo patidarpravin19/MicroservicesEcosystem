@@ -18,6 +18,7 @@ public interface IAccountingInventoryDbContext
     DbSet<ProductType> ProductTypes { get; }
     DbSet<ProductModel> ProductModels { get; }
     DbSet<Product> Products { get; }
+    DbSet<SalesProduct> SalesProducts { get; }
     DbSet<Tax> Taxes { get; }
 
     //DbSet<Role> Roles { get; }

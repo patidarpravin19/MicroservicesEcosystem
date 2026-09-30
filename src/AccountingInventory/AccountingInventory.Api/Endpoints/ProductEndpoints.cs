@@ -3,6 +3,7 @@ using AccountingInventory.Application.Products.Commands.DeleteProduct;
 using AccountingInventory.Application.Products.Commands.UpdateProduct;
 using AccountingInventory.Application.Products.Queries.GetProductById;
 using AccountingInventory.Application.Products.Queries.GetProducts;
+using AccountingInventory.Application.Products.Queries.GetProductsForDDL;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,11 @@ public static class ProductEndpoints
         group.MapPost("/", async (CreateProductCommand command, ISender sender, CancellationToken ct) =>
             Results.Created("/api/products", await sender.Send(command, ct)))
             .WithName("CreateProduct");
+
+        group.MapGet("/all", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetProductsForDDLQuery(), ct)))
+            .WithName("GetProductsForDDL")
+            .Produces<IEnumerable<GetProductsForDDLSummary>>();
 
         group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize,
             [FromQuery] string? search, ISender sender, CancellationToken ct) =>
