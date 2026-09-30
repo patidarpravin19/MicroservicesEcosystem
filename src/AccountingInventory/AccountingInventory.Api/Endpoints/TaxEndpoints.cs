@@ -4,6 +4,7 @@ using AccountingInventory.Application.Taxes.Commands.DeleteTax;
 using AccountingInventory.Application.Taxes.Commands.UpdateTax;
 using AccountingInventory.Application.Taxes.Queries.GetTaxById;
 using AccountingInventory.Application.Taxes.Queries.GetTaxes;
+using AccountingInventory.Application.Taxes.Queries.GetTaxesForDDL;
 using AccountingInventory.Application.Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -22,6 +23,11 @@ public static class TaxEndpoints
 
         group.MapPost("/", async (AddTaxCommand command, ISender sender, CancellationToken ct) =>
             Results.Created("/api/taxes", await sender.Send(command, ct))).WithName("AddTax");
+
+        group.MapGet("/all", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetTaxesForDDLQuery(), ct)))
+            .WithName("GetTaxesForDDL")
+            .Produces<IEnumerable<TaxRateSummary>>();
 
         group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetTaxesQuery(page ?? 1, pageSize ?? 20), ct))).WithName("GetTaxes")
