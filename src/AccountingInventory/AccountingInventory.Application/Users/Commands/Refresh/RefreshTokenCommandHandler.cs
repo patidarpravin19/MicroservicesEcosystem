@@ -23,7 +23,7 @@ public sealed class RefreshTokenCommandHandler(
 {
     public async Task<RefreshTokenResult> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var principal = tokenService.GetPrincipalFromExpiredToken(request.ExpiredAccessToken);
+        var principal = tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
 
         if (principal is null)
         {

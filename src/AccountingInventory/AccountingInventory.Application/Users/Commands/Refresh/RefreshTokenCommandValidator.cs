@@ -6,7 +6,9 @@ public sealed class RefreshTokenCommandValidator : AbstractValidator<RefreshToke
 {
     public RefreshTokenCommandValidator()
     {
-        RuleFor(x => x.ExpiredAccessToken).NotEmpty();
+        RuleFor(x => x.AccessToken)
+            .NotEmpty()
+            .WithMessage("AccessToken is required. Send the access token returned by the login endpoint.");
         RuleFor(x => x.RefreshToken).NotEmpty();
     }
 }
