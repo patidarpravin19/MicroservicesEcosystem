@@ -8,6 +8,7 @@
             public const string Users = "users";
             public const string Roles = "roles";
             public const string Vendors = "vendors";
+            public const string FinanceVendors = "finance_vendors";
             public const string Brands = "brands";
             public const string Variants = "variants";
             public const string Colors = "colors";

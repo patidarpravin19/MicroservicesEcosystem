@@ -69,8 +69,8 @@ public static class SerilogBootstrap
 
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
             {
-                diagnosticContext.Set("CorrelationId", CorrelationIdMiddleware.GetCurrentCorrelationId(httpContext));
-                diagnosticContext.Set("Host", httpContext.Request.Host.Value);
+                diagnosticContext.Set("CorrelationId", CorrelationIdMiddleware.GetCurrentCorrelationId(httpContext)!);
+                diagnosticContext.Set("Host", httpContext.Request.Host.Value!);
                 diagnosticContext.Set("Scheme", httpContext.Request.Scheme);
 
                 if (httpContext.User.Identity?.IsAuthenticated == true)

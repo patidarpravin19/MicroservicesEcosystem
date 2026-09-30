@@ -33,6 +33,7 @@ app.MapAuthEndpoints();
 //app.MapRoleEndpoints();
 app.MapTenantEndpoints();
 app.MapVendorEndpoints();
+app.MapFinanceVendorEndpoints();
 app.MapBrandEndpoints();
 app.MapVariantEndpoints();
 app.MapColorEndpoints();
