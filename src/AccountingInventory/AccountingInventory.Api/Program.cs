@@ -39,6 +39,7 @@ app.MapColorEndpoints();
 app.MapProductTypeEndpoints();
 app.MapProductModelEndpoints();
 app.MapProductEndpoints();
+app.MapTaxEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 
 using (var scope = app.Services.CreateScope())
