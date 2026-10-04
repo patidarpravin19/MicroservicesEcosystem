@@ -2,7 +2,7 @@ using AccountingInventory.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AccountingInventory.Application.Products.Queries.GetProductsForDDL;
+namespace AccountingInventory.Application.Purchases.Products.Queries.GetProductsForDDL;
 
 public sealed class GetProductsForDDLQueryHandler(IAccountingInventoryDbContext dbContext)
     : IRequestHandler<GetProductsForDDLQuery, IEnumerable<GetProductsForDDLSummary>>

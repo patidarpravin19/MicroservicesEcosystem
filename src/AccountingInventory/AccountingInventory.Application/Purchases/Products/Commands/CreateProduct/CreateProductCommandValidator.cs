@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace AccountingInventory.Application.Products.Commands.CreateProduct;
+namespace AccountingInventory.Application.Purchases.Products.Commands.CreateProduct;
 
 public sealed class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
 {

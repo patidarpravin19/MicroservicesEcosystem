@@ -1,7 +1,7 @@
 using AccountingInventory.Application.Common.Models;
 using MediatR;
 
-namespace AccountingInventory.Application.Products.Queries.GetProducts;
+namespace AccountingInventory.Application.Purchases.Products.Queries.GetProducts;
 
 public sealed record GetProductsQuery(int Page = 1, int PageSize = 20, string? Search = null)
     : IRequest<PagedResult<ProductSummary>>;

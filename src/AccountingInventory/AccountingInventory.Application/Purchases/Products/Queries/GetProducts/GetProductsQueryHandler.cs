@@ -3,7 +3,7 @@ using AccountingInventory.Application.Common.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AccountingInventory.Application.Products.Queries.GetProducts;
+namespace AccountingInventory.Application.Purchases.Products.Queries.GetProducts;
 
 public sealed class GetProductsQueryHandler(IAccountingInventoryDbContext dbContext)
     : IRequestHandler<GetProductsQuery, PagedResult<ProductSummary>>

@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace AccountingInventory.Application.Products.Queries.GetProductsForDDL;
+namespace AccountingInventory.Application.Purchases.Products.Queries.GetProductsForDDL;
 
 public sealed record GetProductsForDDLQuery : IRequest<IEnumerable<GetProductsForDDLSummary>>;
 

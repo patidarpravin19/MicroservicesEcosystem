@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace AccountingInventory.Application.Products.Commands.UpdateProduct;
+namespace AccountingInventory.Application.Purchases.Products.Commands.UpdateProduct;
 
 public sealed record UpdateProductCommand(
     Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId, Guid ColorId,

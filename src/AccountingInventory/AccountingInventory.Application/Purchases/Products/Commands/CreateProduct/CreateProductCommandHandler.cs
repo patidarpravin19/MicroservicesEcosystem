@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AccountingInventory.Application.Products.Commands.CreateProduct;
+namespace AccountingInventory.Application.Purchases.Products.Commands.CreateProduct;
 
 public sealed class CreateProductCommandHandler(
     IAccountingInventoryDbContext dbContext,

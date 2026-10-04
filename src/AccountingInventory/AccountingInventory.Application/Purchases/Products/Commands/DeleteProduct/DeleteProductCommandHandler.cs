@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AccountingInventory.Application.Products.Commands.DeleteProduct;
+namespace AccountingInventory.Application.Purchases.Products.Commands.DeleteProduct;
 
 public sealed class DeleteProductCommandHandler(
     IAccountingInventoryDbContext dbContext,

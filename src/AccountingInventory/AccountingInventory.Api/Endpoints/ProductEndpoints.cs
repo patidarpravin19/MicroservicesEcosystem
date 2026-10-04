@@ -1,9 +1,9 @@
-using AccountingInventory.Application.Products.Commands.CreateProduct;
-using AccountingInventory.Application.Products.Commands.DeleteProduct;
-using AccountingInventory.Application.Products.Commands.UpdateProduct;
-using AccountingInventory.Application.Products.Queries.GetProductById;
-using AccountingInventory.Application.Products.Queries.GetProducts;
-using AccountingInventory.Application.Products.Queries.GetProductsForDDL;
+using AccountingInventory.Application.Purchases.Products.Commands.CreateProduct;
+using AccountingInventory.Application.Purchases.Products.Commands.DeleteProduct;
+using AccountingInventory.Application.Purchases.Products.Commands.UpdateProduct;
+using AccountingInventory.Application.Purchases.Products.Queries.GetProductById;
+using AccountingInventory.Application.Purchases.Products.Queries.GetProducts;
+using AccountingInventory.Application.Purchases.Products.Queries.GetProductsForDDL;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

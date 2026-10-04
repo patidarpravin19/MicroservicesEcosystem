@@ -1,10 +1,10 @@
 using AccountingInventory.Application.Abstractions;
-using AccountingInventory.Application.Products.Queries.GetProducts;
+using AccountingInventory.Application.Purchases.Products.Queries.GetProducts;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AccountingInventory.Application.Products.Queries.GetProductById;
+namespace AccountingInventory.Application.Purchases.Products.Queries.GetProductById;
 
 public sealed class GetProductByIdQueryHandler(IAccountingInventoryDbContext dbContext)
     : IRequestHandler<GetProductByIdQuery, ProductSummary>
