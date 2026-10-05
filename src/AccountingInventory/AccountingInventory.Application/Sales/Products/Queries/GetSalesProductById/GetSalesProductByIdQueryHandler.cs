@@ -12,8 +12,6 @@ public sealed class GetSalesProductByIdQueryHandler(IAccountingInventoryDbContex
     {
         var sale = await db.SalesProducts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Sales product '{request.Id}' was not found.");
-        return new(sale.Id, sale.ProductId, sale.CustomerName,
-            sale.CustomerMobile, sale.CustomerAddress, sale.SaleDate, sale.ProductPrice, sale.SellingPrice,
-            sale.Discount, sale.IsActive);
+        return (await SalesProductSummaryMapper.MapAsync(db, [sale], cancellationToken))[0];
     }
 }

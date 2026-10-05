@@ -19,8 +19,6 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
             request.CustomerMobile, request.CustomerAddress, request.SaleDate, request.ProductPrice,
             request.SellingPrice, request.Discount);
         await db.SaveChangesAsync(cancellationToken);
-        return new(sale.Id, sale.ProductId, sale.CustomerName,
-            sale.CustomerMobile, sale.CustomerAddress, sale.SaleDate, sale.ProductPrice, sale.SellingPrice,
-            sale.Discount, sale.IsActive);
+        return (await SalesProductSummaryMapper.MapAsync(db, [sale], cancellationToken))[0];
     }
 }

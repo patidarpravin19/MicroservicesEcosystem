@@ -14,20 +14,23 @@ public sealed class GetSalesProductsQueryHandler(IAccountingInventoryDbContext d
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim().ToLower();
+            var matchingProductIds = await db.Products.AsNoTracking()
+                .Where(product => product.SerialNumber.ToLower().Contains(search)
+                    || (product.SerialNumber1 != null && product.SerialNumber1.ToLower().Contains(search)))
+                .Select(product => product.Id.ToString())
+                .ToListAsync(cancellationToken);
             query = query.Where(x => x.ProductId.ToLower().Contains(search)
                 || x.CustomerName.ToLower().Contains(search) ||
-                x.CustomerMobile.ToLower().Contains(search));
+                x.CustomerMobile.ToLower().Contains(search) || matchingProductIds.Contains(x.ProductId));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var items = await query.OrderByDescending(x => x.SaleDate)
+        var sales = await query.OrderByDescending(x => x.SaleDate)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new SalesProductSummary(x.Id, x.ProductId,
-                x.CustomerName, x.CustomerMobile, x.CustomerAddress, x.SaleDate, x.ProductPrice,
-                x.SellingPrice, x.Discount, x.IsActive))
             .ToListAsync(cancellationToken);
+        var items = await SalesProductSummaryMapper.MapAsync(db, sales, cancellationToken);
         return new(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
