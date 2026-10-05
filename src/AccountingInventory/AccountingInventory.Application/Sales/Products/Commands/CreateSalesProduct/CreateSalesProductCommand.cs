@@ -4,7 +4,6 @@ namespace AccountingInventory.Application.Sales.Products.Commands.CreateSalesPro
 
 public sealed record CreateSalesProductCommand(
     string ProductId,
-    string SerialNumber,
     string CustomerName,
     string CustomerMobile,
     string CustomerAddress,

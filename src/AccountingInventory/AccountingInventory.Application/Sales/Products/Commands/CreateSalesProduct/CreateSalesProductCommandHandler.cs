@@ -11,15 +11,15 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
 {
     public async Task<SalesProductSummary> Handle(CreateSalesProductCommand request, CancellationToken cancellationToken)
     {
-        if (await db.SalesProducts.AnyAsync(x => x.SerialNumber == request.SerialNumber.Trim(), cancellationToken))
-            throw new ConflictException($"A sales product with serial number '{request.SerialNumber}' already exists.");
+        if (await db.SalesProducts.AnyAsync(x => x.ProductId == request.ProductId.Trim(), cancellationToken))
+            throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
-        var sale = SalesProduct.Create(request.ProductId, request.SerialNumber,
+        var sale = SalesProduct.Create(request.ProductId,
             request.CustomerName, request.CustomerMobile, request.CustomerAddress, request.SaleDate,
             request.ProductPrice, request.SellingPrice, request.Discount);
         db.SalesProducts.Add(sale);
         await db.SaveChangesAsync(cancellationToken);
-        return new(sale.Id, sale.ProductId, sale.SerialNumber, sale.CustomerName,
+        return new(sale.Id, sale.ProductId, sale.CustomerName,
             sale.CustomerMobile, sale.CustomerAddress, sale.SaleDate, sale.ProductPrice, sale.SellingPrice,
             sale.Discount, sale.IsActive);
     }

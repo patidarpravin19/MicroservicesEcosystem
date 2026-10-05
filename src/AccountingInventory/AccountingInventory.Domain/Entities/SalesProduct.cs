@@ -6,7 +6,6 @@ namespace AccountingInventory.Domain.Entities;
 public sealed class SalesProduct : AggregateRoot
 {
     public string ProductId { get; private set; } = null!;
-    public string SerialNumber { get; private set; } = null!;
     public string CustomerName { get; private set; } = null!;
     public string CustomerMobile { get; private set; } = null!;
     public string CustomerAddress { get; private set; } = null!;
@@ -15,7 +14,7 @@ public sealed class SalesProduct : AggregateRoot
     public decimal SellingPrice { get; private set; }
     public decimal Discount { get; private set; }
 
-    public static SalesProduct Create(string productId, string serialNumber,
+    public static SalesProduct Create(string productId,
         string customerName, string customerMobile, string customerAddress, DateOnly saleDate,
         decimal productPrice, decimal sellingPrice, decimal discount)
         => new()
@@ -23,7 +22,6 @@ public sealed class SalesProduct : AggregateRoot
             Id = Guid.NewGuid(),
             IsActive = true,
             ProductId = productId.Trim(),
-            SerialNumber = serialNumber.Trim(),
             CustomerName = customerName.Trim(),
             CustomerMobile = customerMobile.Trim(),
             CustomerAddress = customerAddress.Trim(),
@@ -33,12 +31,11 @@ public sealed class SalesProduct : AggregateRoot
             Discount = discount
         };
 
-    public void Update(string productId, string serialNumber,
+    public void Update(string productId,
         string customerName, string customerMobile, string customerAddress, DateOnly saleDate,
         decimal productPrice, decimal sellingPrice, decimal discount)
     {
         ProductId = productId.Trim();
-        SerialNumber = serialNumber.Trim();
         CustomerName = customerName.Trim();
         CustomerMobile = customerMobile.Trim();
         CustomerAddress = customerAddress.Trim();
