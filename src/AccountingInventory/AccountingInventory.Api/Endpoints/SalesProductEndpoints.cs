@@ -5,6 +5,9 @@ using AccountingInventory.Application.Sales.Products.Commands.DeleteSalesProduct
 using AccountingInventory.Application.Sales.Products.Commands.UpdateSalesProduct;
 using AccountingInventory.Application.Sales.Products.Queries.GetSalesProductById;
 using AccountingInventory.Application.Sales.Products.Queries.GetSalesProducts;
+using AccountingInventory.Application.Sales.Payments.Commands.RecordSalesPayment;
+using AccountingInventory.Application.Sales.Payments;
+using AccountingInventory.Application.Sales.Payments.Queries.GetSalesPayment;
 using BuildingBlocks.WebDefaults;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +41,25 @@ public static class SalesProductEndpoints
             Results.Ok(await sender.Send(new GetSalesProductByIdQuery(id), ct)))
             .WithName("GetSalesProductById")
             .Produces<SalesProductSummary>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/payment", async (Guid id, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetSalesPaymentQuery(id), ct)))
+            .WithName("GetSalesPayment")
+            .Produces<SalesPaymentSummary>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/payment", async (Guid id, RecordSalesPaymentCommand command,
+            ISender sender, CancellationToken ct) =>
+        {
+            if (id != command.SalesProductId)
+                return Results.BadRequest("Sale ID in route does not match ID in body.");
+            return Results.Ok(await sender.Send(command, ct));
+        })
+            .WithName("RecordSalesPayment")
+            .Produces<SalesPaymentSummary>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateSalesProductCommand command, ISender sender, CancellationToken ct) =>

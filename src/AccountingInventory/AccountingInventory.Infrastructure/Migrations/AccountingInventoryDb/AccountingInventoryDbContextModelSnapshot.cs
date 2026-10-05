@@ -438,6 +438,91 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.ToTable("product_types", (string)null);
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal?>("DownPayment")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("down_payment");
+
+                    b.Property<decimal?>("EmiAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("emi_amount");
+
+                    b.Property<Guid?>("FinanceVendorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("finance_vendor_id");
+
+                    b.Property<DateOnly?>("FirstInstallmentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("first_installment_date");
+
+                    b.Property<bool?>("HasInsurance")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_insurance");
+
+                    b.Property<decimal?>("InsuranceAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("insurance_amount");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modified_by");
+
+                    b.Property<int?>("NumberOfEmi")
+                        .HasColumnType("integer")
+                        .HasColumnName("number_of_emi");
+
+                    b.Property<string>("PaymentMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_mode");
+
+                    b.Property<Guid>("SalesProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_product_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_payments");
+
+                    b.HasIndex("FinanceVendorId")
+                        .HasDatabaseName("ix_sales_payments_finance_vendor_id");
+
+                    b.HasIndex("SalesProductId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_payments_sales_product_id");
+
+                    b.ToTable("sales_payments", (string)null);
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesProduct", b =>
                 {
                     b.Property<Guid>("Id")
@@ -781,6 +866,22 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasDatabaseName("ix_vendors_mobile");
 
                     b.ToTable("vendors", (string)null);
+                });
+
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesPayment", b =>
+                {
+                    b.HasOne("AccountingInventory.Domain.Entities.FinanceVendor", null)
+                        .WithMany()
+                        .HasForeignKey("FinanceVendorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_payments_finance_vendors_finance_vendor_id");
+
+                    b.HasOne("AccountingInventory.Domain.Entities.SalesProduct", null)
+                        .WithMany()
+                        .HasForeignKey("SalesProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_payments_sales_products_sales_product_id");
                 });
 #pragma warning restore 612, 618
         }

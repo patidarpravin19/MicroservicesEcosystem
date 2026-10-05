@@ -35,6 +35,11 @@ internal static class SalesProductSummaryMapper
             })
             .ToDictionaryAsync(product => product.Id, cancellationToken);
 
+        var saleIds = sales.Select(sale => sale.Id).ToArray();
+        var paymentModes = await db.SalesPayments.AsNoTracking()
+            .Where(payment => saleIds.Contains(payment.SalesProductId))
+            .ToDictionaryAsync(payment => payment.SalesProductId, payment => payment.PaymentMode, cancellationToken);
+
         return sales.Select(sale =>
         {
             var product = Guid.TryParse(sale.ProductId, out var id) && products.TryGetValue(id, out var match)
@@ -60,7 +65,8 @@ internal static class SalesProductSummaryMapper
                 sale.ProductPrice,
                 sale.SellingPrice,
                 sale.Discount,
-                sale.IsActive);
+                sale.IsActive,
+                paymentModes.GetValueOrDefault(sale.Id));
         }).ToArray();
     }
 }

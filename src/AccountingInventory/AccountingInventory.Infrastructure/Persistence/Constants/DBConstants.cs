@@ -16,6 +16,7 @@
             public const string ProductModels = "product_models";            
             public const string Products = "products";
             public const string SalesProducts = "sales_products";
+            public const string SalesPayments = "sales_payments";
 
         }
     }

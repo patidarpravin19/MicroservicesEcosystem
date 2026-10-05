@@ -12,4 +12,5 @@ public sealed record SalesProductSummary(
     decimal ProductPrice,
     decimal SellingPrice,
     decimal Discount,
-    bool IsActive);
+    bool IsActive,
+    string? PaymentMode);
