@@ -271,6 +271,11 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("purchase_price");
 
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_amount");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("integer")
                         .HasColumnName("quantity");

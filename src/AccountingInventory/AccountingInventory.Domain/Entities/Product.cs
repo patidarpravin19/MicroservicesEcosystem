@@ -15,6 +15,7 @@ public sealed class Product : AggregateRoot
     public string? SerialNumber1 { get; private set; }
     public int Quantity { get; private set; }
     public decimal PurchasePrice { get; private set; }
+    public decimal TotalAmount { get; private set; }
     public decimal Discount { get; private set; }
     public decimal Cgst { get; private set; }
     public decimal Sgst { get; private set; }
@@ -33,7 +34,8 @@ public sealed class Product : AggregateRoot
             ColorId = colorId, SerialNumber = serialNumber.Trim(),
             SerialNumber1 = string.IsNullOrWhiteSpace(serialNumber1) ? null : serialNumber1.Trim(),
             Quantity = quantity, PurchasePrice = purchasePrice, Discount = discount,
-            Cgst = cgst, Sgst = sgst, Tax = tax
+            Cgst = cgst, Sgst = sgst, Tax = tax,
+            TotalAmount = CalculateTotalAmount(purchasePrice, cgst, sgst)
         };
     }
 
@@ -49,6 +51,7 @@ public sealed class Product : AggregateRoot
         SerialNumber1 = string.IsNullOrWhiteSpace(serialNumber1) ? null : serialNumber1.Trim();
         Quantity = quantity; PurchasePrice = purchasePrice; Discount = discount;
         Cgst = cgst; Sgst = sgst; Tax = tax;
+        TotalAmount = CalculateTotalAmount(purchasePrice, cgst, sgst);
     }
 
     public void Delete() { IsDeleted = true; IsActive = false; }
@@ -65,6 +68,9 @@ public sealed class Product : AggregateRoot
         if (purchasePrice < 0 || discount < 0 || cgst < 0 || sgst < 0 || tax < 0)
             throw new ArgumentException("Price, discount, and tax values cannot be negative.");
     }
+
+    private static decimal CalculateTotalAmount(decimal purchasePrice, decimal cgst, decimal sgst)
+        => decimal.Round(purchasePrice * (1 + (cgst + sgst) / 100), 2, MidpointRounding.AwayFromZero);
 
     private Product() { }
 }

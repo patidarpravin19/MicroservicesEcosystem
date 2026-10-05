@@ -10,4 +10,4 @@ public sealed record UpdateProductCommand(
 public sealed record UpdateProductResult(
     Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId,
     Guid ColorId, string SerialNumber, string? SerialNumber1, int Quantity, decimal PurchasePrice,
-    decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive);
+    decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive);

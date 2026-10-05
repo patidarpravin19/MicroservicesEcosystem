@@ -15,7 +15,7 @@ public sealed class GetProductByIdQueryHandler(IAccountingInventoryDbContext dbC
             .Where(x => x.Id == request.Id)
             .Select(x => new ProductSummary(x.Id, x.VendorId, x.BrandId, x.ProductTypeId, x.ProductModelId,
                 x.VariantId, x.ColorId, x.SerialNumber, x.SerialNumber1, x.Quantity, x.PurchasePrice,
-                x.Discount, x.Cgst, x.Sgst, x.Tax, x.IsActive,
+                x.TotalAmount, x.Discount, x.Cgst, x.Sgst, x.Tax, x.IsActive,
                 dbContext.Vendors.Where(v => v.Id == x.VendorId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
                 dbContext.Brands.Where(v => v.Id == x.BrandId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,
                 dbContext.ProductTypes.Where(v => v.Id == x.ProductTypeId).Select(v => v.Name).FirstOrDefault() ?? string.Empty,

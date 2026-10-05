@@ -13,6 +13,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.SerialNumber).IsRequired().HasMaxLength(100);
         builder.Property(x => x.SerialNumber1).HasMaxLength(100);
         builder.Property(x => x.PurchasePrice).HasPrecision(18, 2);
+        builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.Property(x => x.Discount).HasPrecision(18, 2);
         builder.Property(x => x.Cgst).HasPrecision(5, 2);
         builder.Property(x => x.Sgst).HasPrecision(5, 2);

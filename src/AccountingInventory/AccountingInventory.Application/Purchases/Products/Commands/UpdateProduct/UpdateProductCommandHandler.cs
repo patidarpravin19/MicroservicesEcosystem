@@ -24,6 +24,7 @@ public sealed class UpdateProductCommandHandler(
         logger.LogInformation("Product {ProductId} ({SerialNumber}) updated successfully.", product.Id, product.SerialNumber);
         return new UpdateProductResult(product.Id, product.VendorId, product.BrandId, product.ProductTypeId,
             product.ProductModelId, product.VariantId, product.ColorId, product.SerialNumber, product.SerialNumber1,
-            product.Quantity, product.PurchasePrice, product.Discount, product.Cgst, product.Sgst, product.Tax, product.IsActive);
+            product.Quantity, product.PurchasePrice, product.TotalAmount, product.Discount, product.Cgst, product.Sgst,
+            product.Tax, product.IsActive);
     }
 }
