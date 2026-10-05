@@ -23,8 +23,8 @@ public static class ProductEndpoints
             Results.Created("/api/products", await sender.Send(command, ct)))
             .WithName("CreateProduct");
 
-        group.MapGet("/all", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetProductsForDDLQuery(), ct)))
+        group.MapGet("/all", async ([FromQuery] Guid? currentSaleId, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetProductsForDDLQuery(currentSaleId), ct)))
             .WithName("GetProductsForDDL")
             .Produces<IEnumerable<GetProductsForDDLSummary>>();
 

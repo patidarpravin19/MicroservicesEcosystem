@@ -11,7 +11,19 @@ public sealed class DeleteSalesProductCommandHandler(IAccountingInventoryDbConte
     {
         var sale = await db.SalesProducts.SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Sales product '{request.Id}' was not found.");
+        if (Guid.TryParse(sale.ProductId, out var productId))
+        {
+            var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId, cancellationToken);
+            product?.IncreaseStock(1);
+        }
         sale.Delete();
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException("Stock changed while the sale was being deleted. Refresh and try again.");
+        }
     }
 }

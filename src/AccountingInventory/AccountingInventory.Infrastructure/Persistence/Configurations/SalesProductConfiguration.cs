@@ -18,6 +18,7 @@ public sealed class SalesProductConfiguration : IEntityTypeConfiguration<SalesPr
         builder.Property(x => x.ProductPrice).HasPrecision(18, 2);
         builder.Property(x => x.SellingPrice).HasPrecision(18, 2);
         builder.Property(x => x.Discount).HasPrecision(18, 2);
+        builder.HasIndex(x => x.ProductId).IsUnique().HasFilter("\"is_deleted\" = false");
         builder.Ignore(x => x.DomainEvents);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

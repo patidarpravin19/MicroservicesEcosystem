@@ -271,12 +271,8 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("purchase_price");
 
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("total_amount");
-
                     b.Property<int>("Quantity")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
 
@@ -300,6 +296,11 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
                         .HasColumnName("tax");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_amount");
 
                     b.Property<Guid>("VariantId")
                         .HasColumnType("uuid")
@@ -512,6 +513,11 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
 
                     b.HasKey("Id")
                         .HasName("pk_sales_products");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_products_product_id")
+                        .HasFilter("\"is_deleted\" = false");
 
                     b.ToTable("sales_products", (string)null);
                 });

@@ -14,6 +14,10 @@ public sealed class UpdateProductCommandHandler(
     {
         var product = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A Product with ID '{request.Id}' was not found.");
+        var hasActiveSale = await dbContext.SalesProducts
+            .AnyAsync(x => x.ProductId == product.Id.ToString(), cancellationToken);
+        if (hasActiveSale && request.Quantity != product.Quantity)
+            throw new ConflictException("Stock quantity cannot be edited while this product is sold. Delete the sale to return it to stock.");
         if (await dbContext.Products.AnyAsync(x => x.Id != request.Id && x.SerialNumber == request.SerialNumber.Trim(), cancellationToken))
             throw new ConflictException($"A Product with serial number '{request.SerialNumber}' already exists.");
 

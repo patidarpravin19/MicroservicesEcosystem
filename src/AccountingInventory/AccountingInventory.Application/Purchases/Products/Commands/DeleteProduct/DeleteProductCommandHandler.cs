@@ -14,6 +14,8 @@ public sealed class DeleteProductCommandHandler(
     {
         var product = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A Product with ID '{request.Id}' was not found.");
+        if (await dbContext.SalesProducts.AnyAsync(x => x.ProductId == product.Id.ToString(), cancellationToken))
+            throw new ConflictException("This product has an active sale. Delete the sale before removing the product from inventory.");
         product.Delete();
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Product {ProductId} deleted successfully.", product.Id);

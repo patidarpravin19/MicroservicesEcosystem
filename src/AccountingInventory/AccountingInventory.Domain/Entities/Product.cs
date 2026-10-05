@@ -56,6 +56,19 @@ public sealed class Product : AggregateRoot
 
     public void Delete() { IsDeleted = true; IsActive = false; }
 
+    public void DecreaseStock(int quantity)
+    {
+        if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity));
+        if (Quantity < quantity) throw new InvalidOperationException("Insufficient stock.");
+        Quantity -= quantity;
+    }
+
+    public void IncreaseStock(int quantity)
+    {
+        if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity));
+        Quantity = checked(Quantity + quantity);
+    }
+
     private static void Validate(Guid vendorId, Guid brandId, Guid productTypeId, Guid productModelId,
         Guid variantId, Guid colorId, string serialNumber, int quantity, decimal purchasePrice,
         decimal discount, decimal cgst, decimal sgst, decimal tax)
@@ -64,7 +77,7 @@ public sealed class Product : AggregateRoot
             productModelId == Guid.Empty || variantId == Guid.Empty || colorId == Guid.Empty)
             throw new ArgumentException("All product reference IDs are required.");
         if (string.IsNullOrWhiteSpace(serialNumber)) throw new ArgumentException("SerialNumber is required.");
-        if (quantity <= 0) throw new ArgumentException("Quantity must be greater than zero.");
+        if (quantity < 0) throw new ArgumentException("Quantity cannot be negative.");
         if (purchasePrice < 0 || discount < 0 || cgst < 0 || sgst < 0 || tax < 0)
             throw new ArgumentException("Price, discount, and tax values cannot be negative.");
     }
