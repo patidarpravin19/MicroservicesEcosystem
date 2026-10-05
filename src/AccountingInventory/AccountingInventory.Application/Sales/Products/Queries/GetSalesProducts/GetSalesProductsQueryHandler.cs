@@ -14,7 +14,7 @@ public sealed class GetSalesProductsQueryHandler(IAccountingInventoryDbContext d
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim().ToLower();
-            query = query.Where(x => x.ProductId.ToLower().Contains(search) || x.ProductName.ToLower().Contains(search) ||
+            query = query.Where(x => x.ProductId.ToLower().Contains(search) ||
                 x.SerialNumber.ToLower().Contains(search) || x.CustomerName.ToLower().Contains(search) ||
                 x.CustomerMobile.ToLower().Contains(search));
         }
@@ -24,7 +24,7 @@ public sealed class GetSalesProductsQueryHandler(IAccountingInventoryDbContext d
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
         var items = await query.OrderByDescending(x => x.SaleDate).ThenBy(x => x.SerialNumber)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new SalesProductSummary(x.Id, x.ProductId, x.ProductName, x.SerialNumber,
+            .Select(x => new SalesProductSummary(x.Id, x.ProductId, x.SerialNumber,
                 x.CustomerName, x.CustomerMobile, x.CustomerAddress, x.SaleDate, x.ProductPrice,
                 x.SellingPrice, x.Discount, x.IsActive))
             .ToListAsync(cancellationToken);

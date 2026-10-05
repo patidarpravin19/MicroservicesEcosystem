@@ -14,12 +14,12 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
         if (await db.SalesProducts.AnyAsync(x => x.SerialNumber == request.SerialNumber.Trim(), cancellationToken))
             throw new ConflictException($"A sales product with serial number '{request.SerialNumber}' already exists.");
 
-        var sale = SalesProduct.Create(request.ProductId, request.ProductName, request.SerialNumber,
+        var sale = SalesProduct.Create(request.ProductId, request.SerialNumber,
             request.CustomerName, request.CustomerMobile, request.CustomerAddress, request.SaleDate,
             request.ProductPrice, request.SellingPrice, request.Discount);
         db.SalesProducts.Add(sale);
         await db.SaveChangesAsync(cancellationToken);
-        return new(sale.Id, sale.ProductId, sale.ProductName, sale.SerialNumber, sale.CustomerName,
+        return new(sale.Id, sale.ProductId, sale.SerialNumber, sale.CustomerName,
             sale.CustomerMobile, sale.CustomerAddress, sale.SaleDate, sale.ProductPrice, sale.SellingPrice,
             sale.Discount, sale.IsActive);
     }

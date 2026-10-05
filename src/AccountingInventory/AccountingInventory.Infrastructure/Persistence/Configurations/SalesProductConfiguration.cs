@@ -11,7 +11,6 @@ public sealed class SalesProductConfiguration : IEntityTypeConfiguration<SalesPr
         builder.ToTable(Constants.DBConstants.DBTableNames.SalesProducts);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ProductId).IsRequired().HasMaxLength(100);
-        builder.Property(x => x.ProductName).IsRequired().HasMaxLength(200);
         builder.Property(x => x.SerialNumber).IsRequired().HasMaxLength(100);
         builder.Property(x => x.CustomerName).IsRequired().HasMaxLength(200);
         builder.Property(x => x.CustomerMobile).IsRequired().HasMaxLength(20);

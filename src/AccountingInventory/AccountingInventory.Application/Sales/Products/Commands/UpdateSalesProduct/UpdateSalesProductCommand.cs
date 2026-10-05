@@ -5,7 +5,6 @@ namespace AccountingInventory.Application.Sales.Products.Commands.UpdateSalesPro
 public sealed record UpdateSalesProductCommand(
     Guid Id,
     string ProductId,
-    string ProductName,
     string SerialNumber,
     string CustomerName,
     string CustomerMobile,
