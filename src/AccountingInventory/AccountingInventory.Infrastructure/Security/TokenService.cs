@@ -77,7 +77,10 @@ public sealed class TokenService(JwtOptions options) : ITokenService
             ValidateLifetime = false,
         };
 
-        var handler = new JwtSecurityTokenHandler();
+        // Keep JWT claim names as issued. By default JwtSecurityTokenHandler maps
+        // the standard "sub" claim to ClaimTypes.NameIdentifier, so looking up
+        // JwtRegisteredClaimNames.Sub below would fail for an otherwise valid token.
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
 
         try
         {
