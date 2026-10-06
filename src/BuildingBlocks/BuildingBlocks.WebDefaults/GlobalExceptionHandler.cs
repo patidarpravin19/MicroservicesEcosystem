@@ -4,7 +4,6 @@ using BuildingBlocks.Observability.Middleware;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +13,7 @@ namespace BuildingBlocks.WebDefaults;
 /// The one .NET 10 IExceptionHandler implementation for every service in the
 /// ecosystem. Converts FluentValidation failures, any service's DomainException
 /// subclass, and the shared Conflict/NotFound/Unauthorized/Forbidden exceptions into
-/// RFC 7807 ProblemDetails responses. Because every service's domain exceptions
+/// standard success/message/data error responses. Because every service's domain exceptions
 /// derive from the same BuildingBlocks.Domain.DomainException base, and every
 /// service's Application-layer exceptions ARE the same shared types (from
 /// BuildingBlocks.Application.Exceptions), this single handler covers Identity,
@@ -37,26 +36,18 @@ public sealed class GlobalExceptionHandler(
             "Unhandled exception. CorrelationId={CorrelationId} StatusCode={StatusCode} Path={Path}",
             correlationId, statusCode, httpContext.Request.Path);
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Type = $"https://httpstatuses.io/{statusCode}",
-            Instance = httpContext.Request.Path,
-            Detail = environment.IsDevelopment() ? exception.Message : title,
-        };
-
-        problemDetails.Extensions["correlationId"] = correlationId;
-        problemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
-
-        if (errors is not null)
-        {
-            problemDetails.Extensions["errors"] = errors;
-        }
-
         httpContext.Response.StatusCode = statusCode;
-        httpContext.Response.ContentType = "application/problem+json";
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        httpContext.Response.ContentType = "application/json";
+        var message = environment.IsDevelopment() && statusCode >= 500
+            ? exception.Message
+            : title;
+        var response = new ApiResponse<object?>(false, message, null, errors,
+            new Dictionary<string, string>
+            {
+                ["correlationId"] = correlationId,
+                ["traceId"] = httpContext.TraceIdentifier,
+            });
+        await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
 
         return true;
     }

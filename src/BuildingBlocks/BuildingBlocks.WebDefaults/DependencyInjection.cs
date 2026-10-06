@@ -76,6 +76,7 @@ public static class DependencyInjection
     public static WebApplication UseWebDefaults(this WebApplication app)
     {
         app.UseExceptionHandler(_ => { });
+        app.UseMiddleware<ApiResponseEnvelopeMiddleware>();
 
         if (app.Environment.IsDevelopment())
         {
