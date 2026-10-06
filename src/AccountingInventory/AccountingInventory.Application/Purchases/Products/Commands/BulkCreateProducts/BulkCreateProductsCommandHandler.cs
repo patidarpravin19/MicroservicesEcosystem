@@ -23,10 +23,10 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
 
         var existing = await dbContext.Products
             .Where(x => serials.Contains(x.SerialNumber) || (x.SerialNumber1 != null && serials.Contains(x.SerialNumber1)))
-            .Select(x => x.SerialNumber)
+            .Select(x => serials.Contains(x.SerialNumber) ? x.SerialNumber : x.SerialNumber1!)
             .FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
-            throw new ConflictException($"A product with serial number '{existing}' already exists.");
+            throw new ConflictException($"Serial number '{existing}' is already assigned to another product.");
 
         var entities = products.Select(item => Product.Create(item.VendorId, item.BrandId,
             item.ProductTypeId, item.ProductModelId, item.VariantId, item.ColorId,
