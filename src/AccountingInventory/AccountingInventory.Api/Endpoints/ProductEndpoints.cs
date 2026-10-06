@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Purchases.Products.Commands.CreateProduct;
 using AccountingInventory.Application.Purchases.Products.Commands.BulkCreateProducts;
+using AccountingInventory.Application.Purchases.Products.Commands.BulkUpdateProducts;
 using AccountingInventory.Application.Purchases.Products.Commands.DeleteProduct;
 using AccountingInventory.Application.Purchases.Products.Commands.UpdateProduct;
 using AccountingInventory.Application.Purchases.Products.Queries.GetProductById;
@@ -27,6 +28,10 @@ public static class ProductEndpoints
         group.MapPost("/bulk", async (BulkCreateProductsCommand command, ISender sender, CancellationToken ct) =>
             Results.Created("/api/products", await sender.Send(command, ct)))
             .WithName("BulkCreateProducts");
+
+        group.MapPut("/bulk", async (BulkUpdateProductsCommand command, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(command, ct)))
+            .WithName("BulkUpdateProducts");
 
         group.MapGet("/all", async ([FromQuery] Guid? currentSaleId, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetProductsForDDLQuery(currentSaleId), ct)))

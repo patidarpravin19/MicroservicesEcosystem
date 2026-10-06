@@ -34,8 +34,8 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
             item.Discount, item.Cgst, item.Sgst, item.Tax)).ToArray();
         dbContext.Products.AddRange(entities);
         await dbContext.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Product {ProductId} ({SerialNumber}) added successfully.",
-        string.Join(", ", request.Products.Select(p => p.SerialNumber)));
+        logger.LogInformation("Added {ProductCount} products with serial numbers {SerialNumbers}.",
+            entities.Length, string.Join(", ", entities.Select(product => product.SerialNumber)));
 
         return entities.Select(product => new CreateProductResult(product.Id, product.VendorId,
             product.BrandId, product.ProductTypeId, product.ProductModelId, product.VariantId,
