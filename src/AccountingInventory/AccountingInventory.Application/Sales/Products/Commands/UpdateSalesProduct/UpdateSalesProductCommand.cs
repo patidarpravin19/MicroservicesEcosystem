@@ -8,6 +8,7 @@ public sealed record UpdateSalesProductCommand(
     string CustomerName,
     string CustomerMobile,
     string CustomerAddress,
+    string? CustomerEmail,
     DateOnly SaleDate,
     decimal ProductPrice,
     decimal SellingPrice,

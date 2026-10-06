@@ -10,6 +10,7 @@ public sealed class CreateSalesProductCommandValidator : AbstractValidator<Creat
         RuleFor(x => x.CustomerName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.CustomerMobile).NotEmpty().MaximumLength(20);
         RuleFor(x => x.CustomerAddress).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.CustomerEmail).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.CustomerEmail));
         RuleFor(x => x.SaleDate).NotEmpty();
         RuleFor(x => x.ProductPrice).GreaterThanOrEqualTo(0);
         RuleFor(x => x.SellingPrice).GreaterThanOrEqualTo(0);

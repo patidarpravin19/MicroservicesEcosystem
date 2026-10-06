@@ -20,8 +20,9 @@ public sealed class GetSalesProductsQueryHandler(IAccountingInventoryDbContext d
                 .Select(product => product.Id.ToString())
                 .ToListAsync(cancellationToken);
             query = query.Where(x => x.ProductId.ToLower().Contains(search)
-                || x.CustomerName.ToLower().Contains(search) ||
-                x.CustomerMobile.ToLower().Contains(search) || matchingProductIds.Contains(x.ProductId));
+                || db.Customers.Any(customer => customer.Id == x.CustomerId
+                    && (customer.Name.ToLower().Contains(search) || customer.Mobile.ToLower().Contains(search)))
+                || matchingProductIds.Contains(x.ProductId));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

@@ -34,8 +34,9 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
             }
         }
 
-        sale.Update(requestedProductId.ToString(), request.CustomerName,
-            request.CustomerMobile, request.CustomerAddress, request.SaleDate, request.ProductPrice,
+        var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
+            request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
+        sale.Update(requestedProductId.ToString(), customer.Id, request.SaleDate, request.ProductPrice,
             request.SellingPrice, request.Discount);
         try
         {

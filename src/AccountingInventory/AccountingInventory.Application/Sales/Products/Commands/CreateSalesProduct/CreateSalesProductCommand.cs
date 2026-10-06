@@ -7,6 +7,7 @@ public sealed record CreateSalesProductCommand(
     string CustomerName,
     string CustomerMobile,
     string CustomerAddress,
+    string? CustomerEmail,
     DateOnly SaleDate,
     decimal ProductPrice,
     decimal SellingPrice,

@@ -21,9 +21,11 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
         if (await db.SalesProducts.AnyAsync(x => x.ProductId == productId.ToString(), cancellationToken))
             throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
+        var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
+            request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
         product.DecreaseStock(1);
         var sale = SalesProduct.Create(productId.ToString(),
-            request.CustomerName, request.CustomerMobile, request.CustomerAddress, request.SaleDate,
+            customer.Id, request.SaleDate,
             request.ProductPrice, request.SellingPrice, request.Discount);
         db.SalesProducts.Add(sale);
         try

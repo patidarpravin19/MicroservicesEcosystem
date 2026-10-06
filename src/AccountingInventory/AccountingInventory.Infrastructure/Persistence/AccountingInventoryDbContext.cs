@@ -33,6 +33,7 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<ProductModel> ProductModels => Set<ProductModel>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<SalesProduct> SalesProducts => Set<SalesProduct>();
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<SalesPayment> SalesPayments => Set<SalesPayment>();
     public DbSet<Tax> Taxes => Set<Tax>();
 
@@ -53,6 +54,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new ProductModelConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());
         modelBuilder.ApplyConfiguration(new SalesProductConfiguration());
+        modelBuilder.ApplyConfiguration(new CustomerConfiguration());
         modelBuilder.ApplyConfiguration(new SalesPaymentConfiguration());
         modelBuilder.ApplyConfiguration(new TaxConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());

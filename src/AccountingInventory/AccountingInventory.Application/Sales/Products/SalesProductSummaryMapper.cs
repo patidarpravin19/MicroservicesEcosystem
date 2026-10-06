@@ -36,6 +36,10 @@ internal static class SalesProductSummaryMapper
             .ToDictionaryAsync(product => product.Id, cancellationToken);
 
         var saleIds = sales.Select(sale => sale.Id).ToArray();
+        var customerIds = sales.Select(sale => sale.CustomerId).Distinct().ToArray();
+        var customers = await db.Customers.AsNoTracking()
+            .Where(customer => customerIds.Contains(customer.Id))
+            .ToDictionaryAsync(customer => customer.Id, cancellationToken);
         var paymentModes = await db.SalesPayments.AsNoTracking()
             .Where(payment => saleIds.Contains(payment.SalesProductId))
             .ToDictionaryAsync(payment => payment.SalesProductId, payment => payment.PaymentMode, cancellationToken);
@@ -46,6 +50,7 @@ internal static class SalesProductSummaryMapper
                 ? match
                 : null;
             var serialNumber = product?.SerialNumber ?? product?.SerialNumber1 ?? string.Empty;
+            customers.TryGetValue(sale.CustomerId, out var customer);
             var productName = product is null
                 ? string.Empty
                 : string.Join(" - ", new[] { product.Brand, product.Model, product.Variant, product.Color }
@@ -58,9 +63,11 @@ internal static class SalesProductSummaryMapper
                 sale.ProductId,
                 productName,
                 serialNumber,
-                sale.CustomerName,
-                sale.CustomerMobile,
-                sale.CustomerAddress,
+                sale.CustomerId,
+                customer?.Name ?? string.Empty,
+                customer?.Mobile ?? string.Empty,
+                customer?.Address ?? string.Empty,
+                customer?.Email,
                 sale.SaleDate,
                 sale.ProductPrice,
                 sale.SellingPrice,
