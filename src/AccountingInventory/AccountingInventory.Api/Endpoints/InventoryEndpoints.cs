@@ -20,7 +20,15 @@ public static class InventoryEndpoints
             [FromQuery] string? search, ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetStockQuery(page ?? 1, pageSize ?? 20, search), cancellationToken)))
             .WithName("GetStockInventory")
-            .Produces<PagedResult<StockItemSummary>>();
+            .Produces<PagedResult<StockGroupSummary>>();
+
+        group.MapGet("/stock/products", async ([FromQuery] Guid brandId, [FromQuery] Guid productModelId,
+            [FromQuery] Guid variantId, [FromQuery] int? page, [FromQuery] int? pageSize,
+            [FromQuery] string? search, ISender sender, CancellationToken cancellationToken) =>
+            Results.Ok(await sender.Send(new GetAvailableStockProductsQuery(brandId, productModelId,
+                variantId, page ?? 1, pageSize ?? 20, search), cancellationToken)))
+            .WithName("GetAvailableStockProducts")
+            .Produces<PagedResult<AvailableStockProductSummary>>();
 
         return group;
     }
