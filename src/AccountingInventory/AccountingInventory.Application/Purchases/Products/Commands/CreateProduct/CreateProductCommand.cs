@@ -4,10 +4,11 @@ namespace AccountingInventory.Application.Purchases.Products.Commands.CreateProd
 
 public sealed record CreateProductCommand(
     Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId, Guid ColorId,
-    string SerialNumber, string? SerialNumber1, int Quantity, decimal PurchasePrice, decimal Discount,
+    string SerialNumber, string? SerialNumber1, string? BillNumber, decimal PurchasePrice, decimal Discount,
     decimal Cgst, decimal Sgst, decimal Tax) : IRequest<CreateProductResult>;
 
 public sealed record CreateProductResult(
     Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId,
-    Guid ColorId, string SerialNumber, string? SerialNumber1, int Quantity, decimal PurchasePrice,
-    decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive);
+    Guid ColorId, string SerialNumber, string? SerialNumber1, decimal PurchasePrice,
+    decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive,
+    bool IsSold, string? BillNumber);

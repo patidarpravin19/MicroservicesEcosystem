@@ -4,10 +4,11 @@ namespace AccountingInventory.Application.Purchases.Products.Commands.UpdateProd
 
 public sealed record UpdateProductCommand(
     Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId, Guid ColorId,
-    string SerialNumber, string? SerialNumber1, int Quantity, decimal PurchasePrice, decimal Discount,
+    string SerialNumber, string? SerialNumber1, string? BillNumber, decimal PurchasePrice, decimal Discount,
     decimal Cgst, decimal Sgst, decimal Tax) : IRequest<UpdateProductResult>;
 
 public sealed record UpdateProductResult(
     Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId, Guid ProductModelId, Guid VariantId,
-    Guid ColorId, string SerialNumber, string? SerialNumber1, int Quantity, decimal PurchasePrice,
-    decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive);
+    Guid ColorId, string SerialNumber, string? SerialNumber1, decimal PurchasePrice,
+    decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax, bool IsActive,
+    bool IsSold, string? BillNumber);

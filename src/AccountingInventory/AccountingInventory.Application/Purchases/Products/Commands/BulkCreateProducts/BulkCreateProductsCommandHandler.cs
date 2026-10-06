@@ -30,7 +30,7 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
 
         var entities = products.Select(item => Product.Create(item.VendorId, item.BrandId,
             item.ProductTypeId, item.ProductModelId, item.VariantId, item.ColorId,
-            item.SerialNumber, item.SerialNumber1, item.Quantity, item.PurchasePrice,
+            item.SerialNumber, item.SerialNumber1, item.BillNumber, item.PurchasePrice,
             item.Discount, item.Cgst, item.Sgst, item.Tax)).ToArray();
         dbContext.Products.AddRange(entities);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -39,8 +39,8 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
 
         return entities.Select(product => new CreateProductResult(product.Id, product.VendorId,
             product.BrandId, product.ProductTypeId, product.ProductModelId, product.VariantId,
-            product.ColorId, product.SerialNumber, product.SerialNumber1, product.Quantity,
+            product.ColorId, product.SerialNumber, product.SerialNumber1,
             product.PurchasePrice, product.TotalAmount, product.Discount, product.Cgst,
-            product.Sgst, product.Tax, product.IsActive)).ToArray();
+            product.Sgst, product.Tax, product.IsActive, product.IsSold, product.BillNumber)).ToArray();
     }
 }

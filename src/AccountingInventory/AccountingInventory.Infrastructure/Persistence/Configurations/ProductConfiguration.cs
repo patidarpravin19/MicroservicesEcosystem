@@ -12,9 +12,10 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.SerialNumber).IsRequired().HasMaxLength(100);
         builder.Property(x => x.SerialNumber1).HasMaxLength(100);
+        builder.Property(x => x.BillNumber).HasMaxLength(100);
         builder.Property(x => x.PurchasePrice).HasPrecision(18, 2);
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
-        builder.Property(x => x.Quantity).IsConcurrencyToken();
+        builder.Property(x => x.IsSold).IsConcurrencyToken();
         builder.Property(x => x.Discount).HasPrecision(18, 2);
         builder.Property(x => x.Cgst).HasPrecision(5, 2);
         builder.Property(x => x.Sgst).HasPrecision(5, 2);

@@ -35,8 +35,8 @@ public sealed class GetStockQueryHandler(IAccountingInventoryDbContext db)
                 product.Id,
                 product.SerialNumber,
                 product.SerialNumber1,
-                product.Quantity,
                 product.TotalAmount,
+                product.IsSold,
                 product.IsActive,
                 Brand = db.Brands.Where(item => item.Id == product.BrandId)
                     .Select(item => item.Name).FirstOrDefault() ?? string.Empty,
@@ -49,25 +49,16 @@ public sealed class GetStockQueryHandler(IAccountingInventoryDbContext db)
             })
             .ToListAsync(cancellationToken);
 
-        var productIds = products.Select(product => product.Id.ToString()).ToArray();
-        var soldProductIds = await db.SalesProducts.AsNoTracking()
-            .Where(sale => productIds.Contains(sale.ProductId))
-            .Select(sale => sale.ProductId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-        var soldSet = soldProductIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         var items = products.Select(product =>
         {
-            var isSold = soldSet.Contains(product.Id.ToString());
+            var isSold = product.IsSold;
             var status = !product.IsActive ? "Inactive"
                 : isSold ? "Sold"
-                : product.Quantity > 0 ? "In stock"
-                : "Out of stock";
+                : "In stock";
             var name = string.Join(" - ", new[] { product.Brand, product.Model, product.Variant, product.Color }
                 .Where(part => !string.IsNullOrWhiteSpace(part)));
             return new StockItemSummary(product.Id, name, product.SerialNumber, product.SerialNumber1,
-                product.Quantity, product.TotalAmount, isSold, product.IsActive, status);
+                product.TotalAmount, isSold, product.IsActive, status);
         }).ToArray();
 
         return new PagedResult<StockItemSummary>(items, page, pageSize, totalCount,

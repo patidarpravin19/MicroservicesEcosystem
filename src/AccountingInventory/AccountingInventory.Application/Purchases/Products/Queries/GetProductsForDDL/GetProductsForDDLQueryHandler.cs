@@ -21,19 +21,10 @@ public sealed class GetProductsForDDLQueryHandler(IAccountingInventoryDbContext 
                 currentProductId = parsedProductId;
         }
 
-        var soldProductIds = await dbContext.SalesProducts
-            .Where(sale => request.CurrentSaleId == null || sale.Id != request.CurrentSaleId)
-            .Select(sale => sale.ProductId)
-            .ToListAsync(cancellationToken);
-        var soldProductGuidIds = soldProductIds
-            .Select(id => Guid.TryParse(id, out var parsedId) ? parsedId : Guid.Empty)
-            .Where(id => id != Guid.Empty)
-            .ToHashSet();
-
         var products = await dbContext.Products
             .AsNoTracking()
             .Where(product => product.IsActive
-                && (product.Quantity > 0 || product.Id == currentProductId))
+                && (!product.IsSold || product.Id == currentProductId))
             .OrderBy(product => product.SerialNumber)
             .Select(product => new GetProductsForDDLSummary(
                 product.Id,
@@ -64,6 +55,6 @@ public sealed class GetProductsForDDLQueryHandler(IAccountingInventoryDbContext 
                 product.Discount))
             .ToListAsync(cancellationToken);
 
-        return products.Where(product => product.Id == currentProductId || !soldProductGuidIds.Contains(product.Id));
+        return products;
     }
 }

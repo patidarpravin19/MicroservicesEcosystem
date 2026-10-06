@@ -14,7 +14,7 @@ public sealed class DeleteSalesProductCommandHandler(IAccountingInventoryDbConte
         if (Guid.TryParse(sale.ProductId, out var productId))
         {
             var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId, cancellationToken);
-            product?.IncreaseStock(1);
+            product?.MarkAvailable();
         }
         sale.Delete();
         try

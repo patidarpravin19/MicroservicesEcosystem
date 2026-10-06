@@ -20,17 +20,17 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
         {
             var nextProduct = await db.Products.SingleOrDefaultAsync(x => x.Id == requestedProductId, cancellationToken)
                 ?? throw new NotFoundException($"Product '{request.ProductId}' was not found.");
-            if (!nextProduct.IsActive || nextProduct.Quantity < 1)
-                throw new ConflictException("This product is out of stock and cannot be sold.");
+            if (!nextProduct.IsActive || nextProduct.IsSold)
+                throw new ConflictException("This product has already been sold or is inactive.");
             if (await db.SalesProducts.AnyAsync(x => x.Id != request.Id
                     && x.ProductId == requestedProductId.ToString(), cancellationToken))
                 throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
-            nextProduct.DecreaseStock(1);
+            nextProduct.MarkSold();
             if (originalProductId != Guid.Empty)
             {
                 var previousProduct = await db.Products.SingleOrDefaultAsync(x => x.Id == originalProductId, cancellationToken);
-                previousProduct?.IncreaseStock(1);
+                previousProduct?.MarkAvailable();
             }
         }
 

@@ -16,14 +16,14 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
 
         var product = await db.Products.SingleOrDefaultAsync(x => x.Id == productId, cancellationToken)
             ?? throw new NotFoundException($"Product '{request.ProductId}' was not found.");
-        if (!product.IsActive || product.Quantity < 1)
-            throw new ConflictException("This product is out of stock and cannot be sold.");
+        if (!product.IsActive || product.IsSold)
+            throw new ConflictException("This product has already been sold or is inactive.");
         if (await db.SalesProducts.AnyAsync(x => x.ProductId == productId.ToString(), cancellationToken))
             throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
-        product.DecreaseStock(1);
+        product.MarkSold();
         var sale = SalesProduct.Create(productId.ToString(),
             customer.Id, request.SaleDate,
             request.ProductPrice, request.SellingPrice, request.Discount);

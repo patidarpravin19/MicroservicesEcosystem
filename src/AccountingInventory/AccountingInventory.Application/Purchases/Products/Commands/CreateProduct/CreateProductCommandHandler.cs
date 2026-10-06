@@ -22,14 +22,14 @@ public sealed class CreateProductCommandHandler(
             throw new ConflictException("A serial number already exists on another product.");
 
         var product = Product.Create(request.VendorId, request.BrandId, request.ProductTypeId, request.ProductModelId,
-            request.VariantId, request.ColorId, request.SerialNumber, request.SerialNumber1, request.Quantity,
+            request.VariantId, request.ColorId, request.SerialNumber, request.SerialNumber1, request.BillNumber,
             request.PurchasePrice, request.Discount, request.Cgst, request.Sgst, request.Tax);
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Product {ProductId} ({SerialNumber}) added successfully.", product.Id, product.SerialNumber);
         return new CreateProductResult(product.Id, product.VendorId, product.BrandId, product.ProductTypeId,
             product.ProductModelId, product.VariantId, product.ColorId, product.SerialNumber, product.SerialNumber1,
-            product.Quantity, product.PurchasePrice, product.TotalAmount, product.Discount, product.Cgst, product.Sgst,
-            product.Tax, product.IsActive);
+            product.PurchasePrice, product.TotalAmount, product.Discount, product.Cgst, product.Sgst,
+            product.Tax, product.IsActive, product.IsSold, product.BillNumber);
     }
 }

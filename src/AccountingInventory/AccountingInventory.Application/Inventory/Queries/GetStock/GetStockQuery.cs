@@ -11,7 +11,6 @@ public sealed record StockItemSummary(
     string ProductName,
     string SerialNumber,
     string? SerialNumber1,
-    int QuantityOnHand,
     decimal TotalAmount,
     bool IsSold,
     bool IsActive,
