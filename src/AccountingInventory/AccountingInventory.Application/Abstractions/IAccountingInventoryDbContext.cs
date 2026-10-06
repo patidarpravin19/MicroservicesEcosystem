@@ -21,6 +21,7 @@ public interface IAccountingInventoryDbContext
     DbSet<SalesProduct> SalesProducts { get; }
     DbSet<Customer> Customers { get; }
     DbSet<SalesPayment> SalesPayments { get; }
+    DbSet<PurchasePayment> PurchasePayments { get; }
     DbSet<Tax> Taxes { get; }
 
     //DbSet<Role> Roles { get; }

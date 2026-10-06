@@ -16,6 +16,9 @@ public sealed class DeleteProductCommandHandler(
             ?? throw new NotFoundException($"A Product with ID '{request.Id}' was not found.");
         if (await dbContext.SalesProducts.AnyAsync(x => x.ProductId == product.Id.ToString(), cancellationToken))
             throw new ConflictException("This product has an active sale. Delete the sale before removing the product from inventory.");
+        if (product.BillNumber is { } paidBill && await dbContext.PurchasePayments.AnyAsync(payment =>
+                payment.VendorId == product.VendorId && payment.BillNumber.ToLower() == paidBill.ToLower(), cancellationToken))
+            throw new ConflictException("Products on a bill with recorded payments cannot be deleted.");
         product.Delete();
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Product {ProductId} deleted successfully.", product.Id);

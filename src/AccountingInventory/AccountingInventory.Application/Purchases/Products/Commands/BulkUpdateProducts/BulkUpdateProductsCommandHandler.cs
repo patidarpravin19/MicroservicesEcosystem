@@ -40,6 +40,19 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
         if (existingSerial is not null)
             throw new ConflictException($"Serial number '{existingSerial}' is already assigned to another product.");
 
+        var vendorIds = products.Select(product => product.VendorId).Distinct().ToArray();
+        var billNumbers = products.Where(product => product.BillNumber != null)
+            .Select(product => product.BillNumber!.ToLower()).Distinct().ToArray();
+        var paidBills = await dbContext.PurchasePayments
+            .Where(payment => vendorIds.Contains(payment.VendorId) && billNumbers.Contains(payment.BillNumber.ToLower()))
+            .Select(payment => new { payment.VendorId, BillNumber = payment.BillNumber.ToLower() })
+            .ToListAsync(cancellationToken);
+        var paidBillKeys = paidBills.Select(payment => $"{payment.VendorId}:{payment.BillNumber}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (products.Any(product => product.BillNumber is { } bill
+                && paidBillKeys.Contains($"{product.VendorId}:{bill.ToLower()}")))
+            throw new ConflictException("Products on a bill with recorded payments cannot be edited.");
+
         var updatesById = updates.ToDictionary(update => update.Id);
         foreach (var product in products)
         {

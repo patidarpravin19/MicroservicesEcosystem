@@ -528,6 +528,27 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.ToTable("sales_payments", (string)null);
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.PurchasePayment", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<decimal>("Amount").HasPrecision(18, 2).HasColumnType("numeric(18,2)").HasColumnName("amount");
+                    b.Property<string>("BillNumber").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)").HasColumnName("bill_number");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by");
+                    b.Property<bool>("IsActive").HasColumnType("boolean").HasColumnName("is_active");
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean").HasColumnName("is_deleted");
+                    b.Property<DateOnly>("PaymentDate").HasColumnType("date").HasColumnName("payment_date");
+                    b.Property<string>("PaymentMode").IsRequired().HasMaxLength(30).HasColumnType("character varying(30)").HasColumnName("payment_mode");
+                    b.Property<string>("Note").HasMaxLength(500).HasColumnType("character varying(500)").HasColumnName("note");
+                    b.Property<string>("ReferenceNumber").HasMaxLength(100).HasColumnType("character varying(100)").HasColumnName("reference_number");
+                    b.Property<Guid>("VendorId").HasColumnType("uuid").HasColumnName("vendor_id");
+                    b.Property<DateTimeOffset?>("ModifiedAt").HasColumnType("timestamp with time zone").HasColumnName("modified_at");
+                    b.Property<Guid?>("ModifiedBy").HasColumnType("uuid").HasColumnName("modified_by");
+                    b.HasKey("Id").HasName("pk_purchase_payments");
+                    b.HasIndex("VendorId", "BillNumber").HasDatabaseName("ix_purchase_payments_vendor_id_bill_number");
+                    b.ToTable("purchase_payments", (string)null);
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.Customer", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
@@ -544,6 +565,16 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.HasKey("Id").HasName("pk_customers");
                     b.HasIndex("Mobile").IsUnique().HasDatabaseName("ix_customers_mobile");
                     b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.PurchasePayment", b =>
+                {
+                    b.HasOne("AccountingInventory.Domain.Entities.Vendor", null)
+                        .WithMany()
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchase_payments_vendors_vendor_id");
                 });
 
             modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesProduct", b =>

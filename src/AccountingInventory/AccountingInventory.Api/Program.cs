@@ -41,6 +41,7 @@ app.MapProductTypeEndpoints();
 app.MapProductModelEndpoints();
 app.MapProductEndpoints();
 app.MapInventoryEndpoints();
+app.MapPurchaseAccountingEndpoints();
 app.MapSalesProductEndpoints();
 app.MapCustomerEndpoints();
 app.MapTaxEndpoints();
