@@ -29,6 +29,13 @@ public sealed class Customer : AggregateRoot
         Email = NormalizeEmail(email);
     }
 
+    public void Delete()
+    {
+        if (IsDeleted) return;
+        IsDeleted = true;
+        IsActive = false;
+    }
+
     private static string? NormalizeEmail(string? email)
         => string.IsNullOrWhiteSpace(email) ? null : email.Trim();
 
