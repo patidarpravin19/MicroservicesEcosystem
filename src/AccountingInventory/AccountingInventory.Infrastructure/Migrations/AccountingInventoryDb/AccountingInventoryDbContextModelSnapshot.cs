@@ -528,6 +528,26 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.ToTable("sales_payments", (string)null);
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<string>("Action").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("action");
+                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by");
+                    b.Property<DateTimeOffset>("CreatedDate").HasColumnType("timestamp with time zone").HasColumnName("created_date");
+                    b.Property<string>("NewValue").HasColumnType("text").HasColumnName("new_value");
+                    b.Property<string>("OldValue").HasColumnType("text").HasColumnName("old_value");
+                    b.Property<string>("RecordId").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)").HasColumnName("record_id");
+                    b.Property<string>("TableName").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)").HasColumnName("table_name");
+                    b.Property<string>("TenantSchema").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)").HasColumnName("tenant_schema");
+                    b.HasKey("Id").HasName("pk_audit_logs");
+                    b.HasIndex("Action").HasDatabaseName("ix_audit_logs_action");
+                    b.HasIndex("CreatedBy", "CreatedDate").HasDatabaseName("ix_audit_logs_created_by_created_date");
+                    b.HasIndex("CreatedDate").HasDatabaseName("ix_audit_logs_created_date");
+                    b.HasIndex("TableName", "CreatedDate").HasDatabaseName("ix_audit_logs_table_name_created_date");
+                    b.HasIndex("TableName", "RecordId", "CreatedDate").HasDatabaseName("ix_audit_logs_table_name_record_id_created_date");
+                    b.ToTable("audit_logs", (string)null);
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.CustomerBillSettings", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");

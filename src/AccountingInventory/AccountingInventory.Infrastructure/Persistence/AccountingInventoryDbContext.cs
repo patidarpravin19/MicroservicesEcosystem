@@ -2,7 +2,10 @@ using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
 using AccountingInventory.Infrastructure.Persistence.Configurations;
 using AccountingInventory.Infrastructure.Persistence.MultiTenancy;
+using BuildingBlocks.Domain;
+using BuildingBlocks.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace AccountingInventory.Infrastructure.Persistence;
 
@@ -18,7 +21,8 @@ namespace AccountingInventory.Infrastructure.Persistence;
 /// </summary>
 public sealed class AccountingInventoryDbContext(
     DbContextOptions<AccountingInventoryDbContext> options,
-    ITenantProvider tenantProvider)
+    ITenantProvider tenantProvider,
+    ICurrentUserProvider? currentUserProvider = null)
     : DbContext(options), IAccountingInventoryDbContext
 {
     public string SchemaName { get; } = tenantProvider.SchemaName;
@@ -37,6 +41,7 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<SalesPayment> SalesPayments => Set<SalesPayment>();
     public DbSet<SalesReceipt> SalesReceipts => Set<SalesReceipt>();
     public DbSet<CustomerBillSettings> CustomerBillSettings => Set<CustomerBillSettings>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PurchasePayment> PurchasePayments => Set<PurchasePayment>();
     public DbSet<Tax> Taxes => Set<Tax>();
 
@@ -44,6 +49,94 @@ public sealed class AccountingInventoryDbContext(
         => await Database.SqlQueryRaw<string>(
                 "SELECT generate_sales_bill_number({0}) AS \"Value\"", year)
             .SingleAsync(cancellationToken);
+
+    // Keep audit capture on the context's SaveChanges path so every application
+    // write through IAccountingInventoryDbContext is captured regardless of EF
+    // interceptor registration or sync/async handler usage.
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        CaptureAuditLogs();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        CaptureAuditLogs();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void CaptureAuditLogs()
+    {
+        ChangeTracker.DetectChanges();
+        var actor = currentUserProvider?.UserId;
+        var now = DateTimeOffset.UtcNow;
+        var auditLogs = new List<AuditLog>();
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>()
+                     .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                     .ToList())
+        {
+            var originalState = entry.State;
+            var tableName = entry.Metadata.GetTableName();
+            if (string.IsNullOrWhiteSpace(tableName)) continue;
+
+            var oldValues = originalState is EntityState.Modified or EntityState.Deleted
+                ? Snapshot(entry, originalValues: true, includeAll: originalState == EntityState.Deleted)
+                : null;
+
+            switch (originalState)
+            {
+                case EntityState.Added:
+                    entry.Property(entity => entity.CreatedAt).CurrentValue = now;
+                    entry.Property(entity => entity.CreatedBy).CurrentValue = actor;
+                    break;
+                case EntityState.Modified:
+                    entry.Property(entity => entity.ModifiedAt).CurrentValue = now;
+                    entry.Property(entity => entity.ModifiedBy).CurrentValue = actor;
+                    break;
+                case EntityState.Deleted:
+                    entry.State = EntityState.Modified;
+                    entry.Property(entity => entity.IsDeleted).CurrentValue = true;
+                    entry.Property(entity => entity.ModifiedAt).CurrentValue = now;
+                    entry.Property(entity => entity.ModifiedBy).CurrentValue = actor;
+                    break;
+            }
+
+            var action = originalState switch
+            {
+                EntityState.Added => "Create",
+                EntityState.Deleted => "Delete",
+                _ when entry.Property(nameof(AuditableEntity.IsDeleted)).CurrentValue is true
+                    && entry.Property(nameof(AuditableEntity.IsDeleted)).OriginalValue is false => "Delete",
+                _ => "Update"
+            };
+            var newValues = Snapshot(entry, originalValues: false,
+                includeAll: originalState is EntityState.Added or EntityState.Deleted);
+
+            auditLogs.Add(AuditLog.Create(tableName,
+                entry.Property(nameof(AuditableEntity.Id)).CurrentValue?.ToString() ?? string.Empty,
+                action, oldValues, newValues, actor, now, SchemaName));
+        }
+
+        if (auditLogs.Count > 0) AuditLogs.AddRange(auditLogs);
+    }
+
+    private static string? Snapshot(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry,
+        bool originalValues, bool includeAll)
+    {
+        var values = entry.Properties
+            .Where(property => includeAll || property.IsModified)
+            .Where(property => !IsSensitive(property.Metadata.Name))
+            .ToDictionary(property => property.Metadata.Name,
+                property => originalValues ? property.OriginalValue : property.CurrentValue);
+        return values.Count == 0 ? null : JsonSerializer.Serialize(values);
+    }
+
+    private static bool IsSensitive(string propertyName)
+        => propertyName.Contains("password", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Contains("token", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Contains("secret", StringComparison.OrdinalIgnoreCase);
 
     //public DbSet<Role> Roles => Set<Role>();
 
@@ -66,6 +159,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new SalesPaymentConfiguration());
         modelBuilder.ApplyConfiguration(new SalesReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new CustomerBillSettingsConfiguration());
+        modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new PurchasePaymentConfiguration());
         modelBuilder.ApplyConfiguration(new TaxConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
