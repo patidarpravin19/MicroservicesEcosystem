@@ -21,6 +21,8 @@ public interface ITokenService
         IEnumerable<string> permissionCodes);
 
     string HashRefreshToken(string refreshToken);
+    string CreatePasswordResetToken(Guid userId, Guid tenantId, TimeSpan lifetime);
+    PasswordResetPrincipal? ValidatePasswordResetToken(string token);
 
     /// <summary>
     /// Validates an expired-but-otherwise-legitimate access token (signature, issuer,
@@ -33,3 +35,4 @@ public interface ITokenService
 }
 
 public sealed record ExpiredTokenPrincipal(Guid UserId, Guid TenantId, string TenantSchema);
+public sealed record PasswordResetPrincipal(Guid UserId, Guid TenantId);

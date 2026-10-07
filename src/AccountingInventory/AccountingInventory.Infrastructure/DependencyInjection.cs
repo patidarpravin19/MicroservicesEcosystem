@@ -53,6 +53,7 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Jwt configuration section is missing.");
         services.AddSingleton(jwtOptions);
         services.AddSingleton<ITokenService, TokenService>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         return services;
     }

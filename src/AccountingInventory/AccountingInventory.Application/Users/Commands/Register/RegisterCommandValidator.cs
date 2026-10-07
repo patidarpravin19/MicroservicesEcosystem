@@ -1,4 +1,5 @@
 using FluentValidation;
+using AccountingInventory.Application.Users;
 
 namespace AccountingInventory.Application.Users.Commands.Register;
 
@@ -16,10 +17,10 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
             .EmailAddress();
 
         RuleFor(x => x.Password)
-            .NotEmpty()
-            .MinimumLength(8)
-            .Matches("[A-Z]").WithMessage("Password must contain at least one uppercase letter.")
-            .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one digit.");
+            .NotEmpty().WithMessage(PasswordPolicy.RequiredMessage)
+            .MinimumLength(PasswordPolicy.MinimumLength).WithMessage(PasswordPolicy.MinimumLengthMessage)
+            .Matches("[A-Z]").WithMessage(PasswordPolicy.UppercaseMessage)
+            .Matches("[a-z]").WithMessage(PasswordPolicy.LowercaseMessage)
+            .Matches("[0-9]").WithMessage(PasswordPolicy.DigitMessage);
     }
 }

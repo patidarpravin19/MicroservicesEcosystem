@@ -17,6 +17,43 @@ namespace AccountingInventory.Infrastructure.Security;
 /// </summary>
 public sealed class TokenService(JwtOptions options) : ITokenService
 {
+    public string CreatePasswordResetToken(Guid userId, Guid tenantId, TimeSpan lifetime)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim(TenantClaimTypes.TenantId, tenantId.ToString()),
+            new Claim("purpose", "password-reset"),
+        };
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey));
+        var jwt = new JwtSecurityToken(options.Issuer, options.Audience, claims,
+            expires: DateTime.UtcNow.Add(lifetime), signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+        return new JwtSecurityTokenHandler().WriteToken(jwt);
+    }
+
+    public PasswordResetPrincipal? ValidatePasswordResetToken(string token)
+    {
+        var validation = new TokenValidationParameters
+        {
+            ValidateAudience = true, ValidateIssuer = true, ValidIssuer = options.Issuer,
+            ValidAudience = options.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)),
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+        };
+        try
+        {
+            var principal = new JwtSecurityTokenHandler { MapInboundClaims = false }
+                .ValidateToken(token, validation, out var securityToken);
+            if (securityToken is not JwtSecurityToken jwt ||
+                !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase) ||
+                principal.FindFirst("purpose")?.Value != "password-reset" ||
+                !Guid.TryParse(principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var userId) ||
+                !Guid.TryParse(principal.FindFirst(TenantClaimTypes.TenantId)?.Value, out var tenantId)) return null;
+            return new PasswordResetPrincipal(userId, tenantId);
+        }
+        catch (SecurityTokenException) { return null; }
+    }
+
     public TokenPair GenerateTokenPair(
         Guid userId,
         string userName,
