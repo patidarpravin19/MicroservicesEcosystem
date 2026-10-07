@@ -5,6 +5,7 @@ namespace AccountingInventory.Domain.Entities;
 /// <summary>A tenant scoped product sale linked to a customer.</summary>
 public sealed class SalesProduct : AggregateRoot
 {
+    public string BillNumber { get; private set; } = null!;
     public string ProductId { get; private set; } = null!;
     public Guid CustomerId { get; private set; }
     public DateOnly SaleDate { get; private set; }
@@ -12,13 +13,14 @@ public sealed class SalesProduct : AggregateRoot
     public decimal SellingPrice { get; private set; }
     public decimal Discount { get; private set; }
 
-    public static SalesProduct Create(string productId,
+    public static SalesProduct Create(string billNumber, string productId,
         Guid customerId, DateOnly saleDate,
         decimal productPrice, decimal sellingPrice, decimal discount)
         => new()
         {
             Id = Guid.NewGuid(),
             IsActive = true,
+            BillNumber = billNumber.Trim(),
             ProductId = productId.Trim(),
             CustomerId = customerId,
             SaleDate = saleDate,

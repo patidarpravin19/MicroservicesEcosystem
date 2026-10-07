@@ -528,6 +528,26 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.ToTable("sales_payments", (string)null);
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesReceipt", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<decimal>("Amount").HasPrecision(18, 2).HasColumnType("numeric(18,2)").HasColumnName("amount");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by");
+                    b.Property<bool>("IsActive").HasColumnType("boolean").HasColumnName("is_active");
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean").HasColumnName("is_deleted");
+                    b.Property<DateTimeOffset?>("ModifiedAt").HasColumnType("timestamp with time zone").HasColumnName("modified_at");
+                    b.Property<Guid?>("ModifiedBy").HasColumnType("uuid").HasColumnName("modified_by");
+                    b.Property<string>("Note").HasMaxLength(500).HasColumnType("character varying(500)").HasColumnName("note");
+                    b.Property<DateOnly>("PaymentDate").HasColumnType("date").HasColumnName("payment_date");
+                    b.Property<string>("PaymentMode").IsRequired().HasMaxLength(30).HasColumnType("character varying(30)").HasColumnName("payment_mode");
+                    b.Property<string>("ReferenceNumber").HasMaxLength(100).HasColumnType("character varying(100)").HasColumnName("reference_number");
+                    b.Property<Guid>("SalesProductId").HasColumnType("uuid").HasColumnName("sales_product_id");
+                    b.HasKey("Id").HasName("pk_sales_receipts");
+                    b.HasIndex("SalesProductId", "PaymentDate").HasDatabaseName("ix_sales_receipts_sales_product_id_payment_date");
+                    b.ToTable("sales_receipts", (string)null);
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.PurchasePayment", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
@@ -577,6 +597,16 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasConstraintName("fk_purchase_payments_vendors_vendor_id");
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesReceipt", b =>
+                {
+                    b.HasOne("AccountingInventory.Domain.Entities.SalesProduct", null)
+                        .WithMany()
+                        .HasForeignKey("SalesProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_receipts_sales_products_sales_product_id");
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesProduct", b =>
                 {
                     b.Property<Guid>("Id")
@@ -585,42 +615,49 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .HasColumnName("id")
                         .HasColumnOrder(0);
 
+                    b.Property<string>("BillNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("bill_number")
+                        .HasColumnOrder(1);
+
                     b.Property<decimal>("Discount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("discount")
-                        .HasColumnOrder(6);
+                        .HasColumnOrder(7);
 
                     b.Property<string>("ProductId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("product_id")
-                        .HasColumnOrder(1);
+                        .HasColumnOrder(2);
 
                     b.Property<decimal>("ProductPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("product_price")
-                        .HasColumnOrder(4);
+                        .HasColumnOrder(5);
 
                     b.Property<DateOnly>("SaleDate")
                         .HasColumnType("date")
                         .HasColumnName("sale_date")
-                        .HasColumnOrder(3);
+                        .HasColumnOrder(4);
 
                     b.Property<decimal>("SellingPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("selling_price")
-                        .HasColumnOrder(5);
+                        .HasColumnOrder(6);
 
-                    b.Property<Guid>("CustomerId").HasColumnType("uuid").HasColumnName("customer_id").HasColumnOrder(2);
-                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at").HasColumnOrder(7);
-                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by").HasColumnOrder(8);
-                    b.Property<DateTimeOffset?>("ModifiedAt").HasColumnType("timestamp with time zone").HasColumnName("modified_at").HasColumnOrder(9);
-                    b.Property<Guid?>("ModifiedBy").HasColumnType("uuid").HasColumnName("modified_by").HasColumnOrder(10);
-                    b.Property<bool>("IsActive").HasColumnType("boolean").HasColumnName("is_active").HasColumnOrder(11);
-                    b.Property<bool>("IsDeleted").HasColumnType("boolean").HasColumnName("is_deleted").HasColumnOrder(12);
+                    b.Property<Guid>("CustomerId").HasColumnType("uuid").HasColumnName("customer_id").HasColumnOrder(3);
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at").HasColumnOrder(8);
+                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by").HasColumnOrder(9);
+                    b.Property<DateTimeOffset?>("ModifiedAt").HasColumnType("timestamp with time zone").HasColumnName("modified_at").HasColumnOrder(10);
+                    b.Property<Guid?>("ModifiedBy").HasColumnType("uuid").HasColumnName("modified_by").HasColumnOrder(11);
+                    b.Property<bool>("IsActive").HasColumnType("boolean").HasColumnName("is_active").HasColumnOrder(12);
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean").HasColumnName("is_deleted").HasColumnOrder(13);
 
                     b.HasKey("Id")
                         .HasName("pk_sales_products");
@@ -629,6 +666,10 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                         .IsUnique()
                         .HasDatabaseName("ix_sales_products_product_id")
                         .HasFilter("\"is_deleted\" = false");
+
+                    b.HasIndex("BillNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_products_bill_number");
 
                     b.HasIndex("CustomerId").HasDatabaseName("ix_sales_products_customer_id");
 

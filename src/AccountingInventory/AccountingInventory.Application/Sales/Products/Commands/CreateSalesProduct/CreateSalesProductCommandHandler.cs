@@ -23,8 +23,9 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
 
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
+        var billNumber = await db.GenerateSalesBillNumberAsync(DateTime.UtcNow.Year, cancellationToken);
         product.MarkSold();
-        var sale = SalesProduct.Create(productId.ToString(),
+        var sale = SalesProduct.Create(billNumber, productId.ToString(),
             customer.Id, request.SaleDate,
             request.ProductPrice, request.SellingPrice, request.Discount);
         db.SalesProducts.Add(sale);

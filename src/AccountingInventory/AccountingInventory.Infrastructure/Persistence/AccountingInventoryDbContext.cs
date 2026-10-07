@@ -35,8 +35,14 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<SalesProduct> SalesProducts => Set<SalesProduct>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<SalesPayment> SalesPayments => Set<SalesPayment>();
+    public DbSet<SalesReceipt> SalesReceipts => Set<SalesReceipt>();
     public DbSet<PurchasePayment> PurchasePayments => Set<PurchasePayment>();
     public DbSet<Tax> Taxes => Set<Tax>();
+
+    public async Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken)
+        => await Database.SqlQueryRaw<string>(
+                "SELECT generate_sales_bill_number({0}) AS \"Value\"", year)
+            .SingleAsync(cancellationToken);
 
     //public DbSet<Role> Roles => Set<Role>();
 
@@ -57,6 +63,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new SalesProductConfiguration());
         modelBuilder.ApplyConfiguration(new CustomerConfiguration());
         modelBuilder.ApplyConfiguration(new SalesPaymentConfiguration());
+        modelBuilder.ApplyConfiguration(new SalesReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new PurchasePaymentConfiguration());
         modelBuilder.ApplyConfiguration(new TaxConfiguration());
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());

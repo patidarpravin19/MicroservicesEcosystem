@@ -21,8 +21,10 @@ public interface IAccountingInventoryDbContext
     DbSet<SalesProduct> SalesProducts { get; }
     DbSet<Customer> Customers { get; }
     DbSet<SalesPayment> SalesPayments { get; }
+    DbSet<SalesReceipt> SalesReceipts { get; }
     DbSet<PurchasePayment> PurchasePayments { get; }
     DbSet<Tax> Taxes { get; }
+    Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken);
 
     //DbSet<Role> Roles { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);

@@ -73,7 +73,8 @@ internal static class SalesProductSummaryMapper
                 sale.SellingPrice,
                 sale.Discount,
                 sale.IsActive,
-                paymentModes.GetValueOrDefault(sale.Id));
+                paymentModes.GetValueOrDefault(sale.Id),
+                sale.BillNumber);
         }).ToArray();
     }
 }
