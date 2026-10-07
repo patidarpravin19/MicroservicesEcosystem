@@ -14,9 +14,11 @@ public sealed class UpdateProductCommandHandler(
     {
         var product = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A Product with ID '{request.Id}' was not found.");
-        if (product.BillNumber is { } paidBill && await dbContext.PurchasePayments.AnyAsync(payment =>
-                payment.VendorId == product.VendorId && payment.BillNumber.ToLower() == paidBill.ToLower(), cancellationToken))
-            throw new ConflictException("Products on a bill with recorded payments cannot be edited. Correct the bill through an accounting adjustment.");
+
+        // if (product.BillNumber is { } paidBill && await dbContext.PurchasePayments.AnyAsync(payment =>
+        //         payment.VendorId == product.VendorId && payment.BillNumber.ToLower() == paidBill.ToLower(), cancellationToken))
+        //     throw new ConflictException("Products on a bill with recorded payments cannot be edited. Correct the bill through an accounting adjustment.");
+
         var serialNumber = request.SerialNumber.Trim();
         var serialNumber1 = request.SerialNumber1!.Trim();
         if (string.Equals(serialNumber, serialNumber1, StringComparison.OrdinalIgnoreCase))
