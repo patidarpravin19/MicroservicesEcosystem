@@ -528,6 +528,32 @@ namespace AccountingInventory.Infrastructure.Migrations.AccountingInventoryDb
                     b.ToTable("sales_payments", (string)null);
                 });
 
+            modelBuilder.Entity("AccountingInventory.Domain.Entities.CustomerBillSettings", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<string>("BillTitle").IsRequired().HasMaxLength(80).HasColumnType("character varying(80)").HasColumnName("bill_title");
+                    b.Property<string>("CompanyAddress").IsRequired().HasMaxLength(500).HasColumnType("character varying(500)").HasColumnName("company_address");
+                    b.Property<string>("CompanyEmail").HasMaxLength(256).HasColumnType("character varying(256)").HasColumnName("company_email");
+                    b.Property<string>("CompanyMobile").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("company_mobile");
+                    b.Property<string>("CompanyName").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)").HasColumnName("company_name");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+                    b.Property<Guid?>("CreatedBy").HasColumnType("uuid").HasColumnName("created_by");
+                    b.Property<string>("FooterNote").IsRequired().HasMaxLength(500).HasColumnType("character varying(500)").HasColumnName("footer_note");
+                    b.Property<bool>("IsActive").HasColumnType("boolean").HasColumnName("is_active");
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean").HasColumnName("is_deleted");
+                    b.Property<DateTimeOffset?>("ModifiedAt").HasColumnType("timestamp with time zone").HasColumnName("modified_at");
+                    b.Property<Guid?>("ModifiedBy").HasColumnType("uuid").HasColumnName("modified_by");
+                    b.Property<string>("PaperSize").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)").HasColumnName("paper_size");
+                    b.Property<bool>("ShowBalanceDue").HasColumnType("boolean").HasColumnName("show_balance_due");
+                    b.Property<bool>("ShowCustomerEmail").HasColumnType("boolean").HasColumnName("show_customer_email");
+                    b.Property<bool>("ShowDiscount").HasColumnType("boolean").HasColumnName("show_discount");
+                    b.Property<bool>("ShowPaymentHistory").HasColumnType("boolean").HasColumnName("show_payment_history");
+                    b.Property<bool>("ShowSerialNumber").HasColumnType("boolean").HasColumnName("show_serial_number");
+                    b.Property<string>("TaxRegistrationNumber").HasMaxLength(50).HasColumnType("character varying(50)").HasColumnName("tax_registration_number");
+                    b.HasKey("Id").HasName("pk_customer_bill_settings");
+                    b.ToTable("customer_bill_settings", (string)null);
+                });
+
             modelBuilder.Entity("AccountingInventory.Domain.Entities.SalesReceipt", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");

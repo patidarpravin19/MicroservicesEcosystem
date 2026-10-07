@@ -11,8 +11,10 @@ public sealed record GetSalesBillsQuery(int Page = 1, int PageSize = 20, string?
     : IRequest<PagedResult<SalesBillSummary>>;
 
 public sealed record SalesBillSummary(
-    Guid Id, string BillNumber, string ProductName, string CustomerName, string CustomerMobile,
-    DateOnly BillDate, decimal SellingPrice, decimal TotalAmount, decimal AmountPaid, decimal Balance, string PaymentStatus);
+    Guid Id, string BillNumber, string ProductName, string SerialNumber, string CustomerName,
+    string CustomerMobile, string CustomerAddress, string? CustomerEmail, DateOnly BillDate,
+    decimal SellingPrice, decimal Discount, decimal TotalAmount, decimal AmountPaid, decimal Balance,
+    string PaymentStatus);
 
 public sealed record SalesReceiptSummary(
     Guid Id, decimal Amount, string PaymentMode, DateOnly PaymentDate, string? ReferenceNumber, string? Note);
@@ -73,8 +75,9 @@ public sealed class GetSalesBillsQueryHandler(IAccountingInventoryDbContext db)
         var total = Math.Max(0m, sale.SellingPrice - sale.Discount);
         var balance = Math.Max(0m, total - amountPaid);
         var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
-        return new SalesBillSummary(sale.Id, summary.BillNumber, summary.ProductName, summary.CustomerName,
-            summary.CustomerMobile, sale.SaleDate, sale.SellingPrice, total, amountPaid, balance, status);
+        return new SalesBillSummary(sale.Id, summary.BillNumber, summary.ProductName, summary.SerialNumber,
+            summary.CustomerName, summary.CustomerMobile, summary.CustomerAddress, summary.CustomerEmail,
+            sale.SaleDate, sale.SellingPrice, sale.Discount, total, amountPaid, balance, status);
     }
 }
 
