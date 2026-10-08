@@ -24,6 +24,12 @@ internal static class P0Configurations
         model.Entity<User>().HasIndex(x => x.IsOwner).IsUnique().HasFilter("is_owner = true");
         model.Entity<User>().Property(x => x.InvitationHash).HasMaxLength(64);
         model.Entity<SalesProduct>().HasIndex(x => x.ProductId).IsUnique().HasFilter("is_deleted = false AND is_returned = false");
+        Configure<SalesInvoice>(model, "sales_invoices");
+        Configure<SalesInvoiceLine>(model, "sales_invoice_lines");
+        model.Entity<SalesInvoice>().HasIndex(x => x.BillNumber).IsUnique();
+        model.Entity<SalesInvoice>().HasIndex(x => x.CustomerId);
+        model.Entity<SalesInvoice>().HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<SalesInvoiceLine>().HasOne<SalesInvoice>().WithMany(x => x.Lines).HasForeignKey(x => x.SalesInvoiceId).OnDelete(DeleteBehavior.Cascade);
     }
     private static void Configure<T>(ModelBuilder model, string table) where T : AggregateRoot
     {

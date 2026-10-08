@@ -4,6 +4,7 @@ using AccountingInventory.Application.Vendors.Commands.UpdateVendor;
 using AccountingInventory.Application.Common.Models;
 using AccountingInventory.Application.Vendors.Queries.GetVendorById;
 using AccountingInventory.Application.Vendors.Queries.GetVendors;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.WebDefaults;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -92,6 +93,13 @@ public static class VendorEndpoints
             })
             .WithName("DeleteVendor")
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/statement", async (Guid id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to,
+                ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetPartyStatementQuery("Vendor", id, from, to), ct)))
+            .WithName("GetVendorStatement")
+            .Produces<PartyStatementOfAccountDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
     
         return group;

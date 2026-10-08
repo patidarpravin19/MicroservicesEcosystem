@@ -19,6 +19,8 @@ public interface IAccountingInventoryDbContext
     DbSet<ProductModel> ProductModels { get; }
     DbSet<Product> Products { get; }
     DbSet<SalesProduct> SalesProducts { get; }
+    DbSet<SalesInvoice> SalesInvoices { get; }
+    DbSet<SalesInvoiceLine> SalesInvoiceLines { get; }
     DbSet<Customer> Customers { get; }
     DbSet<SalesPayment> SalesPayments { get; }
     DbSet<SalesReceipt> SalesReceipts { get; }

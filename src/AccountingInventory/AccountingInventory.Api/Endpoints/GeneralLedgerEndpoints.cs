@@ -71,6 +71,16 @@ public static class GeneralLedgerEndpoints
             Results.Ok(await sender.Send(new GetTaxReportQuery(from, to), ct)))
             .WithName("GetTaxReport").Produces<TaxReportSummary>();
 
+        group.MapGet("/party-statement", async (
+                [FromQuery] string partyType,
+                [FromQuery] Guid partyId,
+                [FromQuery] DateOnly? from,
+                [FromQuery] DateOnly? to,
+                ISender sender,
+                CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetPartyStatementQuery(partyType, partyId, from, to), ct)))
+            .WithName("GetPartyStatement").Produces<PartyStatementOfAccountDto>();
+
         var periods = app.MapGroup("/api/accounting-periods")
             .WithTags("Accounting Periods")
             .RequireAuthorization("AuthenticatedUser")

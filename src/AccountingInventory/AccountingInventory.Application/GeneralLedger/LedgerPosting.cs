@@ -89,6 +89,31 @@ public static class LedgerPosting
         return lines.Count == 0 ? null : JournalEntry.Post(sale.SaleDate, "Product sale", "Sale", sale.Id.ToString(), lines);
     }
 
+    public static JournalEntry? ForSalesInvoice(SalesInvoice invoice, IReadOnlyList<Product> products, IReadOnlyDictionary<string, Guid> accounts)
+    {
+        var grossRevenue = invoice.SubTotal;
+        var discount = invoice.Discount;
+        var receivable = invoice.TotalAmount;
+        var totalCost = products.Sum(p => decimal.Round(p.PurchasePrice - p.Discount, 2, MidpointRounding.AwayFromZero));
+        if (receivable < 0 || totalCost < 0) throw new ConflictException("Sale amount and inventory cost cannot be negative.");
+
+        var lines = new List<(Guid AccountId, decimal Debit, decimal Credit, string? Memo)>();
+        if (receivable > 0)
+        {
+            lines.Add((accounts["1100"], receivable, 0, "Customer receivable"));
+            if (discount > 0) lines.Add((accounts["4100"], discount, 0, "Sales discount"));
+            if (grossRevenue > 0) lines.Add((accounts["4000"], 0, grossRevenue, "Sales revenue"));
+            var totalTax = invoice.CgstAmount + invoice.SgstAmount + invoice.IgstAmount;
+            if (totalTax > 0) lines.Add((accounts["2100"], 0, totalTax, "GST collected"));
+        }
+        if (totalCost > 0)
+        {
+            lines.Add((accounts["5000"], totalCost, 0, "Cost of goods sold"));
+            lines.Add((accounts["1200"], 0, totalCost, "Inventory relieved"));
+        }
+        return lines.Count == 0 ? null : JournalEntry.Post(invoice.InvoiceDate, $"Sales invoice {invoice.BillNumber}", "SalesInvoice", invoice.Id.ToString(), lines);
+    }
+
     public static JournalEntry ForSalesReceipt(SalesReceipt receipt, IReadOnlyDictionary<string, Guid> accounts)
     {
         var cashAccount = receipt.PaymentMode == "Cash" ? "1000" : "1010";

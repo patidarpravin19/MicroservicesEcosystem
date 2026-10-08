@@ -12,6 +12,8 @@ public sealed class CustomerBillSettings : AggregateRoot
     public string CompanyMobile { get; private set; } = string.Empty;
     public string? CompanyEmail { get; private set; }
     public string? TaxRegistrationNumber { get; private set; }
+    public string? StateCode { get; private set; }
+    public string? StateName { get; private set; }
     public string BillTitle { get; private set; } = "SALES INVOICE";
     public string FooterNote { get; private set; } = "Thank you for your business.";
     public string PaperSize { get; private set; } = "A4";
@@ -23,24 +25,28 @@ public sealed class CustomerBillSettings : AggregateRoot
 
     public static CustomerBillSettings Create(string companyName, string companyAddress, string companyMobile,
         string? companyEmail, string? taxRegistrationNumber, string billTitle, string footerNote, string paperSize,
-        bool showCustomerEmail, bool showSerialNumber, bool showDiscount, bool showPaymentHistory, bool showBalanceDue)
+        bool showCustomerEmail, bool showSerialNumber, bool showDiscount, bool showPaymentHistory, bool showBalanceDue,
+        string? stateCode = null, string? stateName = null)
     {
         var settings = new CustomerBillSettings { Id = TenantSettingsId, IsActive = true };
         settings.Update(companyName, companyAddress, companyMobile, companyEmail, taxRegistrationNumber,
             billTitle, footerNote, paperSize, showCustomerEmail, showSerialNumber, showDiscount,
-            showPaymentHistory, showBalanceDue);
+            showPaymentHistory, showBalanceDue, stateCode, stateName);
         return settings;
     }
 
     public void Update(string companyName, string companyAddress, string companyMobile,
         string? companyEmail, string? taxRegistrationNumber, string billTitle, string footerNote, string paperSize,
-        bool showCustomerEmail, bool showSerialNumber, bool showDiscount, bool showPaymentHistory, bool showBalanceDue)
+        bool showCustomerEmail, bool showSerialNumber, bool showDiscount, bool showPaymentHistory, bool showBalanceDue,
+        string? stateCode = null, string? stateName = null)
     {
         CompanyName = companyName.Trim();
         CompanyAddress = companyAddress.Trim();
         CompanyMobile = companyMobile.Trim();
         CompanyEmail = Normalize(companyEmail);
         TaxRegistrationNumber = Normalize(taxRegistrationNumber);
+        StateCode = GstStates.ExtractStateCode(stateCode) ?? GstStates.ExtractStateCode(TaxRegistrationNumber) ?? GstStates.ExtractStateCode(CompanyAddress);
+        StateName = !string.IsNullOrWhiteSpace(stateName) ? stateName.Trim() : GstStates.GetStateName(StateCode);
         BillTitle = billTitle.Trim();
         FooterNote = footerNote.Trim();
         PaperSize = paperSize.Trim();

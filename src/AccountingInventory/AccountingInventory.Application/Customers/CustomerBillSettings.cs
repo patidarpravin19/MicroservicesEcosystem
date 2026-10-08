@@ -19,7 +19,9 @@ public sealed record CustomerBillTemplate(
     bool ShowSerialNumber,
     bool ShowDiscount,
     bool ShowPaymentHistory,
-    bool ShowBalanceDue);
+    bool ShowBalanceDue,
+    string? StateCode = null,
+    string? StateName = null);
 
 public sealed record GetCustomerBillSettingsQuery() : IRequest<CustomerBillTemplate>;
 
@@ -32,15 +34,19 @@ public sealed class GetCustomerBillSettingsQueryHandler(IAccountingInventoryDbCo
             .SingleOrDefaultAsync(item => item.Id == CustomerBillSettings.TenantSettingsId, cancellationToken);
         return settings is null
             ? new CustomerBillTemplate(string.Empty, string.Empty, string.Empty, null, null,
-                "SALES INVOICE", "Thank you for your business.", "A4", true, true, true, true, true)
+                "SALES INVOICE", "Thank you for your business.", "A4", true, true, true, true, true, null, null)
             : Map(settings);
     }
 
     internal static CustomerBillTemplate Map(CustomerBillSettings settings)
-        => new(settings.CompanyName, settings.CompanyAddress, settings.CompanyMobile, settings.CompanyEmail,
+    {
+        var code = settings.StateCode ?? GstStates.ExtractStateCode(settings.TaxRegistrationNumber) ?? GstStates.ExtractStateCode(settings.CompanyAddress);
+        var name = settings.StateName ?? GstStates.GetStateName(code);
+        return new(settings.CompanyName, settings.CompanyAddress, settings.CompanyMobile, settings.CompanyEmail,
             settings.TaxRegistrationNumber, settings.BillTitle, settings.FooterNote, settings.PaperSize,
             settings.ShowCustomerEmail, settings.ShowSerialNumber, settings.ShowDiscount,
-            settings.ShowPaymentHistory, settings.ShowBalanceDue);
+            settings.ShowPaymentHistory, settings.ShowBalanceDue, code, name);
+    }
 }
 
 public sealed record UpdateCustomerBillSettingsCommand(
@@ -56,7 +62,9 @@ public sealed record UpdateCustomerBillSettingsCommand(
     bool ShowSerialNumber,
     bool ShowDiscount,
     bool ShowPaymentHistory,
-    bool ShowBalanceDue) : IRequest<CustomerBillTemplate>;
+    bool ShowBalanceDue,
+    string? StateCode = null,
+    string? StateName = null) : IRequest<CustomerBillTemplate>;
 
 public sealed class UpdateCustomerBillSettingsCommandValidator : AbstractValidator<UpdateCustomerBillSettingsCommand>
 {
@@ -86,7 +94,7 @@ public sealed class UpdateCustomerBillSettingsCommandHandler(IAccountingInventor
             settings = CustomerBillSettings.Create(request.CompanyName, request.CompanyAddress, request.CompanyMobile,
                 request.CompanyEmail, request.TaxRegistrationNumber, request.BillTitle, request.FooterNote,
                 request.PaperSize, request.ShowCustomerEmail, request.ShowSerialNumber, request.ShowDiscount,
-                request.ShowPaymentHistory, request.ShowBalanceDue);
+                request.ShowPaymentHistory, request.ShowBalanceDue, request.StateCode, request.StateName);
             db.CustomerBillSettings.Add(settings);
         }
         else
@@ -94,7 +102,7 @@ public sealed class UpdateCustomerBillSettingsCommandHandler(IAccountingInventor
             settings.Update(request.CompanyName, request.CompanyAddress, request.CompanyMobile,
                 request.CompanyEmail, request.TaxRegistrationNumber, request.BillTitle, request.FooterNote,
                 request.PaperSize, request.ShowCustomerEmail, request.ShowSerialNumber, request.ShowDiscount,
-                request.ShowPaymentHistory, request.ShowBalanceDue);
+                request.ShowPaymentHistory, request.ShowBalanceDue, request.StateCode, request.StateName);
         }
 
         await db.SaveChangesAsync(cancellationToken);

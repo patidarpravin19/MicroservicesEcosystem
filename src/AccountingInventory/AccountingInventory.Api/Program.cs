@@ -45,6 +45,7 @@ app.MapInventoryEndpoints();
 app.MapPurchaseAccountingEndpoints();
 app.MapSalesProductEndpoints();
 app.MapSalesAccountingEndpoints();
+app.MapSalesInvoiceEndpoints();
 app.MapCustomerEndpoints();
 app.MapCustomerBillSettingsEndpoints();
 app.MapAuditLogEndpoints();
@@ -52,6 +53,7 @@ app.MapGeneralLedgerEndpoints();
 app.MapAccountingExtensionEndpoints();
 app.MapAccountingP0Endpoints();
 app.MapTaxEndpoints();
+app.MapDashboardEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 app.MapGet("/health/ready", async (TenantDbContext db, CancellationToken ct) =>
 {

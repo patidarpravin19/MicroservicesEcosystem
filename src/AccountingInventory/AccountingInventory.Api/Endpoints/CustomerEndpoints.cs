@@ -1,6 +1,7 @@
 using AccountingInventory.Application.Customers;
 using AccountingInventory.Application.Customers.Queries.SearchCustomers;
 using AccountingInventory.Application.Common.Models;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.WebDefaults;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -69,6 +70,13 @@ public static class CustomerEndpoints
                 Results.Ok(await sender.Send(new GetCustomerHistoryQuery(id), cancellationToken)))
             .WithName("GetCustomerHistory")
             .Produces<CustomerHistory>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/statement", async (Guid id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to,
+                ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetPartyStatementQuery("Customer", id, from, to), cancellationToken)))
+            .WithName("GetCustomerStatement")
+            .Produces<PartyStatementOfAccountDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         return group;

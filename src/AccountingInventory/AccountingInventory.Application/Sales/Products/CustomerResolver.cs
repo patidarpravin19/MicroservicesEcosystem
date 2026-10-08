@@ -12,19 +12,22 @@ internal static class CustomerResolver
         string mobile,
         string address,
         string? email,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? stateCode = null,
+        string? stateName = null,
+        string? gstin = null)
     {
         var normalizedMobile = mobile.Trim();
         var customer = await db.Customers.SingleOrDefaultAsync(
             item => item.Mobile == normalizedMobile, cancellationToken);
         if (customer is null)
         {
-            customer = Customer.Create(name, normalizedMobile, address, email);
+            customer = Customer.Create(name, normalizedMobile, address, email, stateCode, stateName, gstin);
             db.Customers.Add(customer);
         }
         else
         {
-            customer.UpdateContactDetails(name, normalizedMobile, address, email);
+            customer.UpdateContactDetails(name, normalizedMobile, address, email, stateCode, stateName, gstin);
         }
 
         return customer;
