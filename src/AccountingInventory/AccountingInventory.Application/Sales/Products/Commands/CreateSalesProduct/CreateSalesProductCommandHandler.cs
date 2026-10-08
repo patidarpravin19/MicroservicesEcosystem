@@ -22,6 +22,8 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
         if (await db.SalesProducts.AnyAsync(x => x.ProductId == productId.ToString(), cancellationToken))
             throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
+        if (request.SaleDate < product.PurchaseDate)
+            throw new ConflictException("A sale cannot precede the stock purchase date.");
         var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
         var tax = request.TaxId.HasValue && request.TaxId.Value != Guid.Empty
             ? await db.Taxes.SingleOrDefaultAsync(item => item.Id == request.TaxId.Value && item.IsActive, cancellationToken)
@@ -30,11 +32,11 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
 
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
-        var billNumber = await db.GenerateSalesBillNumberAsync(DateTime.UtcNow.Year, cancellationToken);
+        var billNumber = await db.GenerateSalesBillNumberAsync(request.SaleDate.Year, cancellationToken);
         product.MarkSold();
         var sale = SalesProduct.Create(billNumber, productId.ToString(),
             customer.Id, request.SaleDate,
-            request.ProductPrice, request.SellingPrice, request.Discount,
+            decimal.Round(product.PurchasePrice - product.Discount, 2, MidpointRounding.AwayFromZero), request.SellingPrice, request.Discount,
             tax?.Id, tax?.Cgst ?? 0m, tax?.Sgst ?? 0m, request.PaymentTermsDays);
         db.SalesProducts.Add(sale);
         LedgerPosting.Add(db, LedgerPosting.ForSale(sale, product, ledgerAccounts));

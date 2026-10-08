@@ -36,13 +36,19 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
             }
         }
 
+        if (await db.SalesReceipts.AnyAsync(receipt => receipt.SalesProductId == sale.Id, cancellationToken))
+            throw new ConflictException("A sale with recorded receipts cannot be edited.");
+        var stock = await db.Products.SingleOrDefaultAsync(product => product.Id == requestedProductId, cancellationToken)
+            ?? throw new NotFoundException("The sale's stock record was not found.");
+        if (request.SaleDate < stock.PurchaseDate)
+            throw new ConflictException("A sale cannot precede the stock purchase date.");
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
         var tax = request.TaxId.HasValue && request.TaxId.Value != Guid.Empty
             ? await db.Taxes.SingleOrDefaultAsync(item => item.Id == request.TaxId.Value && item.IsActive, cancellationToken)
                 ?? throw new NotFoundException($"Tax rate '{request.TaxId}' was not found or is inactive.")
             : null;
-        sale.Update(requestedProductId.ToString(), customer.Id, request.SaleDate, request.ProductPrice,
+        sale.Update(requestedProductId.ToString(), customer.Id, request.SaleDate, decimal.Round(stock.PurchasePrice - stock.Discount, 2, MidpointRounding.AwayFromZero),
             request.SellingPrice, request.Discount, tax?.Id, tax?.Cgst ?? 0m, tax?.Sgst ?? 0m,
             request.PaymentTermsDays);
         try

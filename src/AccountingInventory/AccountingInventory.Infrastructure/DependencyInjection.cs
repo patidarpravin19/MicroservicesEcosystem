@@ -22,6 +22,8 @@ public static class DependencyInjection
         //                               Tenant.Create / TenantSchemaNameValidator)
         services.AddHttpContextAccessor();
         services.AddScoped<BuildingBlocks.Persistence.ICurrentUserProvider, BuildingBlocks.Persistence.HttpCurrentUserProvider>();
+        services.AddScoped<IRequestIdentity, RequestIdentity>();
+        services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(BusinessTransactionBehavior<,>));
         services.AddScoped<ITenantProvider, DynamicTenantProvider>();
         services.AddScoped<TenantSchemaConnectionInterceptor>();
         services.AddDbContext<AccountingInventoryDbContext>((sp, options) =>

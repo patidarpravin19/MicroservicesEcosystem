@@ -41,3 +41,11 @@ inside a transaction and roll it back; tenant data is not changed.
 3. update database with the following command:
 		dotnet ef database update --project AccountingInventory.Infrastructure --startup-project AccountingInventory.API --context AccountingInventoryDbContext
 
+
+`20261023120000_RepairUserContacts` corrects historical registration rows where
+email and mobile were passed to the domain factory in reverse order. It swaps
+only pairs with an email-shaped mobile and a phone-shaped email, preserving
+ambiguous values for review. It uses the same tenant migration startup path.
+
+See [product readiness](../../../docs/accounting-inventory-readiness.md) for
+permission changes, verified safeguards, and remaining release requirements.

@@ -136,6 +136,10 @@ public sealed class PostJournalHandler(IAccountingInventoryDbContext db) : IRequ
     public async Task<JournalSummary> Handle(PostJournalCommand request, CancellationToken ct)
     {
         await LedgerPosting.EnsurePeriodOpenAsync(db, request.JournalDate, ct);
+        if (!string.IsNullOrWhiteSpace(request.SourceType)
+            && !string.Equals(request.SourceType, "Manual", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(request.SourceType, "FinancialCorrection", StringComparison.OrdinalIgnoreCase))
+            throw new ConflictException("Manual journals may only use Manual or FinancialCorrection as their source type.");
         var isCorrection = string.Equals(request.SourceType, "FinancialCorrection", StringComparison.OrdinalIgnoreCase);
         if (isCorrection && request.ApprovalId is null)
             throw new ConflictException("Financial corrections require an approved request.");
@@ -230,15 +234,23 @@ public sealed class ReverseJournalHandler(IAccountingInventoryDbContext db)
         var original = await db.JournalEntries.AsNoTracking()
             .SingleOrDefaultAsync(entry => entry.Id == request.JournalEntryId, ct)
             ?? throw new BuildingBlocks.Application.Exceptions.NotFoundException("Journal entry was not found.");
+        if (!string.IsNullOrWhiteSpace(original.SourceType)
+            && !string.Equals(original.SourceType, "Manual", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(original.SourceType, "FinancialCorrection", StringComparison.OrdinalIgnoreCase))
+            throw new ConflictException("System journals must be corrected through their source workflow so stock and balances remain consistent.");
+        if (request.ReversalDate < original.JournalDate)
+            throw new ConflictException("A reversal cannot precede the original journal date.");
         if (await db.JournalEntries.AnyAsync(entry => entry.ReversalOfJournalEntryId == original.Id, ct))
             throw new ConflictException("This journal entry has already been reversed.");
         var lines = await db.JournalLines.AsNoTracking().Where(line => line.JournalEntryId == original.Id)
-            .Select(line => new { line.AccountId, line.Debit, line.Credit, line.Memo }).ToListAsync(ct);
+            .Select(line => new { line.AccountId, line.Debit, line.Credit, line.Memo, line.DimensionId }).ToListAsync(ct);
         var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
         var description = $"Reversal of {original.JournalNumber}" + (reason is null ? string.Empty : $": {reason}");
         var reversal = JournalEntry.Post(request.ReversalDate, description, "JournalReversal", original.Id.ToString(),
             lines.Select(line => (line.AccountId, Debit: line.Credit, Credit: line.Debit,
-                Memo: line.Memo is null ? "Reversal" : $"Reversal: {line.Memo}")).ToArray(), original.Id);
+                Memo: line.Memo)).ToArray(), original.Id);
+        var reversalIndex = 0;
+        foreach (var line in reversal.Lines) line.AssignDimension(lines[reversalIndex++].DimensionId);
         db.JournalEntries.Add(reversal);
         db.JournalLines.AddRange(reversal.Lines);
         await db.SaveChangesAsync(ct);
@@ -312,7 +324,7 @@ public sealed class GetFinancialStatementsHandler(IAccountingInventoryDbContext 
             join entry in db.JournalEntries.AsNoTracking() on line.JournalEntryId equals entry.Id
             join account in db.ChartAccounts.AsNoTracking() on line.AccountId equals account.Id
             where entry.JournalDate <= toDate
-                && (entry.SourceType != "YearEndClose" || (account.Type != LedgerAccountType.Revenue && account.Type != LedgerAccountType.Expense))
+
             group line by line.AccountId into accountLines
             select new { AccountId = accountLines.Key, Debit = accountLines.Sum(line => line.Debit), Credit = accountLines.Sum(line => line.Credit) })
             .ToDictionaryAsync(row => row.AccountId, ct);

@@ -31,7 +31,7 @@ public static class AuthEndpoints
             // Registration has no access token yet, but still needs a tenant. This
             // filter resolves X-Tenant-Id to the registry-owned schema before the
             // MediatR handler resolves its tenant DbContext.
-            .AddEndpointFilter<TenantHeaderEndpointFilter>()
+            .AddEndpointFilter(new TenantHeaderEndpointFilter(allowBootstrapRegistration: true))
             .WithMetadata(new RequiresTenantIdHeaderAttribute())
             .Produces<RegisterResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -57,12 +57,12 @@ public static class AuthEndpoints
         {
             var slug = request.TenantSlug.Trim().ToLowerInvariant();
             var tenant = await directory.Tenants.AsNoTracking().SingleOrDefaultAsync(t => t.Slug == slug, ct);
-            if (tenant is not null && tenant.Status == TenantStatus.Active)
+            if (tenant is not null && tenant.IsActive && tenant.Status == TenantStatus.Active)
             {
                 tenantAccessor.SetTenant(tenant.Id, tenant.SchemaName);
                 await db.ResetConnectionAsync(ct);
                 var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+                var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail && u.IsActive, ct);
                 if (user is not null)
                 {
                     var token = tokens.CreatePasswordResetToken(user.Id, tenant.Id, TimeSpan.FromMinutes(30));
@@ -83,11 +83,11 @@ public static class AuthEndpoints
             var principal = tokens.ValidatePasswordResetToken(request.Token);
             if (principal is null) return Results.BadRequest(new { message = "This password reset link is invalid or has expired." });
             var tenant = await directory.Tenants.AsNoTracking().SingleOrDefaultAsync(t => t.Id == principal.TenantId, ct);
-            if (tenant is null || tenant.Status != TenantStatus.Active)
+            if (tenant is null || !tenant.IsActive || tenant.Status != TenantStatus.Active)
                 return Results.BadRequest(new { message = "This password reset link is invalid or has expired." });
             tenantAccessor.SetTenant(tenant.Id, tenant.SchemaName);
             await db.ResetConnectionAsync(ct);
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == principal.UserId, ct);
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == principal.UserId && u.IsActive, ct);
             if (user is null) return Results.BadRequest(new { message = "This password reset link is invalid or has expired." });
             var passwordErrors = PasswordPolicy.GetErrors(request.Password);
             if (passwordErrors.Count > 0)

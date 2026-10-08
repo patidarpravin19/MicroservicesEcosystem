@@ -135,7 +135,7 @@ public sealed class DeleteCustomerCommandHandler(IAccountingInventoryDbContext d
     {
         var customer = await db.Customers.SingleOrDefaultAsync(item => item.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Customer '{request.Id}' was not found.");
-        if (await db.SalesProducts.AnyAsync(sale => sale.CustomerId == customer.Id, cancellationToken))
+        if (await db.SalesProducts.IgnoreQueryFilters().AnyAsync(sale => sale.CustomerId == customer.Id, cancellationToken))
             throw new ConflictException("Customers with sales history cannot be deleted. Edit the customer or keep the history intact.");
         customer.Delete();
         await db.SaveChangesAsync(cancellationToken);

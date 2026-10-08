@@ -1,4 +1,5 @@
 using AccountingInventory.Application.Abstractions;
+using System.Security.Claims;
 using AccountingInventory.Domain.Entities;
 using BuildingBlocks.Domain.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace AccountingInventory.Api.Endpoints;
 /// <c>X-Tenant-Id</c> request header. The schema is read only from the control-plane
 /// tenant registry, never from a client header.
 /// </summary>
-public sealed class TenantHeaderEndpointFilter : IEndpointFilter
+public sealed class TenantHeaderEndpointFilter(bool allowBootstrapRegistration = false) : IEndpointFilter
 {
     public const string TenantIdHeader = "X-Tenant-Id";
 
@@ -26,7 +27,12 @@ public sealed class TenantHeaderEndpointFilter : IEndpointFilter
                 title: $"Request header '{TenantIdHeader}' must contain one valid tenant id.");
         }
 
+        if (!allowBootstrapRegistration && context.HttpContext.User.Identity?.IsAuthenticated != true)
+            return Results.Unauthorized();
+
         var tenantContext = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>();
+        if (context.HttpContext.User.Identity?.IsAuthenticated == true && tenantContext.TenantId is null)
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "The access token does not identify a tenant.");
         if (tenantContext.TenantId is { } authenticatedTenantId && authenticatedTenantId != tenantId)
         {
             return Results.Problem(
@@ -51,6 +57,16 @@ public sealed class TenantHeaderEndpointFilter : IEndpointFilter
 
         context.HttpContext.RequestServices.GetRequiredService<ITenantContextAccessor>()
             .SetTenant(tenant.Id, tenant.SchemaName);
+
+        var db = context.HttpContext.RequestServices.GetRequiredService<IAccountingInventoryDbContext>();
+        if (context.HttpContext.User.Identity?.IsAuthenticated == true)
+        {
+            if (!Guid.TryParse(context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+                || !await db.Users.AnyAsync(user => user.Id == userId && user.IsActive, context.HttpContext.RequestAborted))
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "The user account is inactive or does not belong to this tenant.");
+        }
+        else if (allowBootstrapRegistration && await db.Users.AnyAsync(context.HttpContext.RequestAborted))
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "This tenant is already registered. Its owner must create additional accounts.");
 
         return await next(context);
     }

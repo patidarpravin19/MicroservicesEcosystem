@@ -15,16 +15,18 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
     public async Task<IReadOnlyList<CreateProductResult>> Handle(
         BulkCreateProductsCommand request, CancellationToken cancellationToken)
     {
+        await PurchaseIntegrity.ValidateAsync(dbContext, request.Products.Select(item => new PurchaseReference(item.VendorId, item.BrandId, item.ProductTypeId, item.ProductModelId,
+            item.VariantId, item.ColorId, item.BillNumber, item.PurchaseDate, item.PaymentTermsDays)), cancellationToken);
         var products = request.Products;
-        var serials = products.SelectMany(x => new[] { x.SerialNumber.Trim(), x.SerialNumber1!.Trim() }).ToArray();
+        var serials = products.SelectMany(x => new[] { x.SerialNumber.Trim().ToLowerInvariant(), x.SerialNumber1!.Trim().ToLowerInvariant() }).ToArray();
         var duplicate = serials.GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(group => group.Count() > 1)?.Key;
         if (duplicate is not null)
             throw new ConflictException($"Serial number '{duplicate}' appears more than once in this purchase.");
 
         var existing = await dbContext.Products
-            .Where(x => serials.Contains(x.SerialNumber) || (x.SerialNumber1 != null && serials.Contains(x.SerialNumber1)))
-            .Select(x => serials.Contains(x.SerialNumber) ? x.SerialNumber : x.SerialNumber1!)
+            .Where(x => serials.Contains(x.SerialNumber.ToLower()) || (x.SerialNumber1 != null && serials.Contains(x.SerialNumber1.ToLower())))
+            .Select(x => serials.Contains(x.SerialNumber.ToLower()) ? x.SerialNumber : x.SerialNumber1!)
             .FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
             throw new ConflictException($"Serial number '{existing}' is already assigned to another product.");

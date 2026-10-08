@@ -63,6 +63,7 @@ public sealed class CloseAccountingPeriodHandler(IAccountingInventoryDbContext d
         await ApprovalGate.ValidateAsync(db, request.ApprovalId, ApprovalAction.ClosePeriod, request.Id.ToString(), new { id = request.Id }, ct);
         var period = await db.AccountingPeriods.SingleOrDefaultAsync(item => item.Id == request.Id, ct)
             ?? throw new BuildingBlocks.Application.Exceptions.NotFoundException("Accounting period was not found.");
+        if (period.IsClosed) throw new ConflictException("This accounting period is already closed.");
         if (await db.AccountingPeriods.AnyAsync(item => item.IsClosed && item.Id != period.Id
                 && item.StartDate <= period.EndDate && item.EndDate >= period.StartDate, ct))
             throw new ConflictException("This period overlaps another closed period.");

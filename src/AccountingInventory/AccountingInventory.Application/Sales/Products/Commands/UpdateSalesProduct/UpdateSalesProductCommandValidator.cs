@@ -14,9 +14,9 @@ public sealed class UpdateSalesProductCommandValidator : AbstractValidator<Updat
         RuleFor(x => x.CustomerEmail).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.CustomerEmail));
         RuleFor(x => x.SaleDate).NotEmpty();
         RuleFor(x => x.PaymentTermsDays).InclusiveBetween(0, 3650);
-        RuleFor(x => x.ProductPrice).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.SellingPrice).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Discount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.ProductPrice).GreaterThanOrEqualTo(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
+        RuleFor(x => x.SellingPrice).GreaterThanOrEqualTo(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
+        RuleFor(x => x.Discount).GreaterThanOrEqualTo(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
         RuleFor(x => x.Discount).LessThanOrEqualTo(x => x.SellingPrice);
     }
 }

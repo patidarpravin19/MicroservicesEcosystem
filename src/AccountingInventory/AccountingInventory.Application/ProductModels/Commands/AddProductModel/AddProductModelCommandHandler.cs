@@ -19,11 +19,14 @@ public sealed class AddProductModelCommandHandler(
 
     public async Task<AddProductModelResult> Handle(AddProductModelCommand request, CancellationToken cancellationToken)
     {
+        if (!await accountingInventoryDbContext.Brands.AnyAsync(row => row.Id == request.BrandId && row.IsActive, cancellationToken)
+            || !await accountingInventoryDbContext.ProductTypes.AnyAsync(row => row.Id == request.ProductTypeId && row.IsActive, cancellationToken))
+            throw new ConflictException("Select an active brand and product type from this tenant.");
         var normalizedCode = request.Code.Trim().ToLowerInvariant();
 
         var productModelTaken = await accountingInventoryDbContext.ProductModels.AnyAsync(p => p.BrandId == request.BrandId
         && p.ProductTypeId == request.ProductTypeId
-        && p.Code == request.Code, cancellationToken);
+        && p.Code.ToLower() == normalizedCode, cancellationToken);
 
         if (productModelTaken)
         {

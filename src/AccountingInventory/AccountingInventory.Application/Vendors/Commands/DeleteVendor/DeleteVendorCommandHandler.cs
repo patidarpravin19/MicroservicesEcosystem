@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
@@ -17,6 +18,7 @@ public sealed class DeleteVendorCommandHandler(
             .SingleOrDefaultAsync(v => v.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A vendor with ID '{request.Id}' was not found.");
 
+        await MasterReferenceIntegrity.EnsureDeletableAsync(accountingInventoryDbContext, "Vendor", request.Id, cancellationToken);
         vendor.Delete();
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 

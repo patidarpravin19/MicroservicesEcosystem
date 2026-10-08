@@ -1,6 +1,7 @@
 using BuildingBlocks.Application.Exceptions;
 using BuildingBlocks.Domain.MultiTenancy;
 using AccountingInventory.Application.Abstractions;
+using AccountingInventory.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -10,13 +11,13 @@ namespace AccountingInventory.Application.Users.Commands.Refresh;
 /// <summary>
 /// Issues a new access/refresh token pair without requiring the caller to know their
 /// tenant slug again — the expired access token already carries tenant_id and
-/// tenant_schema claims from when it was first minted (see ITokenService.
-/// GetPrincipalFromExpiredToken), so this is the one Identity flow that resolves
-/// tenant context directly from a token rather than a TenantDirectory lookup.
+/// claims from when it was first minted. The current registry is checked before
+/// resolving the schema and issuing another token.
 /// </summary>
 public sealed class RefreshTokenCommandHandler(
     IAccountingInventoryDbContext db,
     ITokenService tokenService,
+    ITenantDirectoryContext tenantDirectory,
     ITenantContextAccessor tenantContextAccessor,
     ILogger<RefreshTokenCommandHandler> logger)
     : IRequestHandler<RefreshTokenCommand, RefreshTokenResult>
@@ -31,10 +32,14 @@ public sealed class RefreshTokenCommandHandler(
             throw new UnauthorizedException("The access token is malformed or invalid.");
         }
 
+        var tenant = await tenantDirectory.Tenants.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == principal.TenantId, cancellationToken);
+        if (tenant is null || !tenant.IsActive || tenant.Status != TenantStatus.Active)
+            throw new UnauthorizedException("This tenant is not currently active.");
+        tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
         await db.ResetConnectionAsync(cancellationToken);
-        tenantContextAccessor.SetTenant(principal.TenantId, principal.TenantSchema);
 
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == principal.UserId, cancellationToken);
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == principal.UserId && u.IsActive, cancellationToken);
 
         if (user is null)
         {
@@ -65,7 +70,7 @@ public sealed class RefreshTokenCommandHandler(
         var permissionCodes = new string[] { };
 
         var pair = tokenService.GenerateTokenPair(
-            user.Id, user.UserName, principal.TenantId, principal.TenantSchema, roleNames, permissionCodes);
+            user.Id, user.UserName, tenant.Id, tenant.SchemaName, roleNames, permissionCodes);
 
         user.SetRefreshToken(tokenService.HashRefreshToken(pair.RefreshToken), DateTimeOffset.UtcNow.AddDays(7));
 

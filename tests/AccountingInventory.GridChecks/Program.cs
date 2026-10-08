@@ -72,7 +72,7 @@ try
             if (unit != 0) continue;
             product.MarkSold();
             var sale = SalesProduct.Create("S" + index, product.Id.ToString(), customer.Id,
-                new DateOnly(2026, 1, index + 1), product.TotalAmount, 100 * (index + 1), 0);
+                new DateOnly(2026, 1, index + 1), product.TotalAmount, 100 * (index + 1), 0, null, index + 1, index + 1);
             db.SalesProducts.Add(sale);
             if (index > 0)
             {
@@ -84,6 +84,8 @@ try
     }
     await db.SaveChangesAsync();
 
+    if (!args.Contains("--business-only"))
+    {
     var checks = 0;
     await CheckPages((field, direction, page) => new GetBrandsQueryHandler(db).Handle(new( page, 1, field, direction), default), ["name", "description", "isActive"]);
     await CheckPages((field, direction, page) => new GetColorsQueryHandler(db).Handle(new(page, 1, field, direction), default), ["name", "description", "isActive"]);
@@ -98,8 +100,8 @@ try
     await CheckPages((field, direction, page) => new GetAvailableStockProductsQueryHandler(db).Handle(new(brands[0].Id, models[0].Id, variants[0].Id, page, 1, SortBy: field, SortDirection: direction), default), ["serialNumber", "serialNumber1", "colorName", "totalAmount"]);
     await CheckPages((field, direction, page) => new GetTaxesQueryHandler(db).Handle(new(page, 1, field, direction), default), ["cgst", "sgst", "totalTax", "isActive"]);
     await CheckPages((field, direction, page) => new GetCustomersQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["name", "mobile", "email", "address", "salesCount", "isActive"]);
-    await CheckPages((field, direction, page) => new GetPurchaseBillsQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["vendorName", "billNumber", "billDate", "totalAmount", "amountPaid", "balance", "paymentStatus"]);
-    await CheckPages((field, direction, page) => new GetSalesBillsQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["productName", "customerName", "customerMobile", "billNumber", "billDate", "totalAmount", "amountPaid", "balance", "paymentStatus"]);
+    await CheckPages((field, direction, page) => new GetPurchaseBillsQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["vendorName", "billNumber", "billDate", "dueDate", "paymentTermsDays", "totalAmount", "amountPaid", "balance", "paymentStatus"]);
+    await CheckPages((field, direction, page) => new GetSalesBillsQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["productName", "customerName", "customerMobile", "billNumber", "billDate", "dueDate", "paymentTermsDays", "totalAmount", "amountPaid", "balance", "paymentStatus"]);
     await CheckPages((field, direction, page) => new GetAuditLogsQueryHandler(db).Handle(new(page, 1, SortBy: field, SortDirection: direction), default), ["tableName", "action", "createdDate", "createdByName"]);
 
     var multi = await GridSorting.Apply(db.Products, "isSold,purchasePrice", "asc,desc", "SerialNumber").ToListAsync();
@@ -135,11 +137,14 @@ try
         }
         Console.WriteLine($"PASS: {typeof(T).Name} sorting across pages");
     }
+    }
+    await BusinessIntegrityChecks.RunAsync(db);
 }
 finally
 {
     await transaction.RollbackAsync(); // Temporary schema and fixture data are discarded.
 }
+await TransactionChecks.RunAsync(connectionString!);
 static void Assert(bool condition, string message)
 {
     if (!condition) throw new Exception(message);

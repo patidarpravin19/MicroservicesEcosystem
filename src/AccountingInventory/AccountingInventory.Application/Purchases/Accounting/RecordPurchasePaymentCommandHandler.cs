@@ -23,6 +23,8 @@ public sealed class RecordPurchasePaymentCommandHandler(IAccountingInventoryDbCo
         if (!await products.AnyAsync(cancellationToken))
             throw new NotFoundException($"Purchase bill '{billNumber}' was not found.");
 
+        if (await products.AnyAsync(product => product.PurchaseDate > request.PaymentDate, cancellationToken))
+            throw new ConflictException("The payment date cannot precede the purchase invoice date.");
         var paid = await db.PurchasePayments.Where(payment => payment.VendorId == request.VendorId
                 && payment.BillNumber.ToLower() == normalized)
             .SumAsync(payment => (decimal?)payment.Amount, cancellationToken) ?? 0m;

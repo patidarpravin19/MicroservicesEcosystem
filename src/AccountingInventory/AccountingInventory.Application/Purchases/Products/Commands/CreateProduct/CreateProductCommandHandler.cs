@@ -14,12 +14,14 @@ public sealed class CreateProductCommandHandler(
 {
     public async Task<CreateProductResult> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
-        var serialNumber = request.SerialNumber.Trim();
-        var serialNumber1 = request.SerialNumber1!.Trim();
+        await PurchaseIntegrity.ValidateAsync(dbContext, [new PurchaseReference(request.VendorId, request.BrandId, request.ProductTypeId, request.ProductModelId,
+            request.VariantId, request.ColorId, request.BillNumber, request.PurchaseDate, request.PaymentTermsDays)], cancellationToken);
+        var serialNumber = request.SerialNumber.Trim().ToLowerInvariant();
+        var serialNumber1 = request.SerialNumber1!.Trim().ToLowerInvariant();
         if (string.Equals(serialNumber, serialNumber1, StringComparison.OrdinalIgnoreCase))
             throw new ConflictException("Serial Number and Serial Number 1 must be different.");
-        if (await dbContext.Products.AnyAsync(x => x.SerialNumber == serialNumber || x.SerialNumber == serialNumber1
-            || x.SerialNumber1 == serialNumber || x.SerialNumber1 == serialNumber1, cancellationToken))
+        if (await dbContext.Products.AnyAsync(x => x.SerialNumber.ToLower() == serialNumber || x.SerialNumber.ToLower() == serialNumber1
+            || (x.SerialNumber1 != null && x.SerialNumber1.ToLower() == serialNumber) || (x.SerialNumber1 != null && x.SerialNumber1.ToLower() == serialNumber1), cancellationToken))
             throw new ConflictException("A serial number already exists on another product.");
 
         var product = Product.Create(request.VendorId, request.BrandId, request.ProductTypeId, request.ProductModelId,

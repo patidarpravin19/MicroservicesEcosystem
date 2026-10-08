@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.ProductTypes.Commands.DeleteProductType;
 using BuildingBlocks.Application.Exceptions;
@@ -18,6 +19,7 @@ public sealed class DeleteProductTypeCommandHandler(
             .SingleOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A ProductType with ID '{request.Id}' was not found.");
 
+        await MasterReferenceIntegrity.EnsureDeletableAsync(accountingInventoryDbContext, "ProductType", request.Id, cancellationToken);
         ProductType.Delete();
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 

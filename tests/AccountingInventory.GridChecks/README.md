@@ -20,3 +20,12 @@ Run frontend checks from `react-multitenant-saas`:
 ```powershell
 node tests/gridSorting.cjs
 ```
+
+The suite also covers purchase reference integrity, invoice dates and terms,
+permissions, payment chronology, financial closing, journal reversal protections,
+and legacy contact repair. The two-session concurrency probe creates a separately
+committed scratch schema, proves conflict handling and full rollback, and drops
+that schema in `finally`. Neither test schema is an existing tenant schema.
+
+Pass `--business-only` alongside `--local` to run the accounting/inventory and
+transaction checks without repeating the grid pagination suite.

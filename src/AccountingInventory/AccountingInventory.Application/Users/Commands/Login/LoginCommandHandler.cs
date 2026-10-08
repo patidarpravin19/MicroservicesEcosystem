@@ -32,7 +32,7 @@ public sealed class LoginCommandHandler(
             throw new UnauthorizedException("Invalid tenant, username, or password.");
         }
 
-        if (tenant.Status != TenantStatus.Active)
+        if (tenant.Status != TenantStatus.Active || !tenant.IsActive)
         {
             logger.LogWarning("Login failed: tenant {TenantId} is not active ({Status}).", tenant.Id, tenant.Status);
             throw new UnauthorizedException("This tenant is not currently active.");
@@ -46,7 +46,7 @@ public sealed class LoginCommandHandler(
         tenantContextAccessor.SetTenant(tenant.Id, tenant.SchemaName);
         await accInvDbContext.ResetConnectionAsync(cancellationToken);
        
-        var user = await accInvDbContext.Users.FirstOrDefaultAsync(u => u.UserName == request.UserName, cancellationToken);
+        var user = await accInvDbContext.Users.FirstOrDefaultAsync(u => u.UserName.ToLower() == request.UserName.Trim().ToLower() && u.IsActive, cancellationToken);
 
         if (user is null)
         {

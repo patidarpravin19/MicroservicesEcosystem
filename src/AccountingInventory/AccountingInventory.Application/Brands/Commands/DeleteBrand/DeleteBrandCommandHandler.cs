@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.Brands.Commands.DeleteBrand;
 using BuildingBlocks.Application.Exceptions;
@@ -18,6 +19,7 @@ public sealed class DeleteBrandCommandHandler(
             .SingleOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A brand with ID '{request.Id}' was not found.");
 
+        await MasterReferenceIntegrity.EnsureDeletableAsync(accountingInventoryDbContext, "Brand", request.Id, cancellationToken);
         brand.Delete();
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 

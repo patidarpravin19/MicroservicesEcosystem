@@ -17,7 +17,7 @@ public sealed class RecordSalesReceiptValidator : AbstractValidator<RecordSalesR
     public RecordSalesReceiptValidator()
     {
         RuleFor(command => command.SalesProductId).NotEmpty();
-        RuleFor(command => command.Amount).GreaterThan(0);
+        RuleFor(command => command.Amount).GreaterThan(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
         RuleFor(command => command.PaymentMode).Must(mode => mode is "Cash" or "UPI" or "OnlineTransfer" or "Cheque" or "Other");
         RuleFor(command => command.PaymentDate).NotEmpty();
         RuleFor(command => command.ReferenceNumber).MaximumLength(100);
@@ -35,6 +35,9 @@ public sealed class RecordSalesReceiptHandler(IAccountingInventoryDbContext db)
     {
         var sale = await db.SalesProducts.SingleOrDefaultAsync(item => item.Id == request.SalesProductId, cancellationToken)
             ?? throw new NotFoundException($"Sales bill '{request.SalesProductId}' was not found.");
+        if (!sale.IsActive) throw new ConflictException("Receipts cannot be recorded against an inactive sale.");
+        if (request.PaymentDate < sale.SaleDate)
+            throw new ConflictException("The receipt date cannot precede the invoice date.");
         var total = sale.TotalAmount;
         var amountPaid = await db.SalesReceipts.Where(receipt => receipt.SalesProductId == sale.Id)
             .SumAsync(receipt => (decimal?)receipt.Amount, cancellationToken) ?? 0m;

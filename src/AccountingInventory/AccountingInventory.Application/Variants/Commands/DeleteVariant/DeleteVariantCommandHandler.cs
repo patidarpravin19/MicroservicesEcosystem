@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.Variants.Commands.DeleteVariant;
 using BuildingBlocks.Application.Exceptions;
@@ -18,6 +19,7 @@ public sealed class DeleteVariantCommandHandler(
             .SingleOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A variant with ID '{request.Id}' was not found.");
 
+        await MasterReferenceIntegrity.EnsureDeletableAsync(accountingInventoryDbContext, "Variant", request.Id, cancellationToken);
         variant.Delete();
         await accountingInventoryDbContext.SaveChangesAsync(cancellationToken);
 

@@ -34,11 +34,11 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
                 || db.Vendors.Any(vendor => vendor.Id == product.VendorId && vendor.Name.ToLower().Contains(search)));
         }
 
-        var invoices = products.GroupBy(product => new { product.VendorId, product.BillNumber })
+        var invoices = products.GroupBy(product => new { product.VendorId, BillNumber = product.BillNumber!.Trim().ToLower() })
             .Select(group => new
             {
                 group.Key.VendorId,
-                BillNumber = group.Key.BillNumber!,
+                BillNumber = group.Min(product => product.BillNumber)!,
                 BillDate = group.Min(product => product.PurchaseDate),
                 PaymentTermsDays = group.Max(product => product.PaymentTermsDays),
                 DueDate = group.Max(product => product.DueDate),
@@ -48,33 +48,28 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
         var totalCount = await invoices.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var rows = await (from invoice in invoices
-                          join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
-                          orderby invoice.BillDate descending, invoice.BillNumber
-                          select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
-          .Skip((page - 1) * pageSize)
-          .Take(pageSize)
-          .ToListAsync(cancellationToken);
-
-        var vendorIds = rows.Select(row => row.VendorId).Distinct().ToArray();
-        var billNumbers = rows.Select(row => row.BillNumber.ToLower()).Distinct().ToArray();
-        var paidAmounts = await db.PurchasePayments.AsNoTracking()
-            .Where(payment => vendorIds.Contains(payment.VendorId)
-                && billNumbers.Contains(payment.BillNumber.ToLower()))
-            .GroupBy(payment => new { payment.VendorId, BillNumber = payment.BillNumber.ToLower() })
-            .Select(group => new { group.Key.VendorId, group.Key.BillNumber, AmountPaid = group.Sum(payment => payment.Amount) })
-            .ToListAsync(cancellationToken);
-        var paidByInvoice = paidAmounts.ToDictionary(
-            payment => (payment.VendorId, payment.BillNumber), payment => payment.AmountPaid);
-
-        var items = rows.Select(row =>
-        {
-            var amountPaid = paidByInvoice.GetValueOrDefault((row.VendorId, row.BillNumber.ToLower()));
-            var balance = Math.Max(0m, row.TotalAmount - amountPaid);
-            var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
-            return new PurchaseBillSummary($"{row.VendorId}:{row.BillNumber}", row.VendorId, row.VendorName, row.BillNumber,
-                row.BillDate, row.PaymentTermsDays, row.DueDate, row.TotalAmount, amountPaid, balance, status);
-        }).ToArray();
+        var invoiceRows = (from invoice in invoices
+            join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
+            select new
+            {
+                invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate,
+                invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount,
+                AmountPaid = db.PurchasePayments.Where(payment => payment.VendorId == invoice.VendorId
+                    && payment.BillNumber.ToLower() == invoice.BillNumber.ToLower())
+                    .Sum(payment => (decimal?)payment.Amount) ?? 0m
+            }).Select(row => new
+            {
+                row.VendorId, row.VendorName, row.BillNumber, row.BillDate, row.PaymentTermsDays,
+                row.DueDate, row.TotalAmount, row.AmountPaid,
+                Balance = Math.Max(0m, row.TotalAmount - row.AmountPaid),
+                PaymentStatus = row.AmountPaid >= row.TotalAmount ? "Paid" : row.AmountPaid > 0m ? "Partially paid" : "Unpaid"
+            });
+        var rows = await GridSorting.Apply(invoiceRows, request.SortBy, request.SortDirection, "BillDate", true)
+            .ThenBy(row => row.BillNumber).ThenBy(row => row.VendorId)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        var items = rows.Select(row => new PurchaseBillSummary($"{row.VendorId}:{row.BillNumber}",
+            row.VendorId, row.VendorName, row.BillNumber, row.BillDate, row.PaymentTermsDays, row.DueDate,
+            row.TotalAmount, row.AmountPaid, row.Balance, row.PaymentStatus)).ToArray();
 
         return new PagedResult<PurchaseBillSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
@@ -90,11 +85,11 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
         var invoice = await db.Products.AsNoTracking()
             .Where(product => product.VendorId == request.VendorId && product.BillNumber != null
                 && product.BillNumber.ToLower() == normalizedBillNumber)
-            .GroupBy(product => new { product.VendorId, product.BillNumber })
+            .GroupBy(product => new { product.VendorId, BillNumber = product.BillNumber!.Trim().ToLower() })
             .Select(group => new
             {
                 group.Key.VendorId,
-                BillNumber = group.Key.BillNumber!,
+                BillNumber = group.Min(product => product.BillNumber)!,
                 BillDate = group.Min(product => product.PurchaseDate),
                 PaymentTermsDays = group.Max(product => product.PaymentTermsDays),
                 DueDate = group.Max(product => product.DueDate),

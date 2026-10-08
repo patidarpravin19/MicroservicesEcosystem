@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.Common.Exceptions;
 using MediatR;
@@ -11,6 +12,7 @@ public sealed class DeleteTaxCommandHandler(IAccountingInventoryDbContext db) : 
     {
         var tax = await db.Taxes.SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Tax '{request.Id}' was not found.");
+        await MasterReferenceIntegrity.EnsureDeletableAsync(db, "Tax", request.Id, cancellationToken);
         tax.Delete();
         await db.SaveChangesAsync(cancellationToken);
     }

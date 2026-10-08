@@ -10,15 +10,13 @@ using Microsoft.Extensions.Logging;
 namespace AccountingInventory.Application.Users.Commands.Register;
 
 /// <summary>
-/// Registers a new user for the active tenant established from <c>X-Tenant-Id</c>
-/// by the API endpoint filter. Every new user is assigned the tenant's default "User"
-/// role, seeded synchronously when the tenant was registered
-/// (RegisterTenantCommandHandler) — so it is always present by the time anyone can
-/// reach this handler.
+/// Creates the first user in an empty tenant or an additional account requested
+/// by the existing owner. The API establishes tenant context before this handler.
 /// </summary>
 public sealed class RegisterCommandHandler(
     IAccountingInventoryDbContext db,
     ITenantContext tenantContext,
+    IRequestIdentity identity,
     ITokenService tokenService,
     IPasswordHasher<User> passwordHasher,
     ILogger<RegisterCommandHandler> logger)
@@ -31,8 +29,16 @@ public sealed class RegisterCommandHandler(
         var schemaName = tenantContext.SchemaName
             ?? throw new InvalidOperationException("The established tenant does not have a schema.");
 
+        var owner = await db.Users.AsNoTracking().OrderBy(user => user.CreatedAt).ThenBy(user => user.Id)
+            .Select(user => (Guid?)user.Id).FirstOrDefaultAsync(cancellationToken);
+        if (owner.HasValue && identity.UserId != owner)
+            throw new ForbiddenException("Only the tenant owner can create additional user accounts.");
+
+        var userName = request.UserName.Trim();
+        var email = request.Email.Trim().ToLowerInvariant();
+        var mobile = request.Mobile.Trim();
         var exists = await db.Users.AnyAsync(
-            u => u.UserName == request.UserName || u.Email == request.Email, cancellationToken);
+            u => u.UserName.ToLower() == userName.ToLower() || u.Email.ToLower() == email, cancellationToken);
 
         if (exists)
         {
@@ -42,15 +48,10 @@ public sealed class RegisterCommandHandler(
             throw new ConflictException("A user with that username or email already exists.");
         }
 
-        //var defaultRole = await db.Roles.SingleOrDefaultAsync(r => r.Name == DefaultRoleName, cancellationToken)
-        //    ?? throw new ConflictException(
-        //        "This tenant is still being provisioned. Please try registering again in a few seconds.");
-
-        var user = User.Create(request.UserName, request.Email, request.Mobile);
+        var user = User.Create(userName, mobile, email);
         user.Activate();
         var hashed = passwordHasher.HashPassword(user, request.Password);
         user.SetPasswordHash(hashed);
-        //user.AssignRole(defaultRole.Id);
 
         var pair = tokenService.GenerateTokenPair(
             user.Id, user.UserName, tenantId, schemaName,

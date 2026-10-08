@@ -1,3 +1,4 @@
+using AccountingInventory.Application.Common;
 using AccountingInventory.Application.Abstractions;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
@@ -11,6 +12,7 @@ public sealed class DeleteFinanceVendorCommandHandler(IAccountingInventoryDbCont
     {
         var vendor = await db.FinanceVendors.SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Finance vendor '{request.Id}' was not found.");
+        await MasterReferenceIntegrity.EnsureDeletableAsync(db, "FinanceVendor", request.Id, cancellationToken);
         vendor.Delete();
         await db.SaveChangesAsync(cancellationToken);
     }

@@ -18,7 +18,7 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
             throw new ConflictException("The bulk update contains the same product more than once.");
 
         var serials = updates
-            .SelectMany(update => new[] { update.SerialNumber.Trim(), update.SerialNumber1!.Trim() })
+            .SelectMany(update => new[] { update.SerialNumber.Trim().ToLowerInvariant(), update.SerialNumber1!.Trim().ToLowerInvariant() })
             .ToArray();
         var duplicateSerial = serials.GroupBy(serial => serial, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(group => group.Count() > 1)?.Key;
@@ -30,6 +30,11 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
             .ToListAsync(cancellationToken);
         if (products.Count != ids.Length)
             throw new NotFoundException("One or more selected products could not be found. Refresh the product list and try again.");
+        await PurchaseIntegrity.ValidateAsync(dbContext, request.Products.Select(item => new PurchaseReference(item.VendorId, item.BrandId, item.ProductTypeId, item.ProductModelId,
+            item.VariantId, item.ColorId, item.BillNumber, item.PurchaseDate ?? products.Single(product => product.Id == item.Id).PurchaseDate, item.PaymentTermsDays)), cancellationToken);
+
+        if (products.Any(product => product.IsSold || !product.IsActive))
+            throw new ConflictException("Sold or written-off inventory cannot be edited.");
         var postedProductIds = ids.Select(id => id.ToString()).ToArray();
         if (await dbContext.JournalEntries.AnyAsync(entry => entry.SourceType == "PurchaseProduct"
                 && postedProductIds.Contains(entry.SourceId!), cancellationToken))
@@ -37,9 +42,9 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
 
         var existingSerial = await dbContext.Products
             .Where(product => !ids.Contains(product.Id)
-                && (serials.Contains(product.SerialNumber)
-                    || (product.SerialNumber1 != null && serials.Contains(product.SerialNumber1))))
-            .Select(product => serials.Contains(product.SerialNumber) ? product.SerialNumber : product.SerialNumber1!)
+                && (serials.Contains(product.SerialNumber.ToLower())
+                    || (product.SerialNumber1 != null && serials.Contains(product.SerialNumber1.ToLower()))))
+            .Select(product => serials.Contains(product.SerialNumber.ToLower()) ? product.SerialNumber : product.SerialNumber1!)
             .FirstOrDefaultAsync(cancellationToken);
         if (existingSerial is not null)
             throw new ConflictException($"Serial number '{existingSerial}' is already assigned to another product.");
