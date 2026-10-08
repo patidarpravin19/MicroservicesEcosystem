@@ -100,10 +100,10 @@ public sealed class SalesInvoice : AggregateRoot
                 draft.TaxId,
                 draft.CgstRate,
                 draft.SgstRate,
-                draft.IgstRate);
+                draft.IgstRate, draft.HsnSac, draft.UnitOfMeasure);
 
             invoice.Lines.Add(line);
-            subTotal += line.Quantity * line.UnitPrice;
+            subTotal += line.TaxableAmount + line.Discount;
             discountTotal += line.Discount;
             taxableTotal += line.TaxableAmount;
             cgstTotal += line.CgstAmount;
@@ -128,6 +128,8 @@ public sealed class SalesInvoice : AggregateRoot
 
     public void RecordPayment(decimal paymentAmount)
     {
+        if (IsCancelled) throw new InvalidOperationException("Cancelled invoices cannot receive payments.");
+        if (paymentAmount != decimal.Round(paymentAmount, 2)) throw new ArgumentException("Use at most two decimal places.");
         if (paymentAmount <= 0) throw new ArgumentOutOfRangeException(nameof(paymentAmount), "Payment amount must be greater than zero.");
         var rounded = decimal.Round(paymentAmount, 2, MidpointRounding.AwayFromZero);
         if (rounded > Balance) throw new InvalidOperationException($"Payment of {rounded} exceeds balance due of {Balance}.");
@@ -141,6 +143,7 @@ public sealed class SalesInvoice : AggregateRoot
     {
         if (IsCancelled) return;
         IsCancelled = true;
+        Balance = 0m;
         PaymentStatus = "Cancelled";
     }
 
@@ -159,6 +162,8 @@ public sealed class SalesInvoiceLine : AggregateRoot
     public decimal Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
     public decimal Discount { get; private set; }
+    public string? HsnSac { get; private set; }
+    public string UnitOfMeasure { get; private set; } = "NOS";
     public Guid? TaxId { get; private set; }
     public decimal CgstRate { get; private set; }
     public decimal SgstRate { get; private set; }
@@ -183,7 +188,9 @@ public sealed class SalesInvoiceLine : AggregateRoot
         Guid? taxId,
         decimal cgstRate,
         decimal sgstRate,
-        decimal igstRate)
+        decimal igstRate,
+        string? hsnSac = null,
+        string unitOfMeasure = "NOS")
     {
         if (salesInvoiceId == Guid.Empty) throw new ArgumentException("Invoice ID is required.");
         if (string.IsNullOrWhiteSpace(itemDescription)) throw new ArgumentException("Item description is required.");
@@ -191,6 +198,15 @@ public sealed class SalesInvoiceLine : AggregateRoot
         if (unitPrice < 0) throw new ArgumentOutOfRangeException(nameof(unitPrice), "Unit price cannot be negative.");
         if (discount < 0) throw new ArgumentOutOfRangeException(nameof(discount), "Discount cannot be negative.");
 
+        quantity = decimal.Round(quantity, 4, MidpointRounding.AwayFromZero);
+        unitPrice = decimal.Round(unitPrice, 2, MidpointRounding.AwayFromZero);
+        if (quantity <= 0 || !Enum.IsDefined(itemType)) throw new ArgumentException("Invalid item type or quantity.");
+        if (itemType == InvoiceItemType.SerializedProduct && (!productId.HasValue || productId == Guid.Empty || quantity != 1))
+            throw new ArgumentException("A serialized line requires one inventory product.");
+        if (itemType != InvoiceItemType.SerializedProduct && productId.HasValue && productId != Guid.Empty)
+            throw new ArgumentException("Only serialized lines may reference serialized inventory.");
+        if (cgstRate < 0 || sgstRate < 0 || igstRate < 0 || cgstRate + sgstRate + igstRate > 100)
+            throw new ArgumentException("Invalid tax rates.");
         var grossAmount = decimal.Round(quantity * unitPrice, 2, MidpointRounding.AwayFromZero);
         var roundedDiscount = decimal.Round(discount, 2, MidpointRounding.AwayFromZero);
         if (roundedDiscount > grossAmount) throw new ArgumentException("Discount cannot exceed line amount.");
@@ -215,6 +231,8 @@ public sealed class SalesInvoiceLine : AggregateRoot
             Quantity = decimal.Round(quantity, 4, MidpointRounding.AwayFromZero),
             UnitPrice = decimal.Round(unitPrice, 2, MidpointRounding.AwayFromZero),
             Discount = roundedDiscount,
+            HsnSac = string.IsNullOrWhiteSpace(hsnSac) ? null : hsnSac.Trim(),
+            UnitOfMeasure = unitOfMeasure.Trim(),
             TaxId = taxId == Guid.Empty ? null : taxId,
             CgstRate = cgstRate,
             SgstRate = sgstRate,
@@ -242,4 +260,4 @@ public sealed record SalesInvoiceLineDraft(
     Guid? TaxId,
     decimal CgstRate,
     decimal SgstRate,
-    decimal IgstRate = 0m);
+    decimal IgstRate = 0m, string? HsnSac = null, string UnitOfMeasure = "NOS");

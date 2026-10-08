@@ -124,6 +124,13 @@ public static class LedgerPosting
         ]);
     }
 
+    public static JournalEntry ForSalesReceipt(SalesInvoiceReceipt receipt, IReadOnlyDictionary<string, Guid> accounts)
+    {
+        var cash = receipt.PaymentMode == "Cash" ? "1000" : "1010";
+        return JournalEntry.Post(receipt.PaymentDate, "Customer invoice receipt", "SalesInvoiceReceipt", receipt.Id.ToString(),
+            [(accounts[cash], receipt.Amount, 0m, (string?)receipt.PaymentMode), (accounts["1100"], 0m, receipt.Amount, "Receivable settled")]);
+    }
+
     public static JournalEntry ForPurchasePayment(PurchasePayment payment, IReadOnlyDictionary<string, Guid> accounts)
     {
         var cashAccount = payment.PaymentMode == "Cash" ? "1000" : "1010";

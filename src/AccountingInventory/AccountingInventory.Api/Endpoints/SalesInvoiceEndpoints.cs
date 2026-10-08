@@ -58,6 +58,13 @@ public static class SalesInvoiceEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapGet("/advances/{customerId:guid}", async (Guid customerId, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetCustomerAdvancesQuery(customerId), ct)));
+        group.MapPost("/advances/apply", async (ApplyCustomerAdvanceCommand q, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(q, ct)));
+        group.MapPost("/advances/refund", async (RefundCustomerAdvanceCommand q, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(q, ct)));
+
         group.MapGet("/gst-states", () =>
             Results.Ok(GstStates.StateMap.Select(kv => new { Code = kv.Key, Name = kv.Value }).OrderBy(s => s.Code)))
             .WithName("GetGstStates");

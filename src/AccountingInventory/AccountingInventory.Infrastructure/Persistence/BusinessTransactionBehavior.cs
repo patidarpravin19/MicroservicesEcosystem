@@ -1,4 +1,9 @@
 using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using AccountingInventory.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
@@ -10,7 +15,7 @@ namespace AccountingInventory.Infrastructure.Persistence;
 
 // Balance/stock/period checks and all writes must observe one transaction.
 // Serializable isolation rejects concurrent writes that would invalidate a check.
-public sealed class BusinessTransactionBehavior<TRequest, TResponse>(AccountingInventoryDbContext db, IRequestIdentity identity)
+public sealed class BusinessTransactionBehavior<TRequest, TResponse>(AccountingInventoryDbContext db, IRequestIdentity identity, IHttpContextAccessor? http = null)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
@@ -36,7 +41,38 @@ public sealed class BusinessTransactionBehavior<TRequest, TResponse>(AccountingI
                 : "catalog.manage";
             if (!string.IsNullOrEmpty(permission))
                 await AccountingPermissionGate.EnsureAsync(db, identity.UserId, permission, ct);
+            if (request is RefundCorrectionCommand refundRequest)
+            {
+                var note = await db.InvoiceCorrections.AsNoTracking().SingleOrDefaultAsync(n => n.Id == refundRequest.CorrectionId, ct)
+                    ?? throw new NotFoundException("Credit/debit note was not found.");
+                await AccountingPermissionGate.EnsureAsync(db, identity.UserId, note.Kind == "Sale" ? "sales.manage" : "purchases.manage", ct);
+            }
+            // Only responses with stable DTO/primitive contracts are replayed.
+            var replayable = requestNamespace.Contains(".Sales.Invoices", StringComparison.Ordinal)
+                || typeof(TRequest).Name is "RecordSalesReceiptCommand" or "RecordPurchasePaymentCommand" or "RefundCorrectionCommand" or "SettleOpeningItemCommand";
+            var header = http?.HttpContext?.Request.Headers["Idempotency-Key"].ToString();
+            string? key = null;
+            string? hash = null;
+            if (replayable && !string.IsNullOrWhiteSpace(header))
+            {
+                if (!Guid.TryParse(header, out var token)) throw new ConflictException("Idempotency-Key must be a UUID.");
+                key = $"{identity.UserId}:{token}";
+                hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(typeof(TRequest).FullName + JsonSerializer.Serialize(request))));
+                var previous = await db.Set<BusinessRequest>().AsNoTracking().SingleOrDefaultAsync(r => r.RequestKey == key, ct);
+                if (previous is not null)
+                {
+                    if (previous.RequestHash != hash) throw new ConflictException("This retry key was already used for different transaction details.");
+                    var saved = JsonSerializer.Deserialize<TResponse>(previous.ResponseJson)!;
+                    await transaction.CommitAsync(ct);
+                    return saved;
+                }
+            }
             var response = await next();
+            if (key is not null)
+            {
+                db.Set<BusinessRequest>().Add(new BusinessRequest { RequestKey = key, RequestHash = hash!, ResponseJson = JsonSerializer.Serialize(response) });
+                await db.SaveChangesAsync(ct);
+            }
             await transaction.CommitAsync(ct);
             return response;
         }

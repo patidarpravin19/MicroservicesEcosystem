@@ -18,11 +18,12 @@ public sealed class InvoiceCorrection : AggregateRoot
     public decimal SgstRate { get; private set; }
     public decimal CgstAmount { get; private set; }
     public decimal SgstAmount { get; private set; }
+    public decimal IgstAmount { get; private set; }
     public decimal TotalAmount { get; private set; }
 
     public static InvoiceCorrection Create(string kind, Guid sourceId, Guid partyId, string bill,
         DateOnly date, string reason, string disposition, decimal taxable, decimal cgstRate,
-        decimal sgstRate, decimal cgst, decimal sgst, decimal total)
+        decimal sgstRate, decimal cgst, decimal sgst, decimal total, decimal igst = 0m)
     {
         if (kind is not ("Sale" or "Purchase") || sourceId == Guid.Empty || partyId == Guid.Empty || date == default)
             throw new ArgumentException("A valid source, party and note date are required.");
@@ -33,7 +34,7 @@ public sealed class InvoiceCorrection : AggregateRoot
         return new() { Id = Guid.NewGuid(), IsActive = true, Kind = kind, SourceId = sourceId,
             PartyId = partyId, BillNumber = bill, NoteNumber = $"{(kind == "Sale" ? "CN" : "DN")}-{date:yyyyMMdd}-{Guid.NewGuid():N}",
             NoteDate = date, Reason = reason.Trim(), Disposition = disposition, TaxableAmount = taxable,
-            CgstRate = cgstRate, SgstRate = sgstRate, CgstAmount = cgst, SgstAmount = sgst, TotalAmount = total };
+            CgstRate = cgstRate, SgstRate = sgstRate, CgstAmount = cgst, SgstAmount = sgst, IgstAmount = igst, TotalAmount = total };
     }
 }
 

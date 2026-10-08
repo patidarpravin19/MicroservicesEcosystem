@@ -39,6 +39,7 @@ internal static class P0MigrationChecks
             throw new Exception("Upgrade must capture and flag reconstructed invoice snapshots.");
         var owner = await db.Users.SingleAsync(x => x.IsOwner);
         if (owner.UserName != "owner" || !owner.EmailVerified) throw new Exception("Upgrade must preserve the legacy owner and grandfather existing users.");
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE invoice_corrections ADD COLUMN igst_amount numeric(18,2) NOT NULL DEFAULT 0");
         var fixture = InvoiceCorrection.Create("Sale", Guid.NewGuid(), Guid.NewGuid(), "TEST",new(2026,1,10),"Scratch rollback guard","Restock",10,0,0,0,0,10);
         db.InvoiceCorrections.Add(fixture);await db.SaveChangesAsync();
         var transaction=db.Database.CurrentTransaction!;await transaction.CreateSavepointAsync("p0_downgrade_guard");

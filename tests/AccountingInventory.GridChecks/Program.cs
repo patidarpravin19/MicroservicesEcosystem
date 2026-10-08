@@ -147,6 +147,13 @@ try
     await p0Db.Database.ExecuteSqlRawAsync(p0Db.Database.GenerateCreateScript());
     await P0WorkflowChecks.RunAsync(p0Db);
     await P0MigrationChecks.RunAsync(p0Db);
+    var invoiceSchema = "invoice_check_" + Guid.NewGuid().ToString("N");
+    await using (var command = new NpgsqlCommand($"CREATE SCHEMA {invoiceSchema}; SET LOCAL search_path TO {invoiceSchema};", connection, transaction))
+        await command.ExecuteNonQueryAsync();
+    await using var invoiceDb = new AccountingInventoryDbContext(options, new TestTenantProvider(invoiceSchema));
+    await invoiceDb.Database.UseTransactionAsync(transaction);
+    await invoiceDb.Database.ExecuteSqlRawAsync(invoiceDb.Database.GenerateCreateScript());
+    await InvoiceWorkflowChecks.RunAsync(invoiceDb);
 }
 finally
 {

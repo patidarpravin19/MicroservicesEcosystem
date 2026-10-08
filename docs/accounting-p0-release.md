@@ -29,6 +29,14 @@ Stop writes during a deployment incident. Capture a fresh backup for investigati
 - Record a successful restore and upgrade rehearsal using your deployment backup/credentials; capture monitoring and alert evidence.
 - Obtain accountant review of opening balances, historical differences and credit/debit-note treatment, then business acceptance of the workflows. These approvals cannot be substituted by automated code checks.
 
-Full-unit returns are implemented. Partial price adjustments, multi-line invoice redesign and statutory reporting expansion remain separately scoped work.
+Full-unit returns are implemented. Whole multi-line invoice returns are also implemented. Partial invoice returns, partial price adjustments, SKU quantity inventory and statutory reporting expansion remain separately scoped work.
 
 Operational postings and opening settlements must be dated after the cutover date. Opening stock is excluded from new purchase bills and input-tax reports; its historical balances belong in the cutover journal. Use View note to print credit/debit notes with frozen invoice details, tax reversals and recorded refund history.
+
+## Mandatory invoice integrity upgrade
+
+Deploy migration `20261026120000_MandatoryInvoiceIntegrity` with this API and frontend. It adds separate multi-line invoice receipts, usable/refundable customer advances, persisted request replay records, HSN/SAC and unit snapshots, four-decimal quantities and IGST correction amounts. Legacy single-product receipt foreign keys remain intact. Existing CustomerAdvance journals whose source identifies the customer are backfilled to advance records and linked to their original journal; rehearse this conversion on the restored database and reconcile the resulting customer credit.
+
+The downgrade rejects removing used receipts, advances, request records, IGST notes or invoice particulars that would lose financial history. Do not bypass this guard. No live tenant migration is performed as part of source-code validation.
+
+Acceptance must include multi-line mixed-rate and interstate invoices, duplicate serialized-product rejection, fractional quantities, customer allocation overpayments, advance application/refund, full invoice return, historical statement/aging, GST rate-bucket reversal and lost-response replay. The grid checks cover ledger/subledger reconciliation, authorization and actual committed invoice/receipt replay; browser checks cover frozen invoice printing and retained retry keys. These automated checks complement the restore rehearsal and business acceptance above.

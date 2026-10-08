@@ -72,6 +72,11 @@ public sealed class GetStockMovementsHandler(IAccountingInventoryDbContext db)
                 movements.Add(new StockMovementSummary(sale.SaleDate, "Sale", product.Id, product.SerialNumber,
                     sale.BillNumber, -1, -product.Cost, null));
 
+        var invoices = await db.SalesInvoices.AsNoTracking().Include(i => i.Lines).ToListAsync(ct);
+        foreach (var invoice in invoices)
+        foreach (var line in invoice.Lines.Where(l => l.ProductId.HasValue))
+            if (productMap.TryGetValue(line.ProductId!.Value, out var item))
+                movements.Add(new(invoice.InvoiceDate, "Sale", item.Id, item.SerialNumber, invoice.BillNumber, -1, -item.Cost, null));
         var adjustments = await db.InventoryAdjustments.AsNoTracking().Select(adjustment => new
         {
             adjustment.Id, adjustment.ProductId, adjustment.AdjustmentDate, adjustment.Reason, adjustment.Cost
@@ -79,6 +84,17 @@ public sealed class GetStockMovementsHandler(IAccountingInventoryDbContext db)
         var notes = await db.InvoiceCorrections.AsNoTracking().ToListAsync(ct);
         foreach (var note in notes)
         {
+            var invoice = invoices.FirstOrDefault(i => i.Id == note.SourceId);
+            if (invoice is not null && note.Kind == "Sale")
+            {
+                foreach (var line in invoice.Lines.Where(l => l.ProductId.HasValue))
+                    if (productMap.TryGetValue(line.ProductId!.Value, out var item))
+                    {
+                        movements.Add(new(note.NoteDate, "Customer return", item.Id, item.SerialNumber, note.NoteNumber, 1, item.Cost, note.Reason));
+                        if (note.Disposition == "WriteOff") movements.Add(new(note.NoteDate, "Return write-off", item.Id, item.SerialNumber, note.NoteNumber, -1, -item.Cost, note.Reason));
+                    }
+                continue;
+            }
             var sale = note.Kind == "Sale" ? sales.FirstOrDefault(x => x.Id == note.SourceId) : null;
             var productId = sale is null ? note.SourceId : Guid.Parse(sale.ProductId);
             if (!productMap.TryGetValue(productId, out var product)) continue;

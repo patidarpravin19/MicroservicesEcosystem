@@ -70,7 +70,7 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
 
         // Include Multi-line sales invoices
         var multiSalesResult = await db.SalesInvoices
-            .Where(s => !s.IsCancelled && s.InvoiceDate >= fromDate && s.InvoiceDate <= to)
+            .Where(s => s.InvoiceDate >= fromDate && s.InvoiceDate <= to)
             .SelectMany(s => s.Lines)
             .GroupBy(l => new { l.CgstRate, l.SgstRate, l.IgstRate })
             .Select(g => new
@@ -120,11 +120,22 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
         }).OrderBy(row => row.CgstRate + row.SgstRate).ToList();
 
         var notes = await db.InvoiceCorrections.AsNoTracking().Where(x => x.NoteDate >= fromDate && x.NoteDate <= to).ToListAsync(ct);
+        var correctedInvoiceIds = notes.Where(n => n.Kind == "Sale").Select(n => n.SourceId).ToArray();
+        var correctedInvoices = await db.SalesInvoices.AsNoTracking().Include(i => i.Lines)
+            .Where(i => correctedInvoiceIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, ct);
         foreach (var note in notes)
         {
+            if (note.Kind == "Sale" && correctedInvoices.TryGetValue(note.SourceId, out var invoice))
+            {
+                // Full invoice returns reverse each original rate bucket, including mixed GST rates.
+                foreach (var line in invoice.Lines)
+                    sales.Add(new(line.CgstRate, line.SgstRate, -line.TaxableAmount, -line.CgstAmount,
+                        -line.SgstAmount, -(line.CgstAmount + line.SgstAmount + line.IgstAmount), line.IgstRate, -line.IgstAmount));
+                continue;
+            }
             var rows = note.Kind == "Sale" ? sales : purchases;
             rows.Add(new(note.CgstRate, note.SgstRate, -note.TaxableAmount, -note.CgstAmount, -note.SgstAmount,
-                -(note.CgstAmount + note.SgstAmount), 0m, 0m));
+                -(note.CgstAmount + note.SgstAmount + note.IgstAmount), 0m, -note.IgstAmount));
         }
         sales = Combine(sales);
         purchases = Combine(purchases);

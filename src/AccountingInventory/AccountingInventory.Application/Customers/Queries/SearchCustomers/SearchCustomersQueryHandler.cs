@@ -22,7 +22,7 @@ public sealed class SearchCustomersQueryHandler(IAccountingInventoryDbContext db
             .OrderBy(customer => customer.Name)
             .Take(Math.Clamp(request.Limit, 1, 20))
             .Select(customer => new CustomerLookupSummary(
-                customer.Id, customer.Name, customer.Mobile, customer.Address, customer.Email))
+                customer.Id, customer.Name, customer.Mobile, customer.Address, customer.Email, customer.Gstin, customer.StateCode, customer.StateName))
             .ToListAsync(cancellationToken);
     }
 }

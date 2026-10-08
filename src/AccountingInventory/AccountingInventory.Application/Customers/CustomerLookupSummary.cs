@@ -5,4 +5,4 @@ public sealed record CustomerLookupSummary(
     string Name,
     string Mobile,
     string Address,
-    string? Email);
+    string? Email, string? Gstin = null, string? StateCode = null, string? StateName = null);

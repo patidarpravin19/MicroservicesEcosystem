@@ -54,6 +54,10 @@ public sealed class OpeningReconciliationHandler(IAccountingInventoryDbContext d
         var date = q.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var sales = await db.SalesProducts.Where(x => x.SaleDate <= date).ToArrayAsync(ct);
         var receipts = await db.SalesReceipts.Where(x => x.PaymentDate <= date).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
+        var invoices = await db.SalesInvoices.Include(i => i.Lines).Where(i => i.InvoiceDate <= date).ToArrayAsync(ct);
+        receipts += await db.SalesInvoiceReceipts.Where(r => r.PaymentDate <= date && r.AdvanceId == null).SumAsync(r => (decimal?)r.Amount, ct) ?? 0m;
+        var advanceAmount = await db.CustomerAdvances.Where(a => a.PaymentDate <= date).SumAsync(a => (decimal?)a.Amount, ct) ?? 0m;
+        var advanceRefunds = await db.CustomerAdvanceRefunds.Where(a => a.PaymentDate <= date).SumAsync(a => (decimal?)a.Amount, ct) ?? 0m;
         var purchases = await db.Products.Where(x => x.PurchaseDate <= date).ToArrayAsync(ct);
         var payments = await db.PurchasePayments.Where(x => x.PaymentDate <= date).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
         var notes = await db.InvoiceCorrections.Where(x => x.NoteDate <= date).ToArrayAsync(ct);
@@ -64,16 +68,20 @@ public sealed class OpeningReconciliationHandler(IAccountingInventoryDbContext d
             where s.PaymentDate <= date select new { o.Kind, s.Amount }).ToArrayAsync(ct);
         var openingJournal = await db.JournalEntries.Where(x => x.SourceType == "OpeningBalances").Select(x => (DateOnly?)x.JournalDate).SingleOrDefaultAsync(ct);
         var purchasePayable = purchases.Where(x => x.BillNumber != null && (!openingJournal.HasValue || x.PurchaseDate > openingJournal.Value)).Sum(x => x.TotalAmount);
-        var ar = sales.Sum(x => x.TotalAmount) - receipts - notes.Where(x => x.Kind == "Sale").Sum(x => x.TotalAmount)
+        var ar = sales.Sum(x => x.TotalAmount) + invoices.Sum(i => i.TotalAmount) - receipts - advanceAmount + advanceRefunds - notes.Where(x => x.Kind == "Sale").Sum(x => x.TotalAmount)
             + refunds.Where(x => x.Kind == "Sale").Sum(x => x.Amount) + opening.Where(x => x.Kind == "Customer").Sum(x => x.Amount)
             - settlements.Where(x => x.Kind == "Customer").Sum(x => x.Amount);
         var ap = purchasePayable - payments - notes.Where(x => x.Kind == "Purchase").Sum(x => x.TotalAmount)
             + refunds.Where(x => x.Kind == "Purchase").Sum(x => x.Amount) + opening.Where(x => x.Kind == "Vendor").Sum(x => x.Amount)
             - settlements.Where(x => x.Kind == "Vendor").Sum(x => x.Amount);
         // Derive historical stock from purchase/sale/return/write-off events, not today's IsSold flag.
+        var invoiceCosts = await (from line in db.JournalLines join entry in db.JournalEntries on line.JournalEntryId equals entry.Id
+            join account in db.ChartAccounts on line.AccountId equals account.Id
+            where entry.SourceType == "SalesInvoice" && account.Code == "1200" && entry.JournalDate <= date
+            select new { entry.SourceId, Cost = line.Credit - line.Debit }).ToListAsync(ct);
         var stock = purchases.Sum(x => x.PurchasePrice - x.Discount)
-            - sales.Sum(x => x.ProductPrice)
-            + notes.Where(x => x.Kind == "Sale" && x.Disposition == "Restock").Sum(x => sales.First(s => s.Id == x.SourceId).ProductPrice)
+            - sales.Sum(x => x.ProductPrice) - invoiceCosts.Sum(c => c.Cost)
+            + notes.Where(x => x.Kind == "Sale" && x.Disposition == "Restock").Sum(x => sales.FirstOrDefault(s => s.Id == x.SourceId)?.ProductPrice ?? invoiceCosts.Where(c => c.SourceId == x.SourceId.ToString()).Sum(c => c.Cost))
             - notes.Where(x => x.Kind == "Purchase").Sum(x => x.TaxableAmount)
             - (await db.InventoryAdjustments.Where(x => x.AdjustmentDate <= date).SumAsync(x => (decimal?)x.Cost, ct) ?? 0);
         async Task<decimal> Ledger(string code, bool credit)

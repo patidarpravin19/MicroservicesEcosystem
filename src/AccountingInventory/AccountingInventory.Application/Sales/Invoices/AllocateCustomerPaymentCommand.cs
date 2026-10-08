@@ -109,6 +109,15 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
         if (request.TotalPaymentAmount <= 0) throw new ArgumentOutOfRangeException(nameof(request.TotalPaymentAmount), "Payment amount must be greater than zero.");
         if (string.IsNullOrWhiteSpace(request.PaymentMode)) throw new ArgumentException("Payment mode is required.");
 
+        InvoicePaymentRules.Validate(request.TotalPaymentAmount, request.PaymentMode, request.PaymentDate, request.ReferenceNumber, request.Note);
+        if (!request.AutoAllocateFifo && request.SpecificAllocations is { } specs)
+        {
+            if (specs.Any(s => s.AllocatedAmount < 0 || s.AllocatedAmount != decimal.Round(s.AllocatedAmount, 2))
+                || specs.Select(s => s.InvoiceId).Distinct().Count() != specs.Count)
+                throw new ConflictException("Allocations must have unique invoice IDs and nonnegative two-decimal amounts.");
+            if (specs.Sum(s => s.AllocatedAmount) > request.TotalPaymentAmount)
+                throw new ConflictException("Total allocation cannot exceed the payment received.");
+        }
         var customer = await db.Customers
             .SingleOrDefaultAsync(c => c.Id == request.CustomerId, cancellationToken)
             ?? throw new NotFoundException($"Customer '{request.CustomerId}' was not found.");
@@ -135,6 +144,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
             {
                 if (remaining <= 0) break;
 
+                if (request.PaymentDate < inv.InvoiceDate) throw new ConflictException("Payment date cannot precede an allocated invoice date.");
                 var prevBalance = inv.Balance;
                 var alloc = Math.Min(prevBalance, remaining);
 
@@ -146,7 +156,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
                     ? $"FIFO Allocation - {request.Note}"
                     : "Auto FIFO Payment Allocation";
 
-                var receipt = SalesReceipt.Create(
+                var receipt = SalesInvoiceReceipt.Create(
                     inv.Id,
                     alloc,
                     request.PaymentMode,
@@ -154,7 +164,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
                     request.ReferenceNumber,
                     noteText);
 
-                db.SalesReceipts.Add(receipt);
+                db.SalesInvoiceReceipts.Add(receipt);
                 LedgerPosting.Add(db, LedgerPosting.ForSalesReceipt(receipt, ledgerAccounts));
 
                 allocationDetails.Add(new InvoiceAllocationDetailDto(
@@ -178,6 +188,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
                 if (!invoiceMap.TryGetValue(spec.InvoiceId, out var inv))
                     throw new NotFoundException($"Unpaid invoice '{spec.InvoiceId}' not found for customer.");
 
+                if (request.PaymentDate < inv.InvoiceDate) throw new ConflictException("Payment date cannot precede an allocated invoice date.");
                 var prevBalance = inv.Balance;
                 var alloc = decimal.Round(spec.AllocatedAmount, 2, MidpointRounding.AwayFromZero);
 
@@ -187,7 +198,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
                 inv.RecordPayment(alloc);
                 totalAllocated = decimal.Round(totalAllocated + alloc, 2, MidpointRounding.AwayFromZero);
 
-                var receipt = SalesReceipt.Create(
+                var receipt = SalesInvoiceReceipt.Create(
                     inv.Id,
                     alloc,
                     request.PaymentMode,
@@ -195,7 +206,7 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
                     request.ReferenceNumber,
                     request.Note);
 
-                db.SalesReceipts.Add(receipt);
+                db.SalesInvoiceReceipts.Add(receipt);
                 LedgerPosting.Add(db, LedgerPosting.ForSalesReceipt(receipt, ledgerAccounts));
 
                 allocationDetails.Add(new InvoiceAllocationDetailDto(
@@ -216,12 +227,14 @@ public sealed class AllocateCustomerPaymentCommandHandler(IAccountingInventoryDb
         // If there's an unallocated advance payment beyond all outstanding invoices, post On-Account journal
         if (unallocatedAdvance > 0)
         {
+            var advance = CustomerAdvance.Create(customer.Id, unallocatedAdvance, request.PaymentMode, request.PaymentDate, request.ReferenceNumber);
+            db.CustomerAdvances.Add(advance);
             var cashAccount = request.PaymentMode == "Cash" ? "1000" : "1010";
             var advanceJournal = JournalEntry.Post(
                 request.PaymentDate,
                 $"Customer on-account advance: {customer.Name}",
                 "CustomerAdvance",
-                customer.Id.ToString(),
+                advance.Id.ToString(),
                 [
                     (ledgerAccounts[cashAccount], unallocatedAdvance, 0m, $"Unallocated customer receipt via {request.PaymentMode}"),
                     (ledgerAccounts["1100"], 0m, unallocatedAdvance, "On-Account AR credit advance")

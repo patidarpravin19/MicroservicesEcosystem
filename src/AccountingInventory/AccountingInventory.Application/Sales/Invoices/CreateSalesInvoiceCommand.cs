@@ -49,6 +49,14 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
         var supplierState = seller?.StateCode ?? GstStates.ExtractStateCode(seller?.TaxRegistrationNumber) ?? GstStates.ExtractStateCode(seller?.CompanyAddress);
         var effectiveSupplyType = request.SupplyType ?? GstStates.DetermineSupplyType(supplierState, posCode);
 
+        if (request.SupplyType.HasValue && supplierState != null && posCode != null
+            && request.SupplyType.Value != GstStates.DetermineSupplyType(supplierState, posCode))
+            throw new ConflictException("Supply type must match the supplier state and place of supply.");
+        if (!string.IsNullOrWhiteSpace(seller?.TaxRegistrationNumber))
+        {
+            if (supplierState == null || posCode == null) throw new ConflictException("Configure supplier state and choose a place of supply before issuing a GST invoice.");
+            if (request.Lines.Any(l => string.IsNullOrWhiteSpace(l.HsnSac))) throw new ConflictException("HSN/SAC is required on GST invoice lines.");
+        }
         var customer = await CustomerResolver.GetOrCreateAsync(
             db,
             request.CustomerName,
@@ -86,15 +94,36 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 if (request.InvoiceDate < prod.PurchaseDate)
                     throw new ConflictException($"Sale date {request.InvoiceDate} cannot precede purchase date {prod.PurchaseDate} for product '{prod.SerialNumber}'.");
 
+                var previousInvoiceIds = await db.SalesInvoiceLines.Where(l => l.ProductId == prod.Id).Select(l => l.SalesInvoiceId).ToArrayAsync(cancellationToken);
+                var previousSaleIds = await db.SalesProducts.Where(s => s.ProductId == prod.Id.ToString()).Select(s => s.Id).ToArrayAsync(cancellationToken);
+                if (await db.InvoiceCorrections.AnyAsync(n => n.Kind == "Sale" && (previousInvoiceIds.Contains(n.SourceId) || previousSaleIds.Contains(n.SourceId))
+                    && n.NoteDate > request.InvoiceDate, cancellationToken))
+                    throw new ConflictException("Resale cannot precede the previous customer return.");
+
                 prod.MarkSold();
                 productsToRelieve.Add(prod);
             }
+        }
+
+        if (request.Lines.Count(l => l.ItemType == InvoiceItemType.SerializedProduct) != serializedProductIds.Count)
+            throw new ConflictException("Select a different inventory product for every serialized line.");
+        var taxes = await db.Taxes.Where(t => t.IsActive).ToDictionaryAsync(t => t.Id, cancellationToken);
+        foreach (var line in request.Lines)
+        {
+            if (line.TaxId is { } taxId && taxId != Guid.Empty && !taxes.ContainsKey(taxId))
+                throw new ConflictException("The selected tax is inactive or does not exist.");
         }
 
         var billNumber = await db.GenerateSalesBillNumberAsync(request.InvoiceDate.Year, cancellationToken);
 
         var drafts = request.Lines.Select(l =>
         {
+            var product = l.ProductId.HasValue ? productsToRelieve.SingleOrDefault(p => p.Id == l.ProductId.Value) : null;
+            var tax = l.TaxId.HasValue && taxes.TryGetValue(l.TaxId.Value, out var selectedTax) ? selectedTax : null;
+            if (tax is null && (l.CgstRate != 0 || l.SgstRate != 0 || l.IgstRate != 0))
+                throw new ConflictException("Select an active tax rate instead of supplying arbitrary rates.");
+            l = l with { CgstRate = tax?.Cgst ?? 0m, SgstRate = tax?.Sgst ?? 0m, IgstRate = (tax?.Cgst ?? 0m) + (tax?.Sgst ?? 0m),
+                SerialNumber = product?.SerialNumber, SerialNumber1 = product?.SerialNumber1 };
             decimal cgstRate = 0m;
             decimal sgstRate = 0m;
             decimal igstRate = 0m;
@@ -135,7 +164,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 l.TaxId,
                 cgstRate,
                 sgstRate,
-                igstRate);
+                igstRate, l.HsnSac, l.UnitOfMeasure);
         }).ToList();
 
         var invoice = SalesInvoice.Create(
@@ -162,11 +191,12 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
 
         await LedgerPosting.EnsurePeriodOpenAsync(db, invoice.InvoiceDate, cancellationToken);
 
-        SalesReceipt? receipt = null;
+        SalesInvoiceReceipt? receipt = null;
         if (request.InitialPayment != null && request.InitialPayment.Amount > 0)
         {
+            if (request.InitialPayment.PaymentDate < invoice.InvoiceDate) throw new ConflictException("Payment date cannot precede invoice date.");
             invoice.RecordPayment(request.InitialPayment.Amount);
-            receipt = SalesReceipt.Create(
+            receipt = SalesInvoiceReceipt.Create(
                 invoice.Id,
                 request.InitialPayment.Amount,
                 request.InitialPayment.PaymentMode,
@@ -174,7 +204,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 request.InitialPayment.ReferenceNumber,
                 request.InitialPayment.Note);
 
-            db.SalesReceipts.Add(receipt);
+            db.SalesInvoiceReceipts.Add(receipt);
             LedgerPosting.Add(db, LedgerPosting.ForSalesReceipt(receipt, ledgerAccounts));
             await LedgerPosting.EnsurePeriodOpenAsync(db, receipt.PaymentDate, cancellationToken);
         }
@@ -211,7 +241,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 Seller = seller,
                 Lines = invoice.Lines.Select(l => new
                 {
-                    l.LineNumber,
+                    l.LineNumber, l.HsnSac, l.UnitOfMeasure,
                     l.ItemDescription,
                     l.SerialNumber,
                     l.SerialNumber1,
@@ -285,7 +315,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
             l.CgstAmount,
             l.SgstAmount,
             l.IgstAmount,
-            l.TotalAmount)).ToList();
+            l.TotalAmount, l.HsnSac, l.UnitOfMeasure)).ToList();
 
         var paymentDtos = receipt is not null
             ? new List<SalesInvoiceReceiptDto>

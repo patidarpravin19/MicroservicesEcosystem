@@ -125,7 +125,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
         // 2. Multi-line Sales Invoices
         var salesInvoices = await db.SalesInvoices.AsNoTracking()
             .Include(i => i.Lines)
-            .Where(i => i.CustomerId == customerId && !i.IsCancelled)
+            .Where(i => i.CustomerId == customerId )
             .ToListAsync(ct);
 
         var invoiceIds = salesInvoices.Select(i => i.Id).ToList();
@@ -148,15 +148,15 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
         }
 
         // 3. Sales Receipts for these invoices
-        var receipts = await db.SalesReceipts.AsNoTracking()
-            .Where(r => invoiceIds.Contains(r.SalesProductId))
+        var receipts = await db.SalesInvoiceReceipts.AsNoTracking()
+            .Where(r => invoiceIds.Contains(r.InvoiceId) && r.AdvanceId == null)
             .ToListAsync(ct);
 
         var invoiceBillMap = salesInvoices.ToDictionary(i => i.Id, i => i.BillNumber);
 
         foreach (var rc in receipts)
         {
-            var billNum = invoiceBillMap.TryGetValue(rc.SalesProductId, out var b) ? b : "";
+            var billNum = invoiceBillMap.TryGetValue(rc.InvoiceId, out var b) ? b : "";
             var refText = !string.IsNullOrWhiteSpace(rc.ReferenceNumber) ? $" (Ref: {rc.ReferenceNumber})" : "";
             var noteText = !string.IsNullOrWhiteSpace(rc.Note) ? $" - {rc.Note}" : "";
 
@@ -173,7 +173,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
 
         // 4. Legacy single sales products
         var legacySales = await db.SalesProducts.AsNoTracking()
-            .Where(s => s.CustomerId == customerId && !s.IsDeleted && !s.IsReturned)
+            .Where(s => s.CustomerId == customerId && !s.IsDeleted)
             .ToListAsync(ct);
 
         var legacySaleIds = legacySales.Select(s => s.Id).ToList();
@@ -232,6 +232,15 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
                 cn.CreatedAt));
         }
 
+        var noteIds = creditNotes.Select(n => n.Id).ToArray();
+        foreach (var refund in await db.CorrectionRefunds.Where(r => noteIds.Contains(r.CorrectionId)).ToListAsync(ct))
+            rawTransactions.Add((refund.PaymentDate, "Customer Refund", refund.Reference, "Credit note refund", refund.Amount, 0m, refund.Id, refund.CreatedAt));
+        var advances = await db.CustomerAdvances.Where(a => a.CustomerId == customerId).ToListAsync(ct);
+        foreach (var advance in advances)
+            rawTransactions.Add((advance.PaymentDate, "Customer Advance", advance.ReferenceNumber ?? "", "On-account receipt", 0m, advance.Amount, advance.Id, advance.CreatedAt));
+        var advanceIds = advances.Select(a => a.Id).ToArray();
+        foreach (var refund in await db.CustomerAdvanceRefunds.Where(r => advanceIds.Contains(r.AdvanceId)).ToListAsync(ct))
+            rawTransactions.Add((refund.PaymentDate, "Advance Refund", refund.ReferenceNumber ?? "", "On-account refund", refund.Amount, 0m, refund.Id, refund.CreatedAt));
         // Sort all historical transactions chronologically
         var sorted = rawTransactions
             .OrderBy(t => t.Date)
@@ -286,29 +295,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
         var closingSide = closingNet >= 0 ? "Dr" : "Cr";
         var absClosing = Math.Abs(closingNet);
 
-        // Aging calculation for unpaid sales invoices
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        decimal current0To30 = 0m;
-        decimal days31To60 = 0m;
-        decimal days61To90 = 0m;
-        decimal daysOver90 = 0m;
-
-        var unpaidInvoices = salesInvoices.Where(i => i.Balance > 0).ToList();
-        foreach (var inv in unpaidInvoices)
-        {
-            var ageDays = today.DayNumber - inv.InvoiceDate.DayNumber;
-            if (ageDays <= 30) current0To30 += inv.Balance;
-            else if (ageDays <= 60) days31To60 += inv.Balance;
-            else if (ageDays <= 90) days61To90 += inv.Balance;
-            else daysOver90 += inv.Balance;
-        }
-
-        var aging = new PartyAgingSummaryDto(
-            decimal.Round(current0To30, 2),
-            decimal.Round(days31To60, 2),
-            decimal.Round(days61To90, 2),
-            decimal.Round(daysOver90, 2),
-            decimal.Round(current0To30 + days31To60 + days61To90 + daysOver90, 2));
+        var aging = await BuildAging(customerId, true, toDate, ct);
 
         return new PartyStatementOfAccountDto(
             customer.Id,
@@ -464,6 +451,9 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
                 dn.CreatedAt));
         }
 
+        var refundNoteIds = debitNotes.Select(n => n.Id).ToArray();
+        foreach (var refund in await db.CorrectionRefunds.Where(r => refundNoteIds.Contains(r.CorrectionId)).ToListAsync(ct))
+            rawTransactions.Add((refund.PaymentDate, "Supplier Refund", refund.Reference, "Debit note refund", 0m, refund.Amount, refund.Id, refund.CreatedAt));
         var sorted = rawTransactions
             .OrderBy(t => t.Date)
             .ThenBy(t => t.CreatedAt)
@@ -517,19 +507,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
         var closingSide = closingNet >= 0 ? "Cr" : "Dr";
         var absClosing = Math.Abs(closingNet);
 
-        // Aging breakdown for vendor payables
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        decimal current0To30 = 0m;
-        decimal days31To60 = 0m;
-        decimal days61To90 = 0m;
-        decimal daysOver90 = 0m;
-
-        var aging = new PartyAgingSummaryDto(
-            decimal.Round(current0To30, 2),
-            decimal.Round(days31To60, 2),
-            decimal.Round(days61To90, 2),
-            decimal.Round(daysOver90, 2),
-            absClosing);
+        var aging = await BuildAging(vendorId, false, toDate, ct);
 
         return new PartyStatementOfAccountDto(
             vendor.Id,
@@ -537,7 +515,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
             vendor.Name,
             vendor.Mobile,
             null,
-            vendor.Address,
+            vendor.Address ?? "",
             null,
             null,
             null,
@@ -551,6 +529,20 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
             absClosing,
             closingSide,
             aging);
+    }
+    private async Task<PartyAgingSummaryDto> BuildAging(Guid partyId, bool customer, DateOnly asOf, CancellationToken ct)
+    {
+        var report = await new GetAgingReportHandler(db).Handle(new GetAgingReportQuery(asOf, 1, 100, PartyId: partyId), ct);
+        var rows = new List<AgingInvoiceSummary>();
+        var pageCount = customer ? report.Receivables.TotalPages : report.Payables.TotalPages;
+        rows.AddRange((customer ? report.Receivables : report.Payables).Items.Where(r => r.CounterpartyId == partyId));
+        for (var page = 2; page <= pageCount; page++)
+        {
+            var next = await new GetAgingReportHandler(db).Handle(new GetAgingReportQuery(asOf, page, 100, PartyId: partyId), ct);
+            rows.AddRange((customer ? next.Receivables : next.Payables).Items.Where(r => r.CounterpartyId == partyId));
+        }
+        return new(rows.Where(r => r.AgeDays <= 30).Sum(r => r.Balance), rows.Where(r => r.AgeDays > 30 && r.AgeDays <= 60).Sum(r => r.Balance),
+            rows.Where(r => r.AgeDays > 60 && r.AgeDays <= 90).Sum(r => r.Balance), rows.Where(r => r.AgeDays > 90).Sum(r => r.Balance), rows.Sum(r => r.Balance));
     }
 }
 

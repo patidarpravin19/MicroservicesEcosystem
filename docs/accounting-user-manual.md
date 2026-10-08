@@ -1,6 +1,6 @@
 # Accounting & Inventory User Manual
 
-Version: 1.0 | Updated: 8 October 2026 | Covers the current P0 workflows
+Version: 1.1 | Updated: 8 October 2026 | Covers the current accounting workflows
 
 For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.
 
@@ -8,6 +8,7 @@ To share this guide, send accounting-user-manual.html. Open that file in a brows
 
 ## Contents
 
+- [18. Multi-line invoices and customer advances](#18-multi-line-invoices-and-customer-advances)
 - [1. Get started](#1-get-started)
 - [2. Owner: invite staff and grant access](#2-owner-invite-staff-and-grant-access)
 - [3. Set up products and bill details](#3-set-up-products-and-bill-details)
@@ -316,4 +317,24 @@ For help, provide the page name, exact message, invoice/note number, serial numb
 | GL | General Ledger, containing the accounting entries |
 | Reconciliation | Comparing detailed balances with their corresponding ledger totals |
 
-Current scope: full serialized-unit returns and cancellations. Partial price adjustments and general multi-line sales invoices are not available in this workflow.
+Current scope: full serialized-unit and whole multi-line invoice returns and cancellations. Partial invoice returns and partial price adjustments are not available.
+
+## 18. Multi-line invoices and customer advances
+
+Prerequisites: sales permission, available serialized stock where applicable, configured seller bill details and active tax rates. GST-registered sellers must provide their state, the place of supply and a valid HSN/SAC code for each line.
+
+1. Open Sale > Invoices and create a new invoice. Select the customer and check the contact details, GSTIN and place of supply.
+2. Add serialized products, standard items or services. A serialized product can appear once with quantity 1. Standard and service quantities support four decimal places; these lines do not maintain SKU stock quantities.
+3. Enter the tax-exclusive unit price, discount, HSN/SAC and unit of measure (for example NOS). Select an active tax rate. The seller state and place of supply determine CGST/SGST or IGST. Check the displayed totals before saving.
+4. If collecting an initial payment, enter its amount, method and date. Money supports two decimal places. Non-cash payments require a reference, except the Other method. Payments cannot predate the invoice.
+5. Save and print the invoice. Printed buyer, seller, serial numbers, HSN/SAC and amounts come from the saved invoice snapshot, even after master details change.
+
+To receive a payment across invoices, open the customer payment dialog from the invoice list. Select the customer, amount, method, date and reference. Use Auto-Allocate FIFO (Oldest First) or enter custom allocations. Custom allocations cannot exceed the payment or an invoice balance. The unallocated amount becomes an on-account advance for that customer.
+
+To use an advance, select it under Existing customer advances, select an unpaid invoice, enter the amount and date, then choose Apply advance. This settles the invoice without recording cash a second time. To return unused credit, select the advance, enter an amount, refund date, Cash or Bank and the bank reference if applicable, then choose Refund advance. An advance cannot be applied to another customer, spent twice or refunded above its remaining amount. Application and refund dates cannot predate the original advance.
+
+For a whole invoice return, open Accounting > Returns & Corrections, select the invoice, date and reason, then choose whether serialized stock is restocked or written off. All invoice lines are reversed together. Record any customer refund separately, limited to credit already paid. The cancelled invoice remains available in history and cannot receive new payments. Partial line returns require a separately scoped workflow.
+
+Use customer statements and aging with an as-of date to check historical balances. Returns, receipts and refunds affect the report on their own dates; later cancellations do not erase an earlier outstanding balance. GST reports include original invoices and dated reversals, including IGST and mixed tax rates. Customer history opens each invoice using its corresponding bill page. Legacy single-product bills retain their existing payment workflow.
+
+If a payment request loses its response, repeat the same action in the same browser session with unchanged details. The saved retry key allows the API to return the committed result without posting twice. Changing details creates a different request; first check invoice or customer history when uncertain whether an earlier transaction succeeded.

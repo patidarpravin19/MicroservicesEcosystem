@@ -12,7 +12,7 @@ public sealed record AgingReportSummary(DateOnly AsOfDate,
     PagedResult<AgingInvoiceSummary> Receivables, IReadOnlyList<AgingBucketSummary> ReceivableBuckets,
     decimal TotalReceivables, PagedResult<AgingInvoiceSummary> Payables,
     IReadOnlyList<AgingBucketSummary> PayableBuckets, decimal TotalPayables);
-public sealed record GetAgingReportQuery(DateOnly? AsOfDate = null, int Page = 1, int PageSize = 20, string? Search = null)
+public sealed record GetAgingReportQuery(DateOnly? AsOfDate = null, int Page = 1, int PageSize = 20, string? Search = null, Guid? PartyId = null)
     : IRequest<AgingReportSummary>;
 
 public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
@@ -39,6 +39,17 @@ public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
         var receivableRows = sales.Select(sale => MakeRow(sale.BillNumber, sale.CustomerId, sale.CustomerName,
                 sale.SaleDate, sale.DueDate, sale.TotalAmount - notes.Where(x => x.Kind == "Sale" && x.SourceId == sale.Id).Sum(x => x.TotalAmount), receipts.GetValueOrDefault(sale.Id), asOf))
             .Where(row => row.Balance > 0m).ToArray();
+
+        var invoices = await (from invoice in db.SalesInvoices.AsNoTracking()
+            join customer in db.Customers.AsNoTracking() on invoice.CustomerId equals customer.Id
+            where invoice.InvoiceDate <= asOf
+            select new { invoice.Id, invoice.BillNumber, invoice.CustomerId, customer.Name, invoice.InvoiceDate, invoice.DueDate, invoice.TotalAmount }).ToListAsync(ct);
+        var invoiceIds = invoices.Select(i => i.Id).ToArray();
+        var invoiceReceipts = await db.SalesInvoiceReceipts.Where(r => invoiceIds.Contains(r.InvoiceId) && r.PaymentDate <= asOf)
+            .GroupBy(r => r.InvoiceId).Select(g => new { Id = g.Key, Amount = g.Sum(r => r.Amount) }).ToDictionaryAsync(r => r.Id, r => r.Amount, ct);
+        receivableRows = receivableRows.Concat(invoices.Select(i => MakeRow(i.BillNumber, i.CustomerId, i.Name, i.InvoiceDate, i.DueDate,
+            i.TotalAmount - notes.Where(n => n.Kind == "Sale" && n.SourceId == i.Id).Sum(n => n.TotalAmount), invoiceReceipts.GetValueOrDefault(i.Id), asOf))
+            .Where(r => r.Balance > 0)).ToArray();
 
         var purchaseGroups = await db.Products.AsNoTracking()
             .Where(product => product.BillNumber != null && product.PurchaseDate <= asOf && (!cutover.HasValue || product.PurchaseDate > cutover.Value))
@@ -81,6 +92,7 @@ public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
                 else payableRows = payableRows.Append(row).ToArray();
             }
         }
+        if (request.PartyId.HasValue) { receivableRows = receivableRows.Where(r => r.CounterpartyId == request.PartyId.Value).ToArray(); payableRows = payableRows.Where(r => r.CounterpartyId == request.PartyId.Value).ToArray(); }
         var search = request.Search?.Trim();
         if (!string.IsNullOrEmpty(search))
         {

@@ -1,4 +1,5 @@
 using AccountingInventory.Application.Abstractions;
+using AccountingInventory.Application.GeneralLedger;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,24 +44,16 @@ public sealed class GetDashboardSummaryQueryHandler(IAccountingInventoryDbContex
         var firstOfMonth = new DateOnly(today.Year, today.Month, 1);
 
         // 1. Monthly Revenue
-        var monthlyInvoiceRevenue = await db.SalesInvoices.AsNoTracking()
-            .Where(i => !i.IsCancelled && i.InvoiceDate >= firstOfMonth && i.InvoiceDate <= today)
-            .SumAsync(i => (decimal?)i.TotalAmount, ct) ?? 0m;
-
-        var monthlyLegacyRevenue = await db.SalesProducts.AsNoTracking()
-            .Where(s => !s.IsDeleted && !s.IsReturned && s.SaleDate >= firstOfMonth && s.SaleDate <= today)
-            .SumAsync(s => (decimal?)s.TotalAmount, ct) ?? 0m;
-
-        var monthlyRevenue = monthlyInvoiceRevenue + monthlyLegacyRevenue;
+        var monthlyRevenue = await (from line in db.JournalLines join entry in db.JournalEntries on line.JournalEntryId equals entry.Id
+            join account in db.ChartAccounts on line.AccountId equals account.Id
+            where entry.JournalDate >= firstOfMonth && entry.JournalDate <= today && entry.SourceType != "YearEndClose"
+                && (account.Code == "4000" || account.Code == "4100")
+            select (decimal?)(line.Credit - line.Debit)).SumAsync(ct) ?? 0m;
 
         // 2. Total Receivables (Customer balance due)
-        var totalInvoiceReceivables = await db.SalesInvoices.AsNoTracking()
-            .Where(i => !i.IsCancelled && i.Balance > 0)
-            .SumAsync(i => (decimal?)i.Balance, ct) ?? 0m;
-
-        var unpaidInvoicesCount = await db.SalesInvoices.AsNoTracking()
-            .CountAsync(i => !i.IsCancelled && i.Balance > 0, ct);
-
+        var aging = await new GetAgingReportHandler(db).Handle(new GetAgingReportQuery(today), ct);
+        var totalInvoiceReceivables = aging.TotalReceivables;
+        var unpaidInvoicesCount = aging.Receivables.TotalCount;
         // 3. Inventory Units & Valuation
         var inStockProducts = await db.Products.AsNoTracking()
             .Where(p => !p.IsDeleted && !p.IsSold && p.IsActive)

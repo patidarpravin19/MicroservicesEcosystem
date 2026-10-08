@@ -34,12 +34,12 @@ public sealed class GetCustomersQueryHandler(IAccountingInventoryDbContext db)
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
         var sorted = GridSorting.Apply(query, request.SortBy, request.SortDirection, selectors: new SortSelectors<Customer>
         {
-            ["salesCount"] = customer => db.SalesProducts.Count(sale => sale.CustomerId == customer.Id),
+            ["salesCount"] = customer => db.SalesProducts.Count(sale => sale.CustomerId == customer.Id) + db.SalesInvoices.Count(i => i.CustomerId == customer.Id),
         });
         var customers = await sorted.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(customer => new CustomerRecord(customer.Id, customer.Name, customer.Mobile,
                 customer.Address, customer.Email, customer.IsActive,
-                db.SalesProducts.Count(sale => sale.CustomerId == customer.Id)))
+                db.SalesProducts.Count(sale => sale.CustomerId == customer.Id) + db.SalesInvoices.Count(i => i.CustomerId == customer.Id)))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CustomerRecord>(customers, page, pageSize, totalCount,
@@ -56,7 +56,7 @@ public sealed class GetCustomerByIdQueryHandler(IAccountingInventoryDbContext db
     {
         var customer = await db.Customers.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Customer '{request.Id}' was not found.");
-        var salesCount = await db.SalesProducts.CountAsync(sale => sale.CustomerId == customer.Id, cancellationToken);
+        var salesCount = await db.SalesProducts.CountAsync(sale => sale.CustomerId == customer.Id, cancellationToken) + await db.SalesInvoices.CountAsync(i => i.CustomerId == customer.Id, cancellationToken);
         return new CustomerRecord(customer.Id, customer.Name, customer.Mobile, customer.Address,
             customer.Email, customer.IsActive, salesCount);
     }
@@ -120,7 +120,7 @@ public sealed class UpdateCustomerCommandHandler(IAccountingInventoryDbContext d
             throw new ConflictException($"A customer with mobile number '{mobile}' already exists.");
         customer.UpdateContactDetails(request.Name, mobile, request.Address, request.Email);
         await db.SaveChangesAsync(cancellationToken);
-        var salesCount = await db.SalesProducts.CountAsync(sale => sale.CustomerId == customer.Id, cancellationToken);
+        var salesCount = await db.SalesProducts.CountAsync(sale => sale.CustomerId == customer.Id, cancellationToken) + await db.SalesInvoices.CountAsync(i => i.CustomerId == customer.Id, cancellationToken);
         return new CustomerRecord(customer.Id, customer.Name, customer.Mobile, customer.Address,
             customer.Email, customer.IsActive, salesCount);
     }
@@ -137,6 +137,10 @@ public sealed class DeleteCustomerCommandHandler(IAccountingInventoryDbContext d
             ?? throw new NotFoundException($"Customer '{request.Id}' was not found.");
         if (await db.SalesProducts.IgnoreQueryFilters().AnyAsync(sale => sale.CustomerId == customer.Id, cancellationToken))
             throw new ConflictException("Customers with sales history cannot be deleted. Edit the customer or keep the history intact.");
+        if (await db.SalesInvoices.IgnoreQueryFilters().AnyAsync(i => i.CustomerId == customer.Id, cancellationToken)
+            || await db.CustomerAdvances.IgnoreQueryFilters().AnyAsync(a => a.CustomerId == customer.Id, cancellationToken)
+            || await db.OpeningSubledgerBalances.AnyAsync(o => o.Kind == "Customer" && o.PartyId == customer.Id, cancellationToken))
+            throw new ConflictException("Customers with financial history cannot be deleted.");
         customer.Delete();
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -147,7 +151,7 @@ public sealed record CustomerPaymentHistory(Guid Id, decimal Amount, string Paym
 
 public sealed record CustomerSaleHistory(Guid Id, string BillNumber, DateOnly SaleDate, string ProductName,
     string SerialNumber, decimal SellingPrice, decimal Discount, decimal TotalAmount, decimal AmountPaid,
-    decimal Balance, string? PaymentPlan, IReadOnlyList<CustomerPaymentHistory> Payments);
+    decimal Balance, string? PaymentPlan, IReadOnlyList<CustomerPaymentHistory> Payments, bool IsMultiLineInvoice = false);
 
 public sealed record CustomerHistory(CustomerRecord Customer, decimal TotalSales, decimal TotalReceived,
     decimal OutstandingBalance, IReadOnlyList<CustomerSaleHistory> Sales);
@@ -186,7 +190,7 @@ public sealed class GetCustomerHistoryQueryHandler(IAccountingInventoryDbContext
         {
             var summary = summaryById[sale.Id];
             var payments = receiptGroups.GetValueOrDefault(sale.Id) ?? [];
-            var total = Math.Max(0m, sale.SellingPrice - sale.Discount);
+            var total = sale.IsReturned ? 0m : sale.TotalAmount;
             var amountPaid = payments.Sum(payment => payment.Amount);
             var paymentPlan = plans.TryGetValue(sale.Id, out var plan)
                 ? plan.PaymentMode == "Finance"
@@ -201,6 +205,15 @@ public sealed class GetCustomerHistoryQueryHandler(IAccountingInventoryDbContext
 
         var customerRecord = new CustomerRecord(customer.Id, customer.Name, customer.Mobile,
             customer.Address, customer.Email, customer.IsActive, sales.Count);
+        var invoices = await db.SalesInvoices.AsNoTracking().Include(i => i.Lines).Where(i => i.CustomerId == customer.Id).ToListAsync(cancellationToken);
+        var invoiceIds = invoices.Select(i => i.Id).ToArray();
+        var invoiceReceipts = await db.SalesInvoiceReceipts.AsNoTracking().Where(r => invoiceIds.Contains(r.InvoiceId)).ToListAsync(cancellationToken);
+        saleHistory = saleHistory.Concat(invoices.Select(i => new CustomerSaleHistory(i.Id, i.BillNumber, i.InvoiceDate,
+            string.Join("; ", i.Lines.Select(l => l.ItemDescription)), string.Join(", ", i.Lines.Select(l => l.SerialNumber).Where(s => s != null)),
+            i.SubTotal, i.Discount, i.IsCancelled ? 0m : i.TotalAmount, i.AmountPaid, i.Balance, null,
+            invoiceReceipts.Where(r => r.InvoiceId == i.Id).Select(r => new CustomerPaymentHistory(r.Id, r.Amount, r.PaymentMode, r.PaymentDate, r.ReferenceNumber, r.Note)).ToArray(), true)))
+            .OrderByDescending(s => s.SaleDate).ToArray();
+        customerRecord = customerRecord with { SalesCount = saleHistory.Length };
         return new CustomerHistory(customerRecord, saleHistory.Sum(sale => sale.TotalAmount),
             saleHistory.Sum(sale => sale.AmountPaid), saleHistory.Sum(sale => sale.Balance), saleHistory);
     }

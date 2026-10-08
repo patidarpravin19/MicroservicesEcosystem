@@ -113,8 +113,8 @@ public sealed class GetSalesInvoiceDetailsQueryHandler(IAccountingInventoryDbCon
         var customer = await db.Customers.AsNoTracking()
             .SingleOrDefaultAsync(c => c.Id == invoice.CustomerId, cancellationToken);
 
-        var receipts = await db.SalesReceipts.AsNoTracking()
-            .Where(r => r.SalesProductId == invoice.Id)
+        var receipts = await db.SalesInvoiceReceipts.AsNoTracking()
+            .Where(r => r.InvoiceId == invoice.Id)
             .OrderBy(r => r.PaymentDate)
             .Select(r => new SalesInvoiceReceiptDto(r.Id, r.Amount, r.PaymentMode, r.PaymentDate, r.ReferenceNumber, r.Note))
             .ToListAsync(cancellationToken);
@@ -166,7 +166,7 @@ public sealed class GetSalesInvoiceDetailsQueryHandler(IAccountingInventoryDbCon
             l.CgstAmount,
             l.SgstAmount,
             l.IgstAmount,
-            l.TotalAmount)).ToList();
+            l.TotalAmount, l.HsnSac, l.UnitOfMeasure)).ToList();
 
         return new SalesInvoiceDetailsDto(summary, lines, receipts);
     }

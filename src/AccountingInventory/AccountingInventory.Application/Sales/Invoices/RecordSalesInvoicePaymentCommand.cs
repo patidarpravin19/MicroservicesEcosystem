@@ -33,7 +33,7 @@ public sealed class RecordSalesInvoicePaymentCommandHandler(IAccountingInventory
         var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
         invoice.RecordPayment(request.Amount);
 
-        var receipt = SalesReceipt.Create(
+        var receipt = SalesInvoiceReceipt.Create(
             invoice.Id,
             request.Amount,
             request.PaymentMode,
@@ -41,7 +41,7 @@ public sealed class RecordSalesInvoicePaymentCommandHandler(IAccountingInventory
             request.ReferenceNumber,
             request.Note);
 
-        db.SalesReceipts.Add(receipt);
+        db.SalesInvoiceReceipts.Add(receipt);
         LedgerPosting.Add(db, LedgerPosting.ForSalesReceipt(receipt, ledgerAccounts));
         await LedgerPosting.EnsurePeriodOpenAsync(db, receipt.PaymentDate, cancellationToken);
 

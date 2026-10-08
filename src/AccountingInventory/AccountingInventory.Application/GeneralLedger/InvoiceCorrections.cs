@@ -11,14 +11,15 @@ public sealed record ReturnInvoiceCommand(string Kind, Guid SourceId, DateOnly N
     : IRequest<InvoiceCorrection>, IBusinessPermissionRequest
 { public string BusinessPermission => Kind == "Sale" ? "sales.manage" : "purchases.manage"; }
 public sealed record RefundCorrectionCommand(Guid CorrectionId, DateOnly PaymentDate, decimal Amount, string PaymentMode, string? Reference)
-    : IRequest<CorrectionRefund>;
+    : IRequest<CorrectionRefundSummary>;
+public sealed record CorrectionRefundSummary(Guid Id, Guid CorrectionId, DateOnly PaymentDate, decimal Amount, string PaymentMode, string Reference);
 public sealed record GetInvoiceCorrectionsQuery() : IRequest<IReadOnlyList<CorrectionSummary>>;
 public sealed record CorrectionSummary(Guid Id, string Kind, Guid SourceId, Guid PartyId, string BillNumber,
     string NoteNumber, DateOnly NoteDate, string Reason, string Disposition, decimal TotalAmount, decimal Refunded, decimal RefundAvailable,
-    decimal TaxableAmount, decimal CgstRate, decimal SgstRate, decimal CgstAmount, decimal SgstAmount);
+    decimal TaxableAmount, decimal CgstRate, decimal SgstRate, decimal CgstAmount, decimal SgstAmount, decimal IgstAmount = 0m);
 
 public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, IRequestIdentity identity) :
-    IRequestHandler<ReturnInvoiceCommand, InvoiceCorrection>, IRequestHandler<RefundCorrectionCommand, CorrectionRefund>,
+    IRequestHandler<ReturnInvoiceCommand, InvoiceCorrection>, IRequestHandler<RefundCorrectionCommand, CorrectionRefundSummary>,
     IRequestHandler<GetInvoiceCorrectionsQuery, IReadOnlyList<CorrectionSummary>>
 {
     public async Task<InvoiceCorrection> Handle(ReturnInvoiceCommand q, CancellationToken ct)
@@ -28,10 +29,30 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             throw new ConflictException("This invoice unit has already been returned or cancelled.");
         await LedgerPosting.EnsurePeriodOpenAsync(db, q.NoteDate, ct);
         var accounts = await LedgerPosting.EnsureSystemAccountsAsync(db, ct);
-        Product product;
+        Product? product = null;
+        SalesInvoice? invoice = null;
+        var invoiceProducts = new List<Product>();
         InvoiceCorrection note;
         if (q.Kind == "Sale")
         {
+            invoice = await db.SalesInvoices.Include(i => i.Lines).SingleOrDefaultAsync(i => i.Id == q.SourceId, ct);
+            if (invoice is not null)
+            {
+                if (invoice.IsCancelled || q.NoteDate < invoice.InvoiceDate || q.Disposition is not ("Restock" or "WriteOff"))
+                    throw new ConflictException("Choose an unreturned invoice and a note date on/after its invoice date.");
+                if (await db.SalesInvoiceReceipts.AnyAsync(r => r.InvoiceId == invoice.Id && r.PaymentDate > q.NoteDate, ct))
+                    throw new ConflictException("Return cannot precede an invoice receipt or advance application.");
+                var ids = invoice.Lines.Where(l => l.ProductId.HasValue).Select(l => l.ProductId!.Value).ToArray();
+                invoiceProducts = await db.Products.Where(p => ids.Contains(p.Id)).ToListAsync(ct);
+                if (invoiceProducts.Count != ids.Length || invoiceProducts.Any(p => !p.IsSold || !p.IsActive))
+                    throw new ConflictException("Invoice inventory is no longer available for return.");
+                foreach (var item in invoiceProducts) item.MarkAvailable();
+                note = InvoiceCorrection.Create("Sale", invoice.Id, invoice.CustomerId, invoice.BillNumber, q.NoteDate, q.Reason,
+                    q.Disposition, invoice.TaxableAmount, 0m, 0m, invoice.CgstAmount, invoice.SgstAmount, invoice.TotalAmount, invoice.IgstAmount);
+                invoice.Cancel();
+            }
+            else
+            {
             var sale = await db.SalesProducts.SingleOrDefaultAsync(x => x.Id == q.SourceId, ct)
                 ?? throw new NotFoundException("Sales invoice was not found.");
             if (sale.IsReturned || q.NoteDate < sale.SaleDate || q.Disposition is not ("Restock" or "WriteOff"))
@@ -44,6 +65,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             note = InvoiceCorrection.Create("Sale", sale.Id, sale.CustomerId, sale.BillNumber, q.NoteDate,
                 q.Reason, q.Disposition, sale.TaxableAmount, sale.CgstRate, sale.SgstRate, sale.CgstAmount, sale.SgstAmount, sale.TotalAmount);
             sale.MarkReturned(); product.MarkAvailable();
+            }
         }
         else
         {
@@ -51,7 +73,8 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             if (q.NoteDate < product.PurchaseDate || product.IsSold || !product.IsActive || q.Disposition != "Supplier")
                 throw new ConflictException("Only available stock can be returned to the supplier, on/after its purchase date.");
             var stockSaleIds = await db.SalesProducts.Where(x => x.ProductId == product.Id.ToString()).Select(x => x.Id).ToArrayAsync(ct);
-            if (await db.InvoiceCorrections.AnyAsync(x => x.Kind == "Sale" && stockSaleIds.Contains(x.SourceId) && x.NoteDate > q.NoteDate, ct))
+            var stockInvoiceIds = await db.SalesInvoiceLines.Where(x => x.ProductId == product.Id).Select(x => x.SalesInvoiceId).ToArrayAsync(ct);
+            if (await db.InvoiceCorrections.AnyAsync(x => x.Kind == "Sale" && (stockSaleIds.Contains(x.SourceId) || stockInvoiceIds.Contains(x.SourceId)) && x.NoteDate > q.NoteDate, ct))
                 throw new ConflictException("Supplier return cannot precede the customer return.");
             var taxable = decimal.Round(product.PurchasePrice - product.Discount, 2, MidpointRounding.AwayFromZero);
             var cgst = decimal.Round(taxable * product.Cgst / 100m, 2, MidpointRounding.AwayFromZero);
@@ -60,7 +83,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             product.WriteOff();
         }
         // Reverse the exact original source journal, including its captured cost and tax.
-        var sourceType = q.Kind == "Sale" ? "Sale" : "PurchaseProduct";
+        var sourceType = invoice is not null ? "SalesInvoice" : q.Kind == "Sale" ? "Sale" : "PurchaseProduct";
         var original = await db.JournalEntries
             .SingleOrDefaultAsync(x => x.SourceType == sourceType && x.SourceId == q.SourceId.ToString(), ct);
         if (original is null && note.TotalAmount > 0)
@@ -78,7 +101,8 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         }
         if (q.Kind == "Sale" && q.Disposition == "WriteOff")
         {
-            product.WriteOff();
+            if (invoice is not null) { foreach (var item in invoiceProducts) item.WriteOff(); }
+            else product!.WriteOff();
             var cost = original is null ? 0 : await db.JournalLines.Where(x => x.JournalEntryId == original.Id && x.AccountId == accounts["5000"])
                 .SumAsync(x => x.Debit, ct);
             if (cost > 0) LedgerPosting.Add(db, JournalEntry.Post(q.NoteDate, "Returned stock write-off", "ReturnWriteOff", note.Id.ToString(),
@@ -89,7 +113,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         return note;
     }
 
-    public async Task<CorrectionRefund> Handle(RefundCorrectionCommand q, CancellationToken ct)
+    public async Task<CorrectionRefundSummary> Handle(RefundCorrectionCommand q, CancellationToken ct)
     {
         var note = await db.InvoiceCorrections.SingleOrDefaultAsync(x => x.Id == q.CorrectionId, ct)
             ?? throw new NotFoundException("Credit/debit note was not found.");
@@ -108,7 +132,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         db.CorrectionRefunds.Add(refund);
         LedgerPosting.Add(db, JournalEntry.Post(q.PaymentDate, "Invoice refund", "CorrectionRefund", refund.Id.ToString(), lines));
         await db.SaveChangesAsync(ct);
-        return refund;
+        return new(refund.Id, refund.CorrectionId, refund.PaymentDate, refund.Amount, refund.PaymentMode, refund.Reference);
     }
     public async Task<IReadOnlyList<CorrectionSummary>> Handle(GetInvoiceCorrectionsQuery q, CancellationToken ct)
     {
@@ -117,7 +141,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         foreach (var n in notes)
             result.Add(new(n.Id, n.Kind, n.SourceId, n.PartyId, n.BillNumber, n.NoteNumber, n.NoteDate, n.Reason, n.Disposition,
                 n.TotalAmount, await db.CorrectionRefunds.Where(x => x.CorrectionId == n.Id).SumAsync(x => (decimal?)x.Amount, ct) ?? 0,
-                await RefundAvailable(n, ct), n.TaxableAmount, n.CgstRate, n.SgstRate, n.CgstAmount, n.SgstAmount));
+                await RefundAvailable(n, ct), n.TaxableAmount, n.CgstRate, n.SgstRate, n.CgstAmount, n.SgstAmount, n.IgstAmount));
         return result;
     }
     private async Task<decimal> RefundAvailable(InvoiceCorrection n, CancellationToken ct, DateOnly? asOf = null)
@@ -125,9 +149,10 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         var date = asOf ?? DateOnly.MaxValue;
         if (n.Kind == "Sale")
         {
+            var invoicePaid = await db.SalesInvoiceReceipts.Where(r => r.InvoiceId == n.SourceId && r.PaymentDate <= date).SumAsync(r => (decimal?)r.Amount, ct) ?? 0m;
             var paid = await db.SalesReceipts.Where(x => x.SalesProductId == n.SourceId && x.PaymentDate <= date).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
             var refunded = await db.CorrectionRefunds.Where(x => x.CorrectionId == n.Id).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
-            return Math.Max(0, Math.Min(n.TotalAmount, paid) - refunded);
+            return Math.Max(0, Math.Min(n.TotalAmount, paid + invoicePaid) - refunded);
         }
         var bill = n.BillNumber.ToLower();
         var total = await db.Products.Where(x => x.VendorId == n.PartyId && x.BillNumber != null && x.BillNumber.ToLower() == bill)

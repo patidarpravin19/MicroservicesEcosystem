@@ -24,6 +24,9 @@ public interface IAccountingInventoryDbContext
     DbSet<Customer> Customers { get; }
     DbSet<SalesPayment> SalesPayments { get; }
     DbSet<SalesReceipt> SalesReceipts { get; }
+    DbSet<SalesInvoiceReceipt> SalesInvoiceReceipts { get; }
+    DbSet<CustomerAdvance> CustomerAdvances { get; }
+    DbSet<CustomerAdvanceRefund> CustomerAdvanceRefunds { get; }
     DbSet<CustomerBillSettings> CustomerBillSettings { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<PurchasePayment> PurchasePayments { get; }

@@ -42,6 +42,9 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<SalesPayment> SalesPayments => Set<SalesPayment>();
     public DbSet<SalesReceipt> SalesReceipts => Set<SalesReceipt>();
+    public DbSet<SalesInvoiceReceipt> SalesInvoiceReceipts => Set<SalesInvoiceReceipt>();
+    public DbSet<CustomerAdvance> CustomerAdvances => Set<CustomerAdvance>();
+    public DbSet<CustomerAdvanceRefund> CustomerAdvanceRefunds => Set<CustomerAdvanceRefund>();
     public DbSet<CustomerBillSettings> CustomerBillSettings => Set<CustomerBillSettings>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PurchasePayment> PurchasePayments => Set<PurchasePayment>();
