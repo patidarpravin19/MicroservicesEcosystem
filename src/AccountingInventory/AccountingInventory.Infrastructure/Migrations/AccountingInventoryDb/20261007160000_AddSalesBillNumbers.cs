@@ -12,14 +12,9 @@ public sealed class AddSalesBillNumbers : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "bill_number",
-            table: "sales_products",
-            type: "character varying(32)",
-            maxLength: 32,
-            nullable: true);
-
         migrationBuilder.Sql("""
+            ALTER TABLE sales_products ADD COLUMN IF NOT EXISTS bill_number character varying(32) NULL;
+
             WITH numbered_sales AS (
                 SELECT id,
                        EXTRACT(YEAR FROM sale_date)::integer AS bill_year,
@@ -27,14 +22,15 @@ public sealed class AddSalesBillNumbers : Migration
                            PARTITION BY EXTRACT(YEAR FROM sale_date)
                            ORDER BY sale_date, created_at, id) AS bill_sequence
                 FROM sales_products
+                WHERE bill_number IS NULL
             )
             UPDATE sales_products AS sale
             SET bill_number = 'SM-' || numbered_sales.bill_year::text || '-' ||
                 LPAD(numbered_sales.bill_sequence::text, 6, '0')
             FROM numbered_sales
-            WHERE sale.id = numbered_sales.id;
+            WHERE sale.id = numbered_sales.id AND sale.bill_number IS NULL;
 
-            CREATE TABLE sales_bill_counters (
+            CREATE TABLE IF NOT EXISTS sales_bill_counters (
                 bill_year integer PRIMARY KEY,
                 last_number integer NOT NULL
             );
@@ -42,7 +38,9 @@ public sealed class AddSalesBillNumbers : Migration
             INSERT INTO sales_bill_counters (bill_year, last_number)
             SELECT EXTRACT(YEAR FROM sale_date)::integer, COUNT(*)::integer
             FROM sales_products
-            GROUP BY EXTRACT(YEAR FROM sale_date)::integer;
+            GROUP BY EXTRACT(YEAR FROM sale_date)::integer
+            ON CONFLICT (bill_year) DO UPDATE
+                SET last_number = GREATEST(sales_bill_counters.last_number, EXCLUDED.last_number);
 
             CREATE OR REPLACE FUNCTION generate_sales_bill_number(target_year integer)
             RETURNS text
@@ -60,22 +58,11 @@ public sealed class AddSalesBillNumbers : Migration
             $$;
             """);
 
-        migrationBuilder.AlterColumn<string>(
-            name: "bill_number",
-            table: "sales_products",
-            type: "character varying(32)",
-            maxLength: 32,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "character varying(32)",
-            oldMaxLength: 32,
-            oldNullable: true);
-
-        migrationBuilder.CreateIndex(
-            name: "ix_sales_products_bill_number",
-            table: "sales_products",
-            column: "bill_number",
-            unique: true);
+        migrationBuilder.Sql("""
+            ALTER TABLE sales_products ALTER COLUMN bill_number SET NOT NULL;
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_sales_products_bill_number
+                ON sales_products (bill_number);
+            """);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

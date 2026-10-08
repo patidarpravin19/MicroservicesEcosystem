@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Common.Models;
 using AccountingInventory.Application.Inventory.Queries.GetStock;
+using AccountingInventory.Application.Inventory;
 using BuildingBlocks.WebDefaults;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,16 @@ public static class InventoryEndpoints
                 variantId, page ?? 1, pageSize ?? 20, search), cancellationToken)))
             .WithName("GetAvailableStockProducts")
             .Produces<PagedResult<AvailableStockProductSummary>>();
+
+        group.MapGet("/movements", async ([FromQuery] int? page, [FromQuery] int? pageSize,
+            [FromQuery] string? search, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate,
+            ISender sender, CancellationToken cancellationToken) =>
+            Results.Ok(await sender.Send(new GetStockMovementsQuery(page ?? 1, pageSize ?? 20, search, fromDate, toDate), cancellationToken)))
+            .WithName("GetStockMovements").Produces<PagedResult<StockMovementSummary>>();
+
+        group.MapPost("/adjustments/write-off", async (WriteOffInventoryCommand command, ISender sender, CancellationToken cancellationToken) =>
+            Results.Ok(new { id = await sender.Send(command, cancellationToken) }))
+            .WithName("WriteOffInventory");
 
         return group;
     }

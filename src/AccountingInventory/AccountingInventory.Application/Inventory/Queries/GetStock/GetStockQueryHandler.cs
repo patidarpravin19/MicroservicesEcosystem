@@ -31,7 +31,7 @@ public sealed class GetStockQueryHandler(IAccountingInventoryDbContext db)
                 group.Key.BrandId,
                 group.Key.ProductModelId,
                 group.Key.VariantId,
-                TotalProductCost = group.Sum(product => product.TotalAmount),
+                TotalProductCost = group.Sum(product => product.PurchasePrice - product.Discount),
                 TotalQuantity = group.Count()
             });
         var totalCount = await aggregates.CountAsync(cancellationToken);

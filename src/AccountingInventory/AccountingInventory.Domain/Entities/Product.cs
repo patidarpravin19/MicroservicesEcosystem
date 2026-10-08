@@ -14,6 +14,9 @@ public sealed class Product : AggregateRoot
     public string SerialNumber { get; private set; } = null!;
     public string? SerialNumber1 { get; private set; }
     public string? BillNumber { get; private set; }
+    public DateOnly PurchaseDate { get; private set; }
+    public int PaymentTermsDays { get; private set; }
+    public DateOnly DueDate { get; private set; }
     public bool IsSold { get; private set; }
     public decimal PurchasePrice { get; private set; }
     public decimal TotalAmount { get; private set; }
@@ -24,26 +27,31 @@ public sealed class Product : AggregateRoot
 
     public static Product Create(Guid vendorId, Guid brandId, Guid productTypeId, Guid productModelId,
         Guid variantId, Guid colorId, string serialNumber, string? serialNumber1, string? billNumber,
-        decimal purchasePrice, decimal discount, decimal cgst, decimal sgst, decimal tax)
+        decimal purchasePrice, decimal discount, decimal cgst, decimal sgst, decimal tax, DateOnly? purchaseDate = null,
+        int paymentTermsDays = 0)
     {
         Validate(vendorId, brandId, productTypeId, productModelId, variantId, colorId,
             serialNumber, purchasePrice, discount, cgst, sgst, tax);
+        var invoiceDate = purchaseDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         return new Product
         {
             Id = Guid.NewGuid(), IsActive = true, VendorId = vendorId, BrandId = brandId,
             ProductTypeId = productTypeId, ProductModelId = productModelId, VariantId = variantId,
             ColorId = colorId, SerialNumber = serialNumber.Trim(),
             SerialNumber1 = string.IsNullOrWhiteSpace(serialNumber1) ? null : serialNumber1.Trim(),
-            BillNumber = NormalizeBillNumber(billNumber), IsSold = false,
+            BillNumber = NormalizeBillNumber(billNumber), PurchaseDate = invoiceDate,
+            PaymentTermsDays = ValidateTerms(paymentTermsDays),
+            DueDate = invoiceDate.AddDays(paymentTermsDays), IsSold = false,
             PurchasePrice = purchasePrice, Discount = discount,
             Cgst = cgst, Sgst = sgst, Tax = tax,
-            TotalAmount = CalculateTotalAmount(purchasePrice, cgst, sgst)
+            TotalAmount = CalculateTotalAmount(purchasePrice, discount, cgst, sgst)
         };
     }
 
     public void Update(Guid vendorId, Guid brandId, Guid productTypeId, Guid productModelId,
         Guid variantId, Guid colorId, string serialNumber, string? serialNumber1, string? billNumber,
-        decimal purchasePrice, decimal discount, decimal cgst, decimal sgst, decimal tax)
+        decimal purchasePrice, decimal discount, decimal cgst, decimal sgst, decimal tax, DateOnly? purchaseDate = null,
+        int paymentTermsDays = 0)
     {
         Validate(vendorId, brandId, productTypeId, productModelId, variantId, colorId,
             serialNumber, purchasePrice, discount, cgst, sgst, tax);
@@ -52,9 +60,12 @@ public sealed class Product : AggregateRoot
         SerialNumber = serialNumber.Trim();
         SerialNumber1 = string.IsNullOrWhiteSpace(serialNumber1) ? null : serialNumber1.Trim();
         BillNumber = NormalizeBillNumber(billNumber);
+        if (purchaseDate.HasValue) PurchaseDate = purchaseDate.Value;
+        PaymentTermsDays = ValidateTerms(paymentTermsDays);
+        DueDate = PurchaseDate.AddDays(paymentTermsDays);
         PurchasePrice = purchasePrice; Discount = discount;
         Cgst = cgst; Sgst = sgst; Tax = tax;
-        TotalAmount = CalculateTotalAmount(purchasePrice, cgst, sgst);
+        TotalAmount = CalculateTotalAmount(purchasePrice, discount, cgst, sgst);
     }
 
     public void Delete() { IsDeleted = true; IsActive = false; }
@@ -67,8 +78,20 @@ public sealed class Product : AggregateRoot
 
     public void MarkAvailable() => IsSold = false;
 
+    public void WriteOff()
+    {
+        if (!IsActive || IsSold) throw new InvalidOperationException("Only active, unsold products can be written off.");
+        IsActive = false;
+    }
+
     private static string? NormalizeBillNumber(string? billNumber)
         => string.IsNullOrWhiteSpace(billNumber) ? null : billNumber.Trim();
+
+    private static int ValidateTerms(int days)
+    {
+        if (days is < 0 or > 3650) throw new ArgumentOutOfRangeException(nameof(days), "Payment terms must be between 0 and 3650 days.");
+        return days;
+    }
 
     private static void Validate(Guid vendorId, Guid brandId, Guid productTypeId, Guid productModelId,
         Guid variantId, Guid colorId, string serialNumber, decimal purchasePrice,
@@ -78,12 +101,17 @@ public sealed class Product : AggregateRoot
             productModelId == Guid.Empty || variantId == Guid.Empty || colorId == Guid.Empty)
             throw new ArgumentException("All product reference IDs are required.");
         if (string.IsNullOrWhiteSpace(serialNumber)) throw new ArgumentException("SerialNumber is required.");
-        if (purchasePrice < 0 || discount < 0 || cgst < 0 || sgst < 0 || tax < 0)
+        if (purchasePrice < 0 || discount < 0 || discount > purchasePrice || cgst < 0 || sgst < 0 || tax < 0)
             throw new ArgumentException("Price, discount, and tax values cannot be negative.");
+        if (decimal.Round(tax, 2) != decimal.Round(cgst + sgst, 2))
+            throw new ArgumentException("Tax must equal the CGST and SGST rates combined.");
     }
 
-    private static decimal CalculateTotalAmount(decimal purchasePrice, decimal cgst, decimal sgst)
-        => decimal.Round(purchasePrice * (1 + (cgst + sgst) / 100), 2, MidpointRounding.AwayFromZero);
+    private static decimal CalculateTotalAmount(decimal purchasePrice, decimal discount, decimal cgst, decimal sgst)
+    {
+        var taxableAmount = purchasePrice - discount;
+        return decimal.Round(taxableAmount * (1 + (cgst + sgst) / 100), 2, MidpointRounding.AwayFromZero);
+    }
 
     private Product() { }
 }

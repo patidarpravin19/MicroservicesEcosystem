@@ -9,7 +9,7 @@ public sealed record GetPurchaseBillsQuery(int Page = 1, int PageSize = 20, stri
     : IRequest<PagedResult<PurchaseBillSummary>>;
 
 public sealed record PurchaseBillSummary(
-    string Id, Guid VendorId, string VendorName, string BillNumber, DateOnly BillDate,
+    string Id, Guid VendorId, string VendorName, string BillNumber, DateOnly BillDate, int PaymentTermsDays, DateOnly DueDate,
     decimal TotalAmount, decimal AmountPaid, decimal Balance, string PaymentStatus);
 
 public sealed record PurchasePaymentSummary(
@@ -39,9 +39,10 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
             {
                 group.Key.VendorId,
                 BillNumber = group.Key.BillNumber!,
-                BillDate = group.Min(product => product.CreatedAt),
-                TotalAmount = group.Sum(product => product.TotalAmount > product.Discount
-                    ? product.TotalAmount - product.Discount : 0m)
+                BillDate = group.Min(product => product.PurchaseDate),
+                PaymentTermsDays = group.Max(product => product.PaymentTermsDays),
+                DueDate = group.Max(product => product.DueDate),
+                TotalAmount = group.Sum(product => product.TotalAmount)
             });
 
         var totalCount = await invoices.CountAsync(cancellationToken);
@@ -50,7 +51,7 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
         var rows = await (from invoice in invoices
             join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
             orderby invoice.BillDate descending, invoice.BillNumber
-            select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.TotalAmount })
+            select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -72,7 +73,7 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
             var balance = Math.Max(0m, row.TotalAmount - amountPaid);
             var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
             return new PurchaseBillSummary($"{row.VendorId}:{row.BillNumber}", row.VendorId, row.VendorName, row.BillNumber,
-                DateOnly.FromDateTime(row.BillDate.Date), row.TotalAmount, amountPaid, balance, status);
+                row.BillDate, row.PaymentTermsDays, row.DueDate, row.TotalAmount, amountPaid, balance, status);
         }).ToArray();
 
         return new PagedResult<PurchaseBillSummary>(items, page, pageSize, totalCount,
@@ -94,9 +95,10 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
             {
                 group.Key.VendorId,
                 BillNumber = group.Key.BillNumber!,
-                BillDate = group.Min(product => product.CreatedAt),
-                TotalAmount = group.Sum(product => product.TotalAmount > product.Discount
-                    ? product.TotalAmount - product.Discount : 0m)
+                BillDate = group.Min(product => product.PurchaseDate),
+                PaymentTermsDays = group.Max(product => product.PaymentTermsDays),
+                DueDate = group.Max(product => product.DueDate),
+                TotalAmount = group.Sum(product => product.TotalAmount)
             }).FirstOrDefaultAsync(cancellationToken);
 
         if (invoice is null)
@@ -117,7 +119,7 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
         var vendorName = await db.Vendors.AsNoTracking().Where(vendor => vendor.Id == invoice.VendorId)
             .Select(vendor => vendor.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         var bill = new PurchaseBillSummary($"{invoice.VendorId}:{invoice.BillNumber}", invoice.VendorId, vendorName, invoice.BillNumber,
-            DateOnly.FromDateTime(invoice.BillDate.Date), invoice.TotalAmount, amountPaid, balance, status);
+            invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount, amountPaid, balance, status);
         return new PurchaseBillDetails(bill, payments);
     }
 }

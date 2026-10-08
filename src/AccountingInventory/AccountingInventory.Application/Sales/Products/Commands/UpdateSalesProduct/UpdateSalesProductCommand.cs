@@ -12,4 +12,5 @@ public sealed record UpdateSalesProductCommand(
     DateOnly SaleDate,
     decimal ProductPrice,
     decimal SellingPrice,
-    decimal Discount) : IRequest<SalesProductSummary>;
+    decimal Discount,
+    Guid? TaxId = null, int PaymentTermsDays = 0) : IRequest<SalesProductSummary>;

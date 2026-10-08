@@ -20,5 +20,7 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
         RuleFor(x => x.Cgst).InclusiveBetween(0, 100);
         RuleFor(x => x.Sgst).InclusiveBetween(0, 100);
         RuleFor(x => x.Tax).InclusiveBetween(0, 100);
+        RuleFor(x => x.Tax).Equal(x => x.Cgst + x.Sgst).WithMessage("Tax must equal CGST plus SGST.");
+        RuleFor(x => x.PaymentTermsDays).InclusiveBetween(0, 3650);
     }
 }

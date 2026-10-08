@@ -9,5 +9,5 @@ public sealed record GetProductsQuery(int Page = 1, int PageSize = 20, string? S
 public sealed record ProductSummary(Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId,
     Guid ProductModelId, Guid VariantId, Guid ColorId, string SerialNumber, string? SerialNumber1,
     decimal PurchasePrice, decimal TotalAmount, decimal Discount, decimal Cgst, decimal Sgst, decimal Tax,
-    bool IsActive, bool IsSold, string? BillNumber, string VendorName, string BrandName, string ProductTypeName,
+    bool IsActive, bool IsSold, string? BillNumber, DateOnly PurchaseDate, int PaymentTermsDays, DateOnly DueDate, string VendorName, string BrandName, string ProductTypeName,
     string ProductModelName, string VariantName, string ColorName);

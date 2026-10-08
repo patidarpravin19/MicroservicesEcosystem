@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -23,8 +24,12 @@ public sealed class CreateProductCommandHandler(
 
         var product = Product.Create(request.VendorId, request.BrandId, request.ProductTypeId, request.ProductModelId,
             request.VariantId, request.ColorId, request.SerialNumber, request.SerialNumber1, request.BillNumber,
-            request.PurchasePrice, request.Discount, request.Cgst, request.Sgst, request.Tax);
+            request.PurchasePrice, request.Discount, request.Cgst, request.Sgst, request.Tax, request.PurchaseDate,
+            request.PaymentTermsDays);
         dbContext.Products.Add(product);
+        var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(dbContext, cancellationToken);
+        LedgerPosting.Add(dbContext, LedgerPosting.ForPurchase(product, ledgerAccounts));
+        await LedgerPosting.EnsurePeriodOpenAsync(dbContext, product.PurchaseDate, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Product {ProductId} ({SerialNumber}) added successfully.", product.Id, product.SerialNumber);
         return new CreateProductResult(product.Id, product.VendorId, product.BrandId, product.ProductTypeId,

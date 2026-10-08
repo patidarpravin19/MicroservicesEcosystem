@@ -12,25 +12,13 @@ public sealed class AddProductTotalAmount : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<decimal>(
-            name: "total_amount",
-            table: "products",
-            type: "numeric(18,2)",
-            nullable: true);
-
         migrationBuilder.Sql("""
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS total_amount numeric(18,2) NULL;
             UPDATE products
             SET total_amount = ROUND(purchase_price * (1 + (cgst + sgst) / 100), 2)
+            WHERE total_amount IS NULL;
+            ALTER TABLE products ALTER COLUMN total_amount SET NOT NULL;
             """);
-
-        migrationBuilder.AlterColumn<decimal>(
-            name: "total_amount",
-            table: "products",
-            type: "numeric(18,2)",
-            nullable: false,
-            oldClrType: typeof(decimal),
-            oldType: "numeric(18,2)",
-            oldNullable: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

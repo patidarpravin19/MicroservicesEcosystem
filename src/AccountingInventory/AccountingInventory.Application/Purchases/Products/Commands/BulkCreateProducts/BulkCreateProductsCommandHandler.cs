@@ -1,6 +1,7 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Application.Purchases.Products.Commands.CreateProduct;
 using AccountingInventory.Domain.Entities;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +32,12 @@ public sealed class BulkCreateProductsCommandHandler(IAccountingInventoryDbConte
         var entities = products.Select(item => Product.Create(item.VendorId, item.BrandId,
             item.ProductTypeId, item.ProductModelId, item.VariantId, item.ColorId,
             item.SerialNumber, item.SerialNumber1, item.BillNumber, item.PurchasePrice,
-            item.Discount, item.Cgst, item.Sgst, item.Tax)).ToArray();
+            item.Discount, item.Cgst, item.Sgst, item.Tax, item.PurchaseDate, item.PaymentTermsDays)).ToArray();
         dbContext.Products.AddRange(entities);
+        var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(dbContext, cancellationToken);
+        foreach (var product in entities)
+            LedgerPosting.Add(dbContext, LedgerPosting.ForPurchase(product, ledgerAccounts));
+        await LedgerPosting.EnsurePeriodsOpenAsync(dbContext, entities.Select(product => product.PurchaseDate), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Added {ProductCount} products with serial numbers {SerialNumbers}.",
             entities.Length, string.Join(", ", entities.Select(product => product.SerialNumber)));

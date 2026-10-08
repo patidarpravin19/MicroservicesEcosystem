@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,14 +22,23 @@ public sealed class CreateSalesProductCommandHandler(IAccountingInventoryDbConte
         if (await db.SalesProducts.AnyAsync(x => x.ProductId == productId.ToString(), cancellationToken))
             throw new ConflictException($"A sales product with product ID '{request.ProductId}' already exists.");
 
+        var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
+        var tax = request.TaxId.HasValue && request.TaxId.Value != Guid.Empty
+            ? await db.Taxes.SingleOrDefaultAsync(item => item.Id == request.TaxId.Value && item.IsActive, cancellationToken)
+                ?? throw new NotFoundException($"Tax rate '{request.TaxId}' was not found or is inactive.")
+            : null;
+
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
         var billNumber = await db.GenerateSalesBillNumberAsync(DateTime.UtcNow.Year, cancellationToken);
         product.MarkSold();
         var sale = SalesProduct.Create(billNumber, productId.ToString(),
             customer.Id, request.SaleDate,
-            request.ProductPrice, request.SellingPrice, request.Discount);
+            request.ProductPrice, request.SellingPrice, request.Discount,
+            tax?.Id, tax?.Cgst ?? 0m, tax?.Sgst ?? 0m, request.PaymentTermsDays);
         db.SalesProducts.Add(sale);
+        LedgerPosting.Add(db, LedgerPosting.ForSale(sale, product, ledgerAccounts));
+        await LedgerPosting.EnsurePeriodOpenAsync(db, sale.SaleDate, cancellationToken);
         try
         {
             await db.SaveChangesAsync(cancellationToken);

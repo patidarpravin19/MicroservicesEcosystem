@@ -8,42 +8,59 @@ public sealed partial class AddCustomersAndSalesCustomerId : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.CreateTable("customers", table => new
-        {
-            id = table.Column<Guid>(type: "uuid", nullable: false),
-            name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-            mobile = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-            address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-            email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-            created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-            created_by = table.Column<Guid>(type: "uuid", nullable: true),
-            modified_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-            modified_by = table.Column<Guid>(type: "uuid", nullable: true),
-            is_active = table.Column<bool>(type: "boolean", nullable: false),
-            is_deleted = table.Column<bool>(type: "boolean", nullable: false)
-        }, constraints: table => table.PrimaryKey("pk_customers", x => x.id));
-        migrationBuilder.CreateIndex("ix_customers_mobile", "customers", "mobile", unique: true);
+        migrationBuilder.Sql("""
+            CREATE TABLE IF NOT EXISTS customers (
+                id uuid NOT NULL PRIMARY KEY,
+                name character varying(200) NOT NULL,
+                mobile character varying(20) NOT NULL,
+                address character varying(500) NOT NULL,
+                email character varying(256) NULL,
+                created_at timestamp with time zone NOT NULL,
+                created_by uuid NULL,
+                modified_at timestamp with time zone NULL,
+                modified_by uuid NULL,
+                is_active boolean NOT NULL,
+                is_deleted boolean NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_customers_mobile ON customers (mobile);
+            """);
         migrationBuilder.Sql("""
             INSERT INTO customers (id, name, mobile, address, email, created_at, created_by, modified_at, modified_by, is_active, is_deleted)
             SELECT DISTINCT ON (customer_mobile) gen_random_uuid(), customer_name, customer_mobile, customer_address,
                    NULL, now(), NULL, NULL, NULL, TRUE, FALSE
             FROM sales_products ORDER BY customer_mobile, sale_date, id
+            ON CONFLICT (mobile) DO NOTHING
             """);
 
-        migrationBuilder.AddColumn<Guid>("customer_id", "sales_products", type: "uuid", nullable: true);
+        migrationBuilder.Sql("ALTER TABLE sales_products ADD COLUMN IF NOT EXISTS customer_id uuid NULL;");
         migrationBuilder.Sql("""
             UPDATE sales_products AS sale SET customer_id = customer.id
-            FROM customers AS customer WHERE customer.mobile = sale.customer_mobile
+            FROM customers AS customer WHERE customer.mobile = sale.customer_mobile AND sale.customer_id IS NULL
             """);
-        migrationBuilder.AlterColumn<Guid>("customer_id", "sales_products", type: "uuid", nullable: false,
-            oldClrType: typeof(Guid), oldType: "uuid", oldNullable: true);
-        migrationBuilder.CreateIndex("ix_sales_products_customer_id", "sales_products", "customer_id");
-        migrationBuilder.AddForeignKey("fk_sales_products_customers_customer_id", "sales_products", "customer_id", "customers", principalColumn: "id", onDelete: ReferentialAction.Restrict);
+        migrationBuilder.Sql("""
+            ALTER TABLE sales_products ALTER COLUMN customer_id SET NOT NULL;
+            CREATE INDEX IF NOT EXISTS ix_sales_products_customer_id ON sales_products (customer_id);
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'fk_sales_products_customers_customer_id'
+                      AND conrelid = 'sales_products'::regclass
+                ) THEN
+                    ALTER TABLE sales_products
+                        ADD CONSTRAINT fk_sales_products_customers_customer_id
+                        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE RESTRICT;
+                END IF;
+            END $$;
+            """);
 
-        migrationBuilder.DropColumn("customer_name", "sales_products");
-        migrationBuilder.DropColumn("customer_mobile", "sales_products");
-        migrationBuilder.DropColumn("customer_address", "sales_products");
-        migrationBuilder.DropIndex("ix_sales_products_product_id", "sales_products");
+        migrationBuilder.Sql("""
+            ALTER TABLE sales_products
+                DROP COLUMN IF EXISTS customer_name,
+                DROP COLUMN IF EXISTS customer_mobile,
+                DROP COLUMN IF EXISTS customer_address;
+            DROP INDEX IF EXISTS ix_sales_products_product_id;
+            """);
         ReorderSalesProductAuditColumns(migrationBuilder);
         migrationBuilder.CreateIndex("ix_sales_products_product_id", "sales_products", "product_id", unique: true, filter: "is_deleted = false");
     }

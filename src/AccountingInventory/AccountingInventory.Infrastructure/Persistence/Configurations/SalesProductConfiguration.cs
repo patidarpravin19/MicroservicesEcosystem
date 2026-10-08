@@ -17,6 +17,8 @@ public sealed class SalesProductConfiguration : IEntityTypeConfiguration<SalesPr
         builder.Property(x => x.ProductId).HasColumnOrder(2);
         builder.Property(x => x.CustomerId).IsRequired().HasColumnOrder(3);
         builder.Property(x => x.SaleDate).HasColumnType("date").IsRequired();
+        builder.Property(x => x.DueDate).HasColumnType("date").IsRequired();
+        builder.Property(x => x.PaymentTermsDays).IsRequired();
         builder.Property(x => x.SaleDate).HasColumnOrder(4);
         builder.Property(x => x.ProductPrice).HasPrecision(18, 2);
         builder.Property(x => x.ProductPrice).HasColumnOrder(5);
@@ -24,6 +26,13 @@ public sealed class SalesProductConfiguration : IEntityTypeConfiguration<SalesPr
         builder.Property(x => x.SellingPrice).HasColumnOrder(6);
         builder.Property(x => x.Discount).HasPrecision(18, 2);
         builder.Property(x => x.Discount).HasColumnOrder(7);
+        builder.Property(x => x.TaxId);
+        builder.Property(x => x.CgstRate).HasPrecision(5, 2);
+        builder.Property(x => x.SgstRate).HasPrecision(5, 2);
+        builder.Property(x => x.TaxableAmount).HasPrecision(18, 2);
+        builder.Property(x => x.CgstAmount).HasPrecision(18, 2);
+        builder.Property(x => x.SgstAmount).HasPrecision(18, 2);
+        builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.Property(x => x.CreatedAt).HasColumnOrder(8);
         builder.Property(x => x.CreatedBy).HasColumnOrder(9);
         builder.Property(x => x.ModifiedAt).HasColumnOrder(10);
@@ -32,7 +41,9 @@ public sealed class SalesProductConfiguration : IEntityTypeConfiguration<SalesPr
         builder.Property(x => x.IsDeleted).HasColumnOrder(13);
         builder.HasIndex(x => x.ProductId).IsUnique().HasFilter("\"is_deleted\" = false");
         builder.HasIndex(x => x.CustomerId);
+        builder.HasIndex(x => x.TaxId);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Tax>().WithMany().HasForeignKey(x => x.TaxId).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(x => x.DomainEvents);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

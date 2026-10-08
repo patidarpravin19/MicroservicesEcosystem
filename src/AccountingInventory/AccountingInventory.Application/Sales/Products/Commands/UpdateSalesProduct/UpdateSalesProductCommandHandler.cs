@@ -12,6 +12,8 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
     {
         var sale = await db.SalesProducts.SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"Sales product '{request.Id}' was not found.");
+        if (await db.JournalEntries.AnyAsync(entry => entry.SourceType == "Sale" && entry.SourceId == sale.Id.ToString(), cancellationToken))
+            throw new ConflictException("This sale has been posted to the ledger and cannot be edited. Record a reversal and replacement sale instead.");
         if (!Guid.TryParse(request.ProductId, out var requestedProductId))
             throw new NotFoundException($"Product '{request.ProductId}' was not found.");
         var originalProductId = Guid.TryParse(sale.ProductId, out var existingId) ? existingId : Guid.Empty;
@@ -36,8 +38,13 @@ public sealed class UpdateSalesProductCommandHandler(IAccountingInventoryDbConte
 
         var customer = await CustomerResolver.GetOrCreateAsync(db, request.CustomerName,
             request.CustomerMobile, request.CustomerAddress, request.CustomerEmail, cancellationToken);
+        var tax = request.TaxId.HasValue && request.TaxId.Value != Guid.Empty
+            ? await db.Taxes.SingleOrDefaultAsync(item => item.Id == request.TaxId.Value && item.IsActive, cancellationToken)
+                ?? throw new NotFoundException($"Tax rate '{request.TaxId}' was not found or is inactive.")
+            : null;
         sale.Update(requestedProductId.ToString(), customer.Id, request.SaleDate, request.ProductPrice,
-            request.SellingPrice, request.Discount);
+            request.SellingPrice, request.Discount, tax?.Id, tax?.Cgst ?? 0m, tax?.Sgst ?? 0m,
+            request.PaymentTermsDays);
         try
         {
             await db.SaveChangesAsync(cancellationToken);

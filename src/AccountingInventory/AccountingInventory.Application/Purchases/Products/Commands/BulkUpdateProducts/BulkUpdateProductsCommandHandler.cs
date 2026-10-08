@@ -30,6 +30,10 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
             .ToListAsync(cancellationToken);
         if (products.Count != ids.Length)
             throw new NotFoundException("One or more selected products could not be found. Refresh the product list and try again.");
+        var postedProductIds = ids.Select(id => id.ToString()).ToArray();
+        if (await dbContext.JournalEntries.AnyAsync(entry => entry.SourceType == "PurchaseProduct"
+                && postedProductIds.Contains(entry.SourceId!), cancellationToken))
+            throw new ConflictException("One or more purchased products are posted to the ledger and cannot be edited.");
 
         var existingSerial = await dbContext.Products
             .Where(product => !ids.Contains(product.Id)
@@ -59,7 +63,7 @@ public sealed class BulkUpdateProductsCommandHandler(IAccountingInventoryDbConte
             var update = updatesById[product.Id];
             product.Update(update.VendorId, update.BrandId, update.ProductTypeId, update.ProductModelId,
                 update.VariantId, update.ColorId, update.SerialNumber, update.SerialNumber1,
-                update.BillNumber, update.PurchasePrice, update.Discount, update.Cgst, update.Sgst, update.Tax);
+                update.BillNumber, update.PurchasePrice, update.Discount, update.Cgst, update.Sgst, update.Tax, update.PurchaseDate, update.PaymentTermsDays);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

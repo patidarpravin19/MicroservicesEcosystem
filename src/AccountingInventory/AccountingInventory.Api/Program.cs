@@ -47,6 +47,8 @@ app.MapSalesAccountingEndpoints();
 app.MapCustomerEndpoints();
 app.MapCustomerBillSettingsEndpoints();
 app.MapAuditLogEndpoints();
+app.MapGeneralLedgerEndpoints();
+app.MapAccountingExtensionEndpoints();
 app.MapTaxEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
 

@@ -26,6 +26,19 @@ public interface IAccountingInventoryDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<PurchasePayment> PurchasePayments { get; }
     DbSet<Tax> Taxes { get; }
+    DbSet<ChartAccount> ChartAccounts { get; }
+    DbSet<JournalEntry> JournalEntries { get; }
+    DbSet<JournalLine> JournalLines { get; }
+    DbSet<AccountingPeriod> AccountingPeriods { get; }
+    DbSet<BankReconciliation> BankReconciliations { get; }
+    DbSet<BankStatementLine> BankStatementLines { get; }
+    DbSet<InventoryAdjustment> InventoryAdjustments { get; }
+    DbSet<AccountingApproval> AccountingApprovals { get; }
+    DbSet<AccountingDimension> AccountingDimensions { get; }
+    DbSet<SupportingDocument> SupportingDocuments { get; }
+    DbSet<FixedAsset> FixedAssets { get; }
+    DbSet<AccountBudget> AccountBudgets { get; }
+    DbSet<AccountingUserPermission> AccountingUserPermissions { get; }
     Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken);
 
     //DbSet<Role> Roles { get; }

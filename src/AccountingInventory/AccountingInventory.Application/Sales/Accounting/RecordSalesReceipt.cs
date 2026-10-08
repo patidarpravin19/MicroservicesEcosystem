@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
 using FluentValidation;
 using MediatR;
@@ -34,7 +35,7 @@ public sealed class RecordSalesReceiptHandler(IAccountingInventoryDbContext db)
     {
         var sale = await db.SalesProducts.SingleOrDefaultAsync(item => item.Id == request.SalesProductId, cancellationToken)
             ?? throw new NotFoundException($"Sales bill '{request.SalesProductId}' was not found.");
-        var total = Math.Max(0m, sale.SellingPrice - sale.Discount);
+        var total = sale.TotalAmount;
         var amountPaid = await db.SalesReceipts.Where(receipt => receipt.SalesProductId == sale.Id)
             .SumAsync(receipt => (decimal?)receipt.Amount, cancellationToken) ?? 0m;
         var balance = Math.Max(0m, total - amountPaid);
@@ -44,6 +45,9 @@ public sealed class RecordSalesReceiptHandler(IAccountingInventoryDbContext db)
         var receipt = SalesReceipt.Create(sale.Id, request.Amount, request.PaymentMode,
             request.PaymentDate, request.ReferenceNumber, request.Note);
         db.SalesReceipts.Add(receipt);
+        var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
+        LedgerPosting.Add(db, LedgerPosting.ForSalesReceipt(receipt, ledgerAccounts));
+        await LedgerPosting.EnsurePeriodOpenAsync(db, receipt.PaymentDate, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return new SalesReceiptSummary(receipt.Id, receipt.Amount, receipt.PaymentMode, receipt.PaymentDate,
             receipt.ReferenceNumber, receipt.Note);

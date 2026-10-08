@@ -12,8 +12,9 @@ public sealed record GetSalesBillsQuery(int Page = 1, int PageSize = 20, string?
 
 public sealed record SalesBillSummary(
     Guid Id, string BillNumber, string ProductName, string SerialNumber, string CustomerName,
-    string CustomerMobile, string CustomerAddress, string? CustomerEmail, DateOnly BillDate,
-    decimal SellingPrice, decimal Discount, decimal TotalAmount, decimal AmountPaid, decimal Balance,
+    string CustomerMobile, string CustomerAddress, string? CustomerEmail, DateOnly BillDate, int PaymentTermsDays, DateOnly DueDate,
+    decimal SellingPrice, decimal Discount, decimal TaxableAmount, decimal CgstRate, decimal CgstAmount,
+    decimal SgstRate, decimal SgstAmount, decimal TotalAmount, decimal AmountPaid, decimal Balance,
     string PaymentStatus);
 
 public sealed record SalesReceiptSummary(
@@ -72,12 +73,13 @@ public sealed class GetSalesBillsQueryHandler(IAccountingInventoryDbContext db)
         SalesProductSummary summary,
         decimal amountPaid)
     {
-        var total = Math.Max(0m, sale.SellingPrice - sale.Discount);
+        var total = sale.TotalAmount;
         var balance = Math.Max(0m, total - amountPaid);
         var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
         return new SalesBillSummary(sale.Id, summary.BillNumber, summary.ProductName, summary.SerialNumber,
             summary.CustomerName, summary.CustomerMobile, summary.CustomerAddress, summary.CustomerEmail,
-            sale.SaleDate, sale.SellingPrice, sale.Discount, total, amountPaid, balance, status);
+            sale.SaleDate, sale.PaymentTermsDays, sale.DueDate, sale.SellingPrice, sale.Discount, sale.TaxableAmount, sale.CgstRate,
+            sale.CgstAmount, sale.SgstRate, sale.SgstAmount, total, amountPaid, balance, status);
     }
 }
 

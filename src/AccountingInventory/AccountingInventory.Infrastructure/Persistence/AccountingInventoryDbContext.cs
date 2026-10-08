@@ -44,6 +44,19 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PurchasePayment> PurchasePayments => Set<PurchasePayment>();
     public DbSet<Tax> Taxes => Set<Tax>();
+    public DbSet<ChartAccount> ChartAccounts => Set<ChartAccount>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalLine> JournalLines => Set<JournalLine>();
+    public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
+    public DbSet<BankReconciliation> BankReconciliations => Set<BankReconciliation>();
+    public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
+    public DbSet<InventoryAdjustment> InventoryAdjustments => Set<InventoryAdjustment>();
+    public DbSet<AccountingApproval> AccountingApprovals => Set<AccountingApproval>();
+    public DbSet<AccountingDimension> AccountingDimensions => Set<AccountingDimension>();
+    public DbSet<SupportingDocument> SupportingDocuments => Set<SupportingDocument>();
+    public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
+    public DbSet<AccountBudget> AccountBudgets => Set<AccountBudget>();
+    public DbSet<AccountingUserPermission> AccountingUserPermissions => Set<AccountingUserPermission>();
 
     public async Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken)
         => await Database.SqlQueryRaw<string>(
@@ -162,6 +175,21 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new PurchasePaymentConfiguration());
         modelBuilder.ApplyConfiguration(new TaxConfiguration());
+        modelBuilder.ApplyConfiguration(new ChartAccountConfiguration());
+        modelBuilder.ApplyConfiguration(new JournalEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new JournalLineConfiguration());
+        modelBuilder.ApplyConfiguration(new AccountingPeriodConfiguration());
+        modelBuilder.ApplyConfiguration(new BankReconciliationConfiguration());
+        modelBuilder.ApplyConfiguration(new BankStatementLineConfiguration());
+        modelBuilder.ApplyConfiguration(new InventoryAdjustmentConfiguration());
+        modelBuilder.ApplyConfiguration(new AccountingApprovalConfiguration());
+        modelBuilder.ApplyConfiguration(new AccountingDimensionConfiguration());
+        modelBuilder.ApplyConfiguration(new SupportingDocumentConfiguration());
+        modelBuilder.ApplyConfiguration(new FixedAssetConfiguration());
+        modelBuilder.ApplyConfiguration(new AccountBudgetConfiguration());
+        modelBuilder.ApplyConfiguration(new AccountingUserPermissionConfiguration());
+        modelBuilder.Entity<JournalLine>().HasOne<AccountingDimension>().WithMany()
+            .HasForeignKey(line => line.DimensionId).OnDelete(DeleteBehavior.Restrict);
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());
         base.OnModelCreating(modelBuilder);
     }

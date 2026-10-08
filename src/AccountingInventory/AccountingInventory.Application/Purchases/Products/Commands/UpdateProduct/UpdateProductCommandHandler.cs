@@ -14,6 +14,9 @@ public sealed class UpdateProductCommandHandler(
     {
         var product = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException($"A Product with ID '{request.Id}' was not found.");
+        if (await dbContext.JournalEntries.AnyAsync(entry => entry.SourceType == "PurchaseProduct"
+                && entry.SourceId == product.Id.ToString(), cancellationToken))
+            throw new ConflictException("This purchased product is posted to the ledger and cannot be edited. Record a purchase adjustment instead.");
 
         // if (product.BillNumber is { } paidBill && await dbContext.PurchasePayments.AnyAsync(payment =>
         //         payment.VendorId == product.VendorId && payment.BillNumber.ToLower() == paidBill.ToLower(), cancellationToken))
@@ -30,7 +33,8 @@ public sealed class UpdateProductCommandHandler(
 
         product.Update(request.VendorId, request.BrandId, request.ProductTypeId, request.ProductModelId,
             request.VariantId, request.ColorId, request.SerialNumber, request.SerialNumber1, request.BillNumber,
-            request.PurchasePrice, request.Discount, request.Cgst, request.Sgst, request.Tax);
+            request.PurchasePrice, request.Discount, request.Cgst, request.Sgst, request.Tax, request.PurchaseDate,
+            request.PaymentTermsDays);
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Product {ProductId} ({SerialNumber}) updated successfully.", product.Id, product.SerialNumber);
         return new UpdateProductResult(product.Id, product.VendorId, product.BrandId, product.ProductTypeId,

@@ -1,5 +1,6 @@
 using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
+using AccountingInventory.Application.GeneralLedger;
 using BuildingBlocks.Application.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +19,7 @@ public sealed class RecordPurchasePaymentCommandHandler(IAccountingInventoryDbCo
         var normalized = billNumber.ToLower();
         var products = db.Products.Where(product => product.VendorId == request.VendorId
             && product.BillNumber != null && product.BillNumber.ToLower() == normalized);
-        var billTotal = await products.SumAsync(product => product.TotalAmount > product.Discount
-            ? product.TotalAmount - product.Discount : 0m, cancellationToken);
+        var billTotal = await products.SumAsync(product => product.TotalAmount, cancellationToken);
         if (!await products.AnyAsync(cancellationToken))
             throw new NotFoundException($"Purchase bill '{billNumber}' was not found.");
 
@@ -33,6 +33,9 @@ public sealed class RecordPurchasePaymentCommandHandler(IAccountingInventoryDbCo
         var payment = PurchasePayment.Create(request.VendorId, billNumber, request.Amount,
             request.PaymentMode, request.PaymentDate, request.ReferenceNumber, request.Note);
         db.PurchasePayments.Add(payment);
+        var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
+        LedgerPosting.Add(db, LedgerPosting.ForPurchasePayment(payment, ledgerAccounts));
+        await LedgerPosting.EnsurePeriodOpenAsync(db, payment.PaymentDate, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         return new PurchasePaymentSummary(payment.Id, payment.Amount, payment.PaymentMode,

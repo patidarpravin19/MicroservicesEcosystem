@@ -13,6 +13,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.SerialNumber).IsRequired().HasMaxLength(100);
         builder.Property(x => x.SerialNumber1).HasMaxLength(100);
         builder.Property(x => x.BillNumber).HasMaxLength(100);
+        builder.Property(x => x.PurchaseDate).HasColumnType("date");
+        builder.Property(x => x.DueDate).HasColumnType("date").IsRequired();
+        builder.Property(x => x.PaymentTermsDays).IsRequired();
         builder.Property(x => x.PurchasePrice).HasPrecision(18, 2);
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.Property(x => x.IsSold).IsConcurrencyToken();

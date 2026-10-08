@@ -8,14 +8,13 @@ public sealed partial class AddProductSoldStatusAndBillNumber : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "bill_number", table: "products", type: "character varying(100)", maxLength: 100, nullable: true);
-        migrationBuilder.AddColumn<bool>(
-            name: "is_sold", table: "products", type: "boolean", nullable: false, defaultValue: false);
-
-        // Older sales reduced quantity to zero. Restore the purchased unit count and
-        // persist its sold state separately so sales no longer mutate purchase quantity.
         migrationBuilder.Sql("""
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS bill_number character varying(100) NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS is_sold boolean NOT NULL DEFAULT FALSE;
+
+            -- Older sales reduced quantity to zero. Restore only products not
+            -- already marked sold, so retrying a partially applied migration
+            -- cannot increment stock a second time.
             UPDATE products AS product
             SET is_sold = TRUE,
                 quantity = product.quantity + 1
@@ -24,6 +23,7 @@ public sealed partial class AddProductSoldStatusAndBillNumber : Migration
                 WHERE sale.is_deleted = FALSE
                   AND lower(sale.product_id) = product.id::text
             )
+              AND product.is_sold = FALSE;
             """);
     }
 
