@@ -19,7 +19,11 @@ public sealed class RecordPurchasePaymentCommandHandler(IAccountingInventoryDbCo
         var normalized = billNumber.ToLower();
         var products = db.Products.Where(product => product.VendorId == request.VendorId
             && product.BillNumber != null && product.BillNumber.ToLower() == normalized);
+        if (await products.AnyAsync(x => x.IsOpeningStock, cancellationToken))
+            throw new ConflictException("Opening supplier invoices must be settled through Opening Balances outstanding items.");
         var billTotal = await products.SumAsync(product => product.TotalAmount, cancellationToken);
+        billTotal -= await db.InvoiceCorrections.Where(x => x.Kind == "Purchase" && x.PartyId == request.VendorId && x.BillNumber.ToLower() == normalized)
+            .SumAsync(x => (decimal?)x.TotalAmount, cancellationToken) ?? 0;
         if (!await products.AnyAsync(cancellationToken))
             throw new NotFoundException($"Purchase bill '{billNumber}' was not found.");
 

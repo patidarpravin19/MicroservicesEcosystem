@@ -56,7 +56,7 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
         //        group.Sum(item => item.SgstAmount), group.Sum(item => item.CgstAmount + item.SgstAmount)))
         //    .OrderBy(row => row.CgstRate + row.SgstRate).ToListAsync(ct);
         var purchaseRows = await db.Products.AsNoTracking()
-            .Where(item => item.PurchaseDate >= fromDate && item.PurchaseDate <= to)
+            .Where(item => !item.IsOpeningStock && item.PurchaseDate >= fromDate && item.PurchaseDate <= to)
             .Select(item => new { item.Cgst, item.Sgst, item.PurchasePrice, item.Discount, item.TotalAmount })
             .ToListAsync(ct);
         var purchases = purchaseRows.GroupBy(item => new { item.Cgst, item.Sgst }).Select(group =>
@@ -65,14 +65,22 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
             var cgst = group.Sum(item => decimal.Round((item.PurchasePrice - item.Discount) * item.Cgst / 100m, 2, MidpointRounding.AwayFromZero));
             var sgst = group.Sum(item => decimal.Round((item.PurchasePrice - item.Discount) * item.Sgst / 100m, 2, MidpointRounding.AwayFromZero));
             return new TaxReportRateSummary(group.Key.Cgst, group.Key.Sgst, taxable, cgst, sgst, group.Sum(item => item.TotalAmount - (item.PurchasePrice - item.Discount)));
-        }).OrderBy(row => row.CgstRate + row.SgstRate).ToArray();
+        }).OrderBy(row => row.CgstRate + row.SgstRate).ToList();
+        var notes = await db.InvoiceCorrections.AsNoTracking().Where(x => x.NoteDate >= fromDate && x.NoteDate <= to).ToListAsync(ct);
+        foreach (var note in notes)
+        {
+            var rows = note.Kind == "Sale" ? sales : purchases;
+            rows.Add(new(note.CgstRate, note.SgstRate, -note.TaxableAmount, -note.CgstAmount, -note.SgstAmount,
+                -(note.CgstAmount + note.SgstAmount)));
+        }
+        sales = Combine(sales); purchases = Combine(purchases);
 
         async Task<(decimal Debit, decimal Credit)> LedgerMovement(string code)
         {
             var row = await (from line in db.JournalLines.AsNoTracking()
                              join entry in db.JournalEntries.AsNoTracking() on line.JournalEntryId equals entry.Id
                              join account in db.ChartAccounts.AsNoTracking() on line.AccountId equals account.Id
-                             where account.Code == code && entry.JournalDate >= fromDate && entry.JournalDate <= to
+                             where account.Code == code && entry.JournalDate >= fromDate && entry.JournalDate <= to && entry.SourceType != "OpeningBalances"
                              group line by account.Code into rows
                              select new { Debit = rows.Sum(line => line.Debit), Credit = rows.Sum(line => line.Credit) })
                 .FirstOrDefaultAsync(ct);
@@ -90,4 +98,7 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
             outputLedgerNet, inputLedgerNet, outputTax - outputLedgerNet, inputTax - inputLedgerNet,
             outputTax - inputTax);
     }
+    private static List<TaxReportRateSummary> Combine(IEnumerable<TaxReportRateSummary> rows) => rows
+        .GroupBy(x => new { x.CgstRate, x.SgstRate }).Select(g => new TaxReportRateSummary(g.Key.CgstRate, g.Key.SgstRate,
+            g.Sum(x => x.TaxableAmount), g.Sum(x => x.CgstAmount), g.Sum(x => x.SgstAmount), g.Sum(x => x.TotalTax))).ToList();
 }

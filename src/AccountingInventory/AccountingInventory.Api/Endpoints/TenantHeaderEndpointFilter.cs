@@ -11,7 +11,7 @@ namespace AccountingInventory.Api.Endpoints;
 /// <c>X-Tenant-Id</c> request header. The schema is read only from the control-plane
 /// tenant registry, never from a client header.
 /// </summary>
-public sealed class TenantHeaderEndpointFilter(bool allowBootstrapRegistration = false) : IEndpointFilter
+public sealed class TenantHeaderEndpointFilter(bool allowBootstrapRegistration = false, bool allowInvitationAcceptance = false) : IEndpointFilter
 {
     public const string TenantIdHeader = "X-Tenant-Id";
 
@@ -27,7 +27,7 @@ public sealed class TenantHeaderEndpointFilter(bool allowBootstrapRegistration =
                 title: $"Request header '{TenantIdHeader}' must contain one valid tenant id.");
         }
 
-        if (!allowBootstrapRegistration && context.HttpContext.User.Identity?.IsAuthenticated != true)
+        if (!allowBootstrapRegistration && !allowInvitationAcceptance && context.HttpContext.User.Identity?.IsAuthenticated != true)
             return Results.Unauthorized();
 
         var tenantContext = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>();

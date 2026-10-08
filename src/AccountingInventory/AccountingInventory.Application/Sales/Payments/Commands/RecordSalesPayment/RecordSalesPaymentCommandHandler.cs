@@ -13,6 +13,8 @@ public sealed class RecordSalesPaymentCommandHandler(IAccountingInventoryDbConte
     {
         if (!await db.SalesProducts.AnyAsync(sale => sale.Id == request.SalesProductId, cancellationToken))
             throw new NotFoundException($"Sales product '{request.SalesProductId}' was not found.");
+        if (await db.SalesProducts.AnyAsync(sale => sale.Id == request.SalesProductId && sale.IsReturned, cancellationToken))
+            throw new ConflictException("Payment terms cannot be changed for a returned sale.");
 
         if (request.PaymentMode == "Finance")
         {

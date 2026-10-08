@@ -23,23 +23,25 @@ public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
     public async Task<AgingReportSummary> Handle(GetAgingReportQuery request, CancellationToken ct)
     {
         var asOf = request.AsOfDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var cutover = await db.JournalEntries.Where(x => x.SourceType == "OpeningBalances").Select(x => (DateOnly?)x.JournalDate).SingleOrDefaultAsync(ct);
         var sales = await (from sale in db.SalesProducts.AsNoTracking()
             join customer in db.Customers.AsNoTracking() on sale.CustomerId equals customer.Id
             where sale.SaleDate <= asOf
             select new { sale.Id, sale.BillNumber, sale.CustomerId, CustomerName = customer.Name, sale.SaleDate, sale.DueDate, sale.TotalAmount })
             .ToListAsync(ct);
         var saleIds = sales.Select(sale => sale.Id).ToArray();
+        var notes = await db.InvoiceCorrections.AsNoTracking().Where(x => x.NoteDate <= asOf).ToListAsync(ct);
         var receipts = await db.SalesReceipts.AsNoTracking()
             .Where(receipt => saleIds.Contains(receipt.SalesProductId) && receipt.PaymentDate <= asOf)
             .GroupBy(receipt => receipt.SalesProductId)
             .Select(group => new { SaleId = group.Key, Amount = group.Sum(receipt => receipt.Amount) })
             .ToDictionaryAsync(row => row.SaleId, row => row.Amount, ct);
         var receivableRows = sales.Select(sale => MakeRow(sale.BillNumber, sale.CustomerId, sale.CustomerName,
-                sale.SaleDate, sale.DueDate, sale.TotalAmount, receipts.GetValueOrDefault(sale.Id), asOf))
+                sale.SaleDate, sale.DueDate, sale.TotalAmount - notes.Where(x => x.Kind == "Sale" && x.SourceId == sale.Id).Sum(x => x.TotalAmount), receipts.GetValueOrDefault(sale.Id), asOf))
             .Where(row => row.Balance > 0m).ToArray();
 
         var purchaseGroups = await db.Products.AsNoTracking()
-            .Where(product => product.BillNumber != null && product.PurchaseDate <= asOf)
+            .Where(product => product.BillNumber != null && product.PurchaseDate <= asOf && (!cutover.HasValue || product.PurchaseDate > cutover.Value))
             .GroupBy(product => new { product.VendorId, product.BillNumber })
             .Select(group => new
             {
@@ -61,10 +63,24 @@ public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
             .ToListAsync(ct);
         var paidByBill = payments.ToDictionary(payment => (payment.VendorId, payment.BillNumber), payment => payment.Amount);
         var payableRows = purchaseGroups.Select(group => MakeRow(group.BillNumber, group.VendorId,
-                vendorNames.GetValueOrDefault(group.VendorId, string.Empty), group.BillDate, group.DueDate, group.Total,
+                vendorNames.GetValueOrDefault(group.VendorId, string.Empty), group.BillDate, group.DueDate,
+                group.Total - notes.Where(x => x.Kind == "Purchase" && x.PartyId == group.VendorId && x.BillNumber.Equals(group.BillNumber, StringComparison.OrdinalIgnoreCase)).Sum(x => x.TotalAmount),
                 paidByBill.GetValueOrDefault((group.VendorId, group.BillNumber.ToLower())), asOf))
             .Where(row => row.Balance > 0m).ToArray();
 
+        var opening = await db.OpeningSubledgerBalances.AsNoTracking().Where(x => x.CutoverDate <= asOf).ToArrayAsync(ct);
+        foreach (var item in opening)
+        {
+            var paid = await db.OpeningSettlements.Where(x => x.OpeningBalanceId == item.Id && x.PaymentDate <= asOf).SumAsync(x => (decimal?)x.Amount, ct) ?? 0;
+            var name = item.Kind == "Customer" ? await db.Customers.Where(x => x.Id == item.PartyId).Select(x => x.Name).FirstOrDefaultAsync(ct)
+                : await db.Vendors.Where(x => x.Id == item.PartyId).Select(x => x.Name).FirstOrDefaultAsync(ct);
+            var row = MakeRow(item.Reference, item.PartyId, name ?? "", item.CutoverDate, item.DueDate, item.Amount, paid, asOf);
+            if (row.Balance > 0)
+            {
+                if (item.Kind == "Customer") receivableRows = receivableRows.Append(row).ToArray();
+                else payableRows = payableRows.Append(row).ToArray();
+            }
+        }
         var search = request.Search?.Trim();
         if (!string.IsNullOrEmpty(search))
         {

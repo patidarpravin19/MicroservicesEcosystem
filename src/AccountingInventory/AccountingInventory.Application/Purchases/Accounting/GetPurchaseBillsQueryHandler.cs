@@ -26,7 +26,7 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
 {
     public async Task<PagedResult<PurchaseBillSummary>> Handle(GetPurchaseBillsQuery request, CancellationToken cancellationToken)
     {
-        var products = db.Products.AsNoTracking().Where(product => product.BillNumber != null);
+        var products = db.Products.AsNoTracking().Where(product => product.BillNumber != null && !product.IsOpeningStock);
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim().ToLower();
@@ -52,8 +52,12 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
             join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
             select new
             {
-                invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate,
-                invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount,
+                invoice.VendorId, VendorName = db.InvoiceSnapshots.Where(s => s.Kind == "Purchase"
+                    && db.Products.Any(p => p.Id == s.SourceId && p.VendorId == invoice.VendorId && p.BillNumber != null && p.BillNumber.ToLower() == invoice.BillNumber.ToLower()))
+                    .OrderBy(s => s.CreatedAt).Select(s => s.PartyName).FirstOrDefault() ?? vendor.Name, invoice.BillNumber, invoice.BillDate,
+                invoice.PaymentTermsDays, invoice.DueDate,
+                TotalAmount = invoice.TotalAmount - (db.InvoiceCorrections.Where(n => n.Kind == "Purchase" && n.PartyId == invoice.VendorId
+                    && n.BillNumber.ToLower() == invoice.BillNumber.ToLower()).Sum(n => (decimal?)n.TotalAmount) ?? 0),
                 AmountPaid = db.PurchasePayments.Where(payment => payment.VendorId == invoice.VendorId
                     && payment.BillNumber.ToLower() == invoice.BillNumber.ToLower())
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m
@@ -83,7 +87,7 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
     {
         var normalizedBillNumber = request.BillNumber.Trim().ToLower();
         var invoice = await db.Products.AsNoTracking()
-            .Where(product => product.VendorId == request.VendorId && product.BillNumber != null
+            .Where(product => product.VendorId == request.VendorId && !product.IsOpeningStock && product.BillNumber != null
                 && product.BillNumber.ToLower() == normalizedBillNumber)
             .GroupBy(product => new { product.VendorId, BillNumber = product.BillNumber!.Trim().ToLower() })
             .Select(group => new
@@ -109,12 +113,18 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
                 payment.PaymentDate, payment.ReferenceNumber, payment.Note))
             .ToListAsync(cancellationToken);
         var amountPaid = payments.Sum(payment => payment.Amount);
-        var balance = Math.Max(0m, invoice.TotalAmount - amountPaid);
+        var credited = await db.InvoiceCorrections.Where(n => n.Kind == "Purchase" && n.PartyId == request.VendorId && n.BillNumber.ToLower() == normalizedBillNumber)
+            .SumAsync(n => (decimal?)n.TotalAmount, cancellationToken) ?? 0;
+        var netTotal = invoice.TotalAmount - credited;
+        var balance = Math.Max(0m, netTotal - amountPaid);
         var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
-        var vendorName = await db.Vendors.AsNoTracking().Where(vendor => vendor.Id == invoice.VendorId)
+        var vendorName = await db.InvoiceSnapshots.Where(s => s.Kind == "Purchase" && db.Products.Any(p => p.Id == s.SourceId
+                && p.VendorId == request.VendorId && p.BillNumber != null && p.BillNumber.ToLower() == normalizedBillNumber))
+            .OrderBy(s => s.CreatedAt).Select(s => s.PartyName).FirstOrDefaultAsync(cancellationToken)
+            ?? await db.Vendors.AsNoTracking().Where(vendor => vendor.Id == invoice.VendorId)
             .Select(vendor => vendor.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         var bill = new PurchaseBillSummary($"{invoice.VendorId}:{invoice.BillNumber}", invoice.VendorId, vendorName, invoice.BillNumber,
-            invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount, amountPaid, balance, status);
+            invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, netTotal, amountPaid, balance, status);
         return new PurchaseBillDetails(bill, payments);
     }
 }

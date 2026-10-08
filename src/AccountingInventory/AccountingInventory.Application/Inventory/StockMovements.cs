@@ -76,6 +76,21 @@ public sealed class GetStockMovementsHandler(IAccountingInventoryDbContext db)
         {
             adjustment.Id, adjustment.ProductId, adjustment.AdjustmentDate, adjustment.Reason, adjustment.Cost
         }).ToListAsync(ct);
+        var notes = await db.InvoiceCorrections.AsNoTracking().ToListAsync(ct);
+        foreach (var note in notes)
+        {
+            var sale = note.Kind == "Sale" ? sales.FirstOrDefault(x => x.Id == note.SourceId) : null;
+            var productId = sale is null ? note.SourceId : Guid.Parse(sale.ProductId);
+            if (!productMap.TryGetValue(productId, out var product)) continue;
+            if (note.Kind == "Purchase") movements.Add(new(note.NoteDate, "Supplier return", productId, product.SerialNumber,
+                note.NoteNumber, -1, -product.Cost, note.Reason));
+            else
+            {
+                movements.Add(new(note.NoteDate, "Customer return", productId, product.SerialNumber, note.NoteNumber, 1, product.Cost, note.Reason));
+                if (note.Disposition == "WriteOff") movements.Add(new(note.NoteDate, "Return write-off", productId, product.SerialNumber,
+                    note.NoteNumber, -1, -product.Cost, note.Reason));
+            }
+        }
         foreach (var adjustment in adjustments)
             if (productMap.TryGetValue(adjustment.ProductId, out var product))
                 movements.Add(new StockMovementSummary(adjustment.AdjustmentDate, "Write-off", product.Id,

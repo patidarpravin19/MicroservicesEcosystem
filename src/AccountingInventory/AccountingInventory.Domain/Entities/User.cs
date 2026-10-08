@@ -21,6 +21,13 @@ public sealed class User : AggregateRoot
     public required string Mobile { get; init; }
     public required string Email { get; init; }
     public string PasswordHash { get; private set; } = string.Empty;
+    public bool IsOwner { get; private set; }
+    public bool EmailVerified { get; private set; }
+    public string? InvitationHash { get; private set; }
+    public DateTimeOffset? InvitationExpiresAt { get; private set; }
+    public void SetOwner(bool owner) => IsOwner = owner;
+    public void Invite(string hash, DateTimeOffset expires) { InvitationHash = hash; InvitationExpiresAt = expires; IsActive = false; }
+    public void AcceptInvitation() { EmailVerified = true; InvitationHash = null; InvitationExpiresAt = null; IsActive = true; }
     //public IReadOnlyCollection<Guid> RoleIds => _roleIds.AsReadOnly();
     public string? RefreshTokenHash { get; private set; }
     public DateTimeOffset? RefreshTokenExpiresAtUtc { get; private set; }

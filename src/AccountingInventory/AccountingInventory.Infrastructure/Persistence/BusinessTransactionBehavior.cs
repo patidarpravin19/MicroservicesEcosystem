@@ -26,13 +26,15 @@ public sealed class BusinessTransactionBehavior<TRequest, TResponse>(AccountingI
         try
         {
             var requestNamespace = typeof(TRequest).Namespace ?? "";
-            var permission = requestNamespace.Contains(".Purchases.", StringComparison.Ordinal) ? "purchases.manage"
+            var permission = request is IBusinessPermissionRequest permissionRequest ? permissionRequest.BusinessPermission
+                : request is RefundCorrectionCommand ? null
+                : requestNamespace.Contains(".Purchases.", StringComparison.Ordinal) ? "purchases.manage"
                 : requestNamespace.Contains(".Sales.", StringComparison.Ordinal) ? "sales.manage"
                 : requestNamespace.Contains(".Inventory", StringComparison.Ordinal) ? "inventory.manage"
                 : requestNamespace.Contains(".GeneralLedger", StringComparison.Ordinal) ? "accounting.manage"
                 : requestNamespace.Contains(".Users.", StringComparison.Ordinal) ? null
                 : "catalog.manage";
-            if (permission is not null)
+            if (!string.IsNullOrEmpty(permission))
                 await AccountingPermissionGate.EnsureAsync(db, identity.UserId, permission, ct);
             var response = await next();
             await transaction.CommitAsync(ct);

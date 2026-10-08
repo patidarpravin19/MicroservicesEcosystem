@@ -25,6 +25,7 @@ internal static class TransactionChecks
                 .UseSnakeCaseNamingConvention().Options;
             var provider = new ProbeTenant(schema);
             var owner = User.Create("owner", "9000000000", "owner@example.com");
+            owner.SetOwner(true);
             owner.SetPasswordHash("test-only");
             await using (var setup = new AccountingInventoryDbContext(options, provider))
             {

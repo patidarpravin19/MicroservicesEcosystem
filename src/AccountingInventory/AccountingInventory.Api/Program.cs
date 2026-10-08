@@ -12,6 +12,7 @@ using Serilog;
 
 const string ServiceName = "AccountingInventory.Api";
 var builder = WebApplication.CreateBuilder(args);
+AccountingInventory.Api.ProductionConfiguration.Validate(builder);
 
 builder.AddSharedLogging(ServiceName);
 
@@ -49,8 +50,18 @@ app.MapCustomerBillSettingsEndpoints();
 app.MapAuditLogEndpoints();
 app.MapGeneralLedgerEndpoints();
 app.MapAccountingExtensionEndpoints();
+app.MapAccountingP0Endpoints();
 app.MapTaxEndpoints();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = ServiceName }));
+app.MapGet("/health/ready", async (TenantDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        await db.Tenants.AsNoTracking().Take(1).Select(x => x.Id).ToListAsync(ct);
+        return Results.Ok(new { status = "ready" });
+    }
+    catch (Exception) { return Results.StatusCode(StatusCodes.Status503ServiceUnavailable); }
+});
 
 using (var scope = app.Services.CreateScope())
 {

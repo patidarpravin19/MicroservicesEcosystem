@@ -15,6 +15,10 @@ public static class LedgerPosting
         if (dates.Length == 0) return;
         var earliest = dates.Min();
         var latest = dates.Max();
+        var cutover = await db.JournalEntries.AsNoTracking().Where(x => x.SourceType == "OpeningBalances")
+            .Select(x => (DateOnly?)x.JournalDate).SingleOrDefaultAsync(ct);
+        if (cutover.HasValue && dates.Any(x => x <= cutover.Value))
+            throw new ConflictException("Operational postings must be dated after the opening-balance cutover date.");
         var closedPeriods = await db.AccountingPeriods.AsNoTracking()
             .Where(period => period.IsClosed && period.StartDate <= latest && period.EndDate >= earliest)
             .Select(period => new { period.Name, period.StartDate, period.EndDate }).ToListAsync(ct);

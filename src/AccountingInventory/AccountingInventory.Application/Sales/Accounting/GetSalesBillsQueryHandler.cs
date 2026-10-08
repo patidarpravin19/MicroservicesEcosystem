@@ -73,8 +73,8 @@ public sealed class GetSalesBillsQueryHandler(IAccountingInventoryDbContext db)
         decimal amountPaid)
     {
         var total = sale.TotalAmount;
-        var balance = Math.Max(0m, total - amountPaid);
-        var status = balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
+        var balance = sale.IsReturned ? 0 : Math.Max(0m, total - amountPaid);
+        var status = sale.IsReturned ? "Returned" : balance == 0m ? "Paid" : amountPaid > 0m ? "Partially paid" : "Unpaid";
         return new SalesBillSummary(sale.Id, summary.BillNumber, summary.ProductName, summary.SerialNumber,
             summary.CustomerName, summary.CustomerMobile, summary.CustomerAddress, summary.CustomerEmail,
             sale.SaleDate, sale.PaymentTermsDays, sale.DueDate, sale.SellingPrice, sale.Discount, sale.TaxableAmount, sale.CgstRate,

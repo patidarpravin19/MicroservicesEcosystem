@@ -18,6 +18,9 @@ public sealed class Product : AggregateRoot
     public int PaymentTermsDays { get; private set; }
     public DateOnly DueDate { get; private set; }
     public bool IsSold { get; private set; }
+    public bool IsOpeningStock { get; private set; }
+    public void StageOpeningStock() { IsOpeningStock = true; IsActive = false; }
+    public void ActivateOpeningStock() { IsOpeningStock = true; IsActive = true; }
     public decimal PurchasePrice { get; private set; }
     public decimal TotalAmount { get; private set; }
     public decimal Discount { get; private set; }

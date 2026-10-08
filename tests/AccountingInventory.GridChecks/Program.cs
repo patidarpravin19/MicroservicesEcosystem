@@ -139,12 +139,21 @@ try
     }
     }
     await BusinessIntegrityChecks.RunAsync(db);
+    var p0Schema = "p0_check_" + Guid.NewGuid().ToString("N");
+    await using (var command = new NpgsqlCommand($"CREATE SCHEMA {p0Schema}; SET LOCAL search_path TO {p0Schema};", connection, transaction))
+        await command.ExecuteNonQueryAsync();
+    await using var p0Db = new AccountingInventoryDbContext(options, new TestTenantProvider(p0Schema));
+    await p0Db.Database.UseTransactionAsync(transaction);
+    await p0Db.Database.ExecuteSqlRawAsync(p0Db.Database.GenerateCreateScript());
+    await P0WorkflowChecks.RunAsync(p0Db);
+    await P0MigrationChecks.RunAsync(p0Db);
 }
 finally
 {
     await transaction.RollbackAsync(); // Temporary schema and fixture data are discarded.
 }
 await TransactionChecks.RunAsync(connectionString!);
+await P0ApiChecks.RunAsync(connectionString!);
 static void Assert(bool condition, string message)
 {
     if (!condition) throw new Exception(message);

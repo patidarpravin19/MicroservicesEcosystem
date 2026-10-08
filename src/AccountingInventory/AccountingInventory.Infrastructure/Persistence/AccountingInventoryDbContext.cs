@@ -25,7 +25,7 @@ public sealed class AccountingInventoryDbContext(
     ICurrentUserProvider? currentUserProvider = null)
     : DbContext(options), IAccountingInventoryDbContext
 {
-    public string SchemaName { get; } = tenantProvider.SchemaName;
+    public string SchemaName => tenantProvider.SchemaName;
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
@@ -57,6 +57,11 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
     public DbSet<AccountBudget> AccountBudgets => Set<AccountBudget>();
     public DbSet<AccountingUserPermission> AccountingUserPermissions => Set<AccountingUserPermission>();
+    public DbSet<InvoiceCorrection> InvoiceCorrections => Set<InvoiceCorrection>();
+    public DbSet<CorrectionRefund> CorrectionRefunds => Set<CorrectionRefund>();
+    public DbSet<InvoiceSnapshot> InvoiceSnapshots => Set<InvoiceSnapshot>();
+    public DbSet<OpeningSubledgerBalance> OpeningSubledgerBalances => Set<OpeningSubledgerBalance>();
+    public DbSet<OpeningSettlement> OpeningSettlements => Set<OpeningSettlement>();
 
     public async Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken)
         => await Database.SqlQueryRaw<string>(
@@ -68,15 +73,17 @@ public sealed class AccountingInventoryDbContext(
     // interceptor registration or sync/async handler usage.
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        InvoiceSnapshotCapture.CaptureAsync(this, CancellationToken.None).GetAwaiter().GetResult();
         CaptureAuditLogs();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
+        await InvoiceSnapshotCapture.CaptureAsync(this, cancellationToken);
         CaptureAuditLogs();
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
     private void CaptureAuditLogs()
@@ -188,6 +195,7 @@ public sealed class AccountingInventoryDbContext(
         modelBuilder.ApplyConfiguration(new FixedAssetConfiguration());
         modelBuilder.ApplyConfiguration(new AccountBudgetConfiguration());
         modelBuilder.ApplyConfiguration(new AccountingUserPermissionConfiguration());
+        P0Configurations.Configure(modelBuilder);
         modelBuilder.Entity<JournalLine>().HasOne<AccountingDimension>().WithMany()
             .HasForeignKey(line => line.DimensionId).OnDelete(DeleteBehavior.Restrict);
         //modelBuilder.ApplyConfiguration(new RoleConfiguration());

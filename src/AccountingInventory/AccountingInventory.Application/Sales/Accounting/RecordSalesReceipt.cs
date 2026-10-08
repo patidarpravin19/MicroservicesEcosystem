@@ -35,7 +35,7 @@ public sealed class RecordSalesReceiptHandler(IAccountingInventoryDbContext db)
     {
         var sale = await db.SalesProducts.SingleOrDefaultAsync(item => item.Id == request.SalesProductId, cancellationToken)
             ?? throw new NotFoundException($"Sales bill '{request.SalesProductId}' was not found.");
-        if (!sale.IsActive) throw new ConflictException("Receipts cannot be recorded against an inactive sale.");
+        if (!sale.IsActive || sale.IsReturned) throw new ConflictException("Receipts cannot be recorded against an inactive or returned sale.");
         if (request.PaymentDate < sale.SaleDate)
             throw new ConflictException("The receipt date cannot precede the invoice date.");
         var total = sale.TotalAmount;

@@ -21,6 +21,8 @@ public sealed class SalesProduct : AggregateRoot
     public decimal CgstAmount { get; private set; }
     public decimal SgstAmount { get; private set; }
     public decimal TotalAmount { get; private set; }
+    public bool IsReturned { get; private set; }
+    public void MarkReturned() => IsReturned = true;
 
     public static SalesProduct Create(string billNumber, string productId,
         Guid customerId, DateOnly saleDate,

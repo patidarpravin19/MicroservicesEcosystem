@@ -68,7 +68,7 @@ internal static class BusinessIntegrityChecks
 
         var owner = User.Create("owner", "9000000000", "owner@example.com");
         owner.CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        owner.Activate(); owner.SetPasswordHash("test-only");
+        owner.Activate(); owner.SetOwner(true); owner.SetPasswordHash("test-only");
         var staff = User.Create("staff", "9000000001", "staff@example.com");
         staff.CreatedAt = new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero);
         staff.Activate(); staff.SetPasswordHash("test-only");

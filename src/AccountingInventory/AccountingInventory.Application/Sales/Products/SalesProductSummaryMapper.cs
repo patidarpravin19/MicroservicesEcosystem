@@ -36,6 +36,8 @@ internal static class SalesProductSummaryMapper
             .ToDictionaryAsync(product => product.Id, cancellationToken);
 
         var saleIds = sales.Select(sale => sale.Id).ToArray();
+        var snapshots = await db.InvoiceSnapshots.AsNoTracking().Where(x => x.Kind == "Sale" && saleIds.Contains(x.SourceId))
+            .ToDictionaryAsync(x => x.SourceId, cancellationToken);
         var customerIds = sales.Select(sale => sale.CustomerId).Distinct().ToArray();
         var customers = await db.Customers.AsNoTracking()
             .Where(customer => customerIds.Contains(customer.Id))
@@ -51,6 +53,7 @@ internal static class SalesProductSummaryMapper
                 : null;
             var serialNumber = product?.SerialNumber ?? product?.SerialNumber1 ?? string.Empty;
             customers.TryGetValue(sale.CustomerId, out var customer);
+            snapshots.TryGetValue(sale.Id, out var snapshot);
             var productName = product is null
                 ? string.Empty
                 : string.Join(" - ", new[] { product.Brand, product.Model, product.Variant, product.Color }
@@ -61,13 +64,13 @@ internal static class SalesProductSummaryMapper
             return new SalesProductSummary(
                 sale.Id,
                 sale.ProductId,
-                productName,
-                serialNumber,
+                snapshot?.ProductName ?? productName,
+                snapshot?.SerialNumber ?? serialNumber,
                 sale.CustomerId,
-                customer?.Name ?? string.Empty,
-                customer?.Mobile ?? string.Empty,
-                customer?.Address ?? string.Empty,
-                customer?.Email,
+                snapshot?.PartyName ?? customer?.Name ?? string.Empty,
+                snapshot?.PartyMobile ?? customer?.Mobile ?? string.Empty,
+                snapshot?.PartyAddress ?? customer?.Address ?? string.Empty,
+                snapshot is not null ? snapshot.PartyEmail : customer?.Email,
                 sale.SaleDate,
                 sale.PaymentTermsDays,
                 sale.DueDate,

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounting &amp; Inventory User Manual</title>
+<style>
+body{font:16px/1.65 Arial,sans-serif;color:#172536;background:#edf2f6;margin:0}
+main{max-width:900px;margin:30px auto;padding:40px;background:white;border-radius:8px}
+h1{font-size:30px}h2{margin-top:40px;border-top:1px solid #ccd5df;padding-top:20px}h3{margin-top:28px}
+a{color:#1558a1}li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}th{background:#eef3f8}
+.table-wrap{overflow-x:auto}code{background:#eef3f8;padding:2px 4px}button{padding:10px 16px;cursor:pointer}
+@media(max-width:600px){main{margin:0;padding:20px;border-radius:0}}
+@media print{@page{size:A4;margin:18mm}body{background:white;font-size:11pt}main{margin:0;padding:0;max-width:none}.print-tools{display:none}h2,h3{break-after:avoid}tr{break-inside:avoid}a{color:inherit;text-decoration:none}table{font-size:9pt}}
+</style></head><body><main><div class="print-tools"><button onclick="window.print()">Print / Save PDF</button></div>
+<h1 id='accounting-inventory-user-manual'>Accounting &amp; Inventory User Manual</h1>
+<p>Version: 1.0 | Updated: 8 October 2026 | Covers the current P0 workflows</p>
+<p>For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.</p>
+<p>To share this guide, send accounting-user-manual.html. Open that file in a browser and choose Print / Save PDF for a paper or PDF copy. Keep the version and date with any distributed copy.</p>
+<h2 id='contents'>Contents</h2>
+<ul>
+<li><a href="#1-get-started">1. Get started</a></li>
+<li><a href="#2-owner-invite-staff-and-grant-access">2. Owner: invite staff and grant access</a></li>
+<li><a href="#3-set-up-products-and-bill-details">3. Set up products and bill details</a></li>
+<li><a href="#4-accountant-bring-forward-opening-balances">4. Accountant: bring forward opening balances</a></li>
+<li><a href="#5-record-a-new-purchase">5. Record a new purchase</a></li>
+<li><a href="#6-pay-a-supplier">6. Pay a supplier</a></li>
+<li><a href="#7-create-a-sale-and-select-gst">7. Create a sale and select GST</a></li>
+<li><a href="#8-receive-a-customer-payment-and-print-a-bill">8. Receive a customer payment and print a bill</a></li>
+<li><a href="#9-return-or-cancel-a-sale">9. Return or cancel a sale</a></li>
+<li><a href="#10-return-a-product-to-a-supplier">10. Return a product to a supplier</a></li>
+<li><a href="#11-record-refunds-and-print-notes">11. Record refunds and print notes</a></li>
+<li><a href="#12-check-balances-gst-and-stock">12. Check balances, GST and stock</a></li>
+<li><a href="#13-accountant-journals-periods-and-bank-reconciliation">13. Accountant: journals, periods and bank reconciliation</a></li>
+<li><a href="#14-additional-accounting-controls">14. Additional accounting controls</a></li>
+<li><a href="#15-daily-checklist-and-practice-example">15. Daily checklist and practice example</a></li>
+<li><a href="#16-common-problems-and-help">16. Common problems and help</a></li>
+<li><a href="#17-terms-used-in-this-guide">17. Terms used in this guide</a></li>
+</ul>
+<h2 id='1-get-started'>1. Get started</h2>
+<ol>
+<li>For a new account, open the invitation email and follow the activation link. Invitations expire after 24 hours and can be used once.</li>
+<li>Set a password containing at least 12 characters, including an uppercase letter, a lowercase letter and a number.</li>
+<li>Open the sign-in page. Enter your Tenant slug, Username and Password, then sign in.</li>
+<li>Expand the sidebar sections to find Product, Purchase, Sale, Accounting and Settings.</li>
+<li>Ask the owner for the permissions needed for your work. Activation alone does not give staff permission to enter transactions.</li>
+</ol>
+<p>Expected result: you can sign in to your own business and open the permitted forms. If you see a permission error, follow section 16.</p>
+<h2 id='2-owner-invite-staff-and-grant-access'>2. Owner: invite staff and grant access</h2>
+<ol>
+<li>Open Accounting &gt; Staff Access. This page is available to the designated owner.</li>
+<li>Enter Username, Email and Mobile, then select Send invitation.</li>
+<li>Ask the staff member to activate the email invitation. Until activation, their status is Invited and they cannot sign in.</li>
+<li>When the user is Active, tick the permissions they need in their row. Changes save as you select them.</li>
+<li>Ask the user to refresh the application before retrying a blocked action.</li>
+</ol>
+<div class="table-wrap"><table><tbody>
+<tr><th>Permission shown on screen</th><th>Use</th></tr>
+<tr><td>catalog.manage</td><td>Maintain product references, customers and settings</td></tr>
+<tr><td>purchases.manage</td><td>Enter purchases, supplier payments, purchase returns and supplier refunds</td></tr>
+<tr><td>sales.manage</td><td>Enter sales, customer receipts, sales returns and customer refunds</td></tr>
+<tr><td>inventory.manage</td><td>Authorized inventory adjustments</td></tr>
+<tr><td>accounting.manage</td><td>Opening balances, journals and general accounting actions</td></tr>
+<tr><td>accounting.approve</td><td>Review accounting approval requests</td></tr>
+<tr><td>accounting.dimensions.manage</td><td>Maintain branches, projects and cost centers</td></tr>
+<tr><td>accounting.documents.manage</td><td>Link supporting evidence</td></tr>
+<tr><td>accounting.assets.manage</td><td>Maintain fixed assets</td></tr>
+<tr><td>accounting.budgets.manage</td><td>Maintain budgets</td></tr>
+</tbody></table></div>
+<p>To resend an unused or expired invitation, select Resend invitation. The recipient should use the latest email. To suspend verified staff, select Disable; select Enable to restore their account. Disabling does not erase historical transactions.</p>
+<p>To change the owner, first confirm that the replacement user is active and verified. Select Transfer ownership in their row and confirm the named user. You immediately lose owner privileges; you retain only separately granted staff permissions. Arrange any access you need before transferring ownership.</p>
+<p>The initial owner receives an invitation from the service administrator. Contact that administrator if your business has no activated owner.</p>
+<h2 id='3-set-up-products-and-bill-details'>3. Set up products and bill details</h2>
+<ol>
+<li>Under Product, add Vendors, Brands, Product Types, Categories / Models, Variants and Colors as needed. Create the brand and product type before their model.</li>
+<li>Under Settings &gt; Tax, maintain the CGST/SGST rate combinations used by your business. Have your accountant confirm which rate to apply.</li>
+<li>Under Settings &gt; Customer Bill, enter the seller details and choose the printing options for new invoices.</li>
+<li>Confirm that the model belongs to the selected brand and product type before recording stock.</li>
+</ol>
+<p>Expected result: purchase forms offer the required references and sale forms offer the required GST rates. Changes to customer, supplier, product or seller details do not rewrite details captured on existing invoices. Older invoices may use explicitly reconstructed details from the upgrade.</p>
+<h2 id='4-accountant-bring-forward-opening-balances'>4. Accountant: bring forward opening balances</h2>
+<p>Use this once when starting the business in this system with existing stock and unpaid customer/supplier invoices. For a business starting without historical balances, ask your accountant whether an opening import is needed. Complete the cutover before entering normal transactions. Normal postings must be dated after the cutover date.</p>
+<h3 id='prepare-and-stage-stock'>Prepare and stage stock</h3>
+<ol>
+<li>Agree a cutover date with the owner and prepare the approved balance-sheet totals, unpaid invoices and stock list as of that date.</li>
+<li>Create the customer, vendor and product references needed by those lists.</li>
+<li>Open Accounting &gt; Opening Balances &amp; Reconciliation and select the cutover date.</li>
+<li>Select Initialize accounts if the standard accounts have not been created.</li>
+<li>Select Import opening stock. Enter one existing unit, its serial number, historical purchase details and historical cost, then select Import stock unit.</li>
+<li>Repeat for each unit. Use a purchase date on or before cutover. Staged units remain unavailable for sale until opening balances are posted.</li>
+</ol>
+<h3 id='enter-and-post-balances'>Enter and post balances</h3>
+<ol>
+<li>On Opening Balances &amp; Reconciliation, enter each balance-sheet account with a debit or credit. Select Add account balance for more lines.</li>
+<li>Select Add outstanding item for each unpaid customer or vendor invoice. Choose Customer or Vendor, Party, invoice reference, Due date and Opening amount.</li>
+<li>Check that customer items equal the debit balance on 1100 (receivables), vendor items equal the credit balance on 2000 (payables), and staged stock net costs equal the debit balance on 1200 (inventory).</li>
+<li>Include the other approved balance-sheet balances. The system posts any remaining difference to retained earnings; the accountant must approve that difference before submission.</li>
+<li>Review every line and select Post reconciled opening balances.</li>
+<li>Confirm that stock is available and that the Receivables, Payables and Stock reconciliation differences are all zero.</li>
+</ol>
+<p>Example: customer items total 200, vendor items total 150 and stock net cost totals 100. The corresponding control lines are 1100 debit 200, 2000 credit 150 and 1200 debit 100. With no other lines, the system balances the remaining 150 to retained earnings. Use your accountant&#39;s complete figures for a real import.</p>
+<p>Expected result: one opening journal, individual outstanding items and active opening stock. The import cannot be repeated. Use this dedicated page when importing party or stock balances; the older General Ledger opening form does not collect those detailed items.</p>
+<h3 id='settle-an-old-unpaid-invoice'>Settle an old unpaid invoice</h3>
+<ol>
+<li>Find the item under Opening outstanding items.</li>
+<li>Select Receive payment for a customer or Pay vendor for a supplier.</li>
+<li>Enter a date after cutover, an amount no greater than the outstanding balance, and Cash or Bank.</li>
+<li>Select Save settlement and verify the reduced balance.</li>
+</ol>
+<p>Use this workflow for brought-forward invoices. Opening stock does not create a new supplier bill or new input GST claim in the normal purchase workflow.</p>
+<h2 id='5-record-a-new-purchase'>5. Record a new purchase</h2>
+<ol>
+<li>Open Purchase &gt; Products and choose the add action.</li>
+<li>Select Vendor and enter Vendor Bill / Invoice Number, Vendor Invoice Date and Payment Terms (days).</li>
+<li>Select Brand, Product Type, Model, Variant and Color.</li>
+<li>Enter the unit&#39;s Serial Number and Serial Number 1 where applicable. Check both against the physical unit.</li>
+<li>Enter Purchase Price before GST, Discount before GST, CGST (%) and SGST (%). Check the calculated Total Amount (per unit).</li>
+<li>Save and verify that the unit appears in Purchase &gt; Stock Inventory and the bill appears in Purchase &gt; Bills &amp; Payments.</li>
+<li>For multiple serialized units on one vendor invoice, enter each unit using the same vendor, bill number, invoice date and payment terms. Finish entering the invoice before paying it.</li>
+</ol>
+<p>Example: Purchase Price 1,000, Discount 0, CGST 9% and SGST 9% gives Total Amount 1,180 per unit.</p>
+<p>Expected result: available stock and a supplier payable are created. Saving a purchase does not record payment. Serial numbers cannot collide with existing records. Paid bills cannot gain or change units; posted, sold or written-off stock cannot be edited directly.</p>
+<h2 id='6-pay-a-supplier'>6. Pay a supplier</h2>
+<ol>
+<li>Open Purchase &gt; Bills &amp; Payments and find the vendor bill.</li>
+<li>Select View / Record in the Payments column.</li>
+<li>Review the invoice total, previous payments and balance.</li>
+<li>Enter Amount, Payment method and Payment date. Enter the required reference for a transfer, UPI or cheque, and an optional note.</li>
+<li>Select Record payment once, then check Payment history and the remaining balance.</li>
+</ol>
+<p>Expected result: the supplier balance decreases. The amount cannot exceed the outstanding bill balance and the date cannot precede the invoice or fall in a closed period. Opening invoices are settled through section 4.</p>
+<h2 id='7-create-a-sale-and-select-gst'>7. Create a sale and select GST</h2>
+<ol>
+<li>Open Sale &gt; Products and choose the add action.</li>
+<li>Select Product (name or serial number). Match the displayed serial to the physical unit.</li>
+<li>Check Purchase Price (including GST), which fills automatically and cannot be edited here.</li>
+<li>Check GST rate. It defaults to the configured CGST/SGST combination matching the purchase product. Verify it before saving; if a matching rate is missing, ask the owner to configure it under Settings &gt; Tax.</li>
+<li>Enter Selling Price (including GST). It initially equals the product&#39;s purchase total, and you can change it.</li>
+<li>Check Discount (including GST), calculated as purchase total minus selling price, with a minimum of zero. It is not an additional discount to subtract from the selling price.</li>
+<li>Search Customer Name or Mobile and select an existing customer, or enter the customer&#39;s details. Confirm Mobile Number and Address; Email is optional.</li>
+<li>Enter Sale Date and Payment Terms (days), then select Create Sale.</li>
+<li>Verify the invoice under Sale &gt; Bills &amp; Payments. Record any money received separately using section 8.</li>
+</ol>
+<p>Example: purchase total 1,180 and selling price 1,000 gives a displayed discount of 180. With CGST 9% and SGST 9%, the selling total remains 1,000; the system calculates the taxable value and tax inside that total. A selling price above 1,180 gives a displayed discount of zero.</p>
+<p>GST rate selection is required by the form. No GST is an available selection; use it only when appropriate for the transaction. Selecting a product again can reset its default selling price and GST selection, so review those fields after changing products.</p>
+<p>Expected result: the unit becomes sold and a customer receivable is created. The sale date cannot precede purchase, cutover or the previous customer return for a restocked unit. Posted financial details cannot be changed directly; use Returns &amp; Corrections for supported full-unit corrections.</p>
+<h2 id='8-receive-a-customer-payment-and-print-a-bill'>8. Receive a customer payment and print a bill</h2>
+<ol>
+<li>Open Sale &gt; Bills &amp; Payments and find the invoice.</li>
+<li>Select View / Record in the Payments column.</li>
+<li>Check Bill Total, Received and Balance Due.</li>
+<li>Enter Amount, Payment method, Payment date and any required transaction reference. Add an optional note.</li>
+<li>Select Record payment, then confirm the receipt in Payment history and the reduced balance.</li>
+<li>Select Print bill. Review the invoice and use the print control to print or save it as a PDF.</li>
+</ol>
+<p>Expected result: the customer&#39;s outstanding balance decreases. Receipts cannot exceed the unpaid amount or precede the invoice. New invoice prints retain the seller and customer/product details captured at creation, while payment history reflects subsequently recorded payments.</p>
+<h2 id='9-return-or-cancel-a-sale'>9. Return or cancel a sale</h2>
+<p>This workflow reverses a complete serialized unit. The original invoice stays in history. A refund is a separate step.</p>
+<ol>
+<li>Open Accounting &gt; Returns &amp; Corrections and set Invoice type to Sale.</li>
+<li>Search Find invoice or serial, then select the correct Invoice unit.</li>
+<li>Enter Note date on or after the sale and all receipts already recorded for it, in an open period after cutover.</li>
+<li>For Returned stock, choose Restock for resale if the unit is saleable, or Write off damaged stock if it must not be sold again.</li>
+<li>Enter a clear Reason, review the invoice/serial and select Post credit note.</li>
+<li>Confirm the note in the table. Check Stock Inventory or Stock Movements for the selected disposition.</li>
+<li>If money must be returned to the customer, follow section 11.</li>
+</ol>
+<p>Expected result: the sale and GST journal are reversed. Restock makes the unit available for a later sale. WriteOff removes its inventory cost and records the loss. The same sale cannot be returned twice and cannot receive further payments after return.</p>
+<p>To cancel an entered sale or replace incorrect invoice details, first confirm that a full reversal is appropriate, post the credit note, then create the replacement sale from available stock. A partial price-only adjustment is not currently supported.</p>
+<h2 id='10-return-a-product-to-a-supplier'>10. Return a product to a supplier</h2>
+<ol>
+<li>Open Accounting &gt; Returns &amp; Corrections and set Invoice type to Purchase.</li>
+<li>Search the bill or serial and select the available Invoice unit.</li>
+<li>Enter Note date on or after purchase. If it was sold and later returned by a customer, the supplier return must also be on or after that customer return.</li>
+<li>Enter the supplier-return Reason and select Post debit note.</li>
+<li>Confirm the note and that the unit is no longer available stock.</li>
+<li>Record any refund received from the supplier using section 11.</li>
+</ol>
+<p>Expected result: the unit&#39;s original purchase journal and GST are reversed. Sold or inactive stock cannot be returned through this form. The debit note reduces the supplier bill&#39;s payable; a supplier refund can only use the paid credit available after the other units on that bill are accounted for.</p>
+<h2 id='11-record-refunds-and-print-notes'>11. Record refunds and print notes</h2>
+<ol>
+<li>In Accounting &gt; Returns &amp; Corrections, find the posted note.</li>
+<li>If Record refund is available, select it. The form shows the available paid credit.</li>
+<li>Enter Date on or after the note, Amount within that available credit, Cash or Bank, and Reference where available.</li>
+<li>Select Save refund and verify the Refunded value. Record the actual cash/bank movement once.</li>
+<li>Select View note to review the original party, product/serial, reason, tax reversals and refund history.</li>
+<li>Select Print / save PDF to produce a copy for the customer or supplier.</li>
+</ol>
+<p>Expected result: customer refunds record money paid out; supplier refunds record money received. An unpaid returned invoice may have no refund available. Never enter a refund as a new customer receipt or vendor payment. Notes cannot be edited after posting; contact the accountant if a note was entered incorrectly.</p>
+<h2 id='12-check-balances-gst-and-stock'>12. Check balances, GST and stock</h2>
+<ol>
+<li>Open Accounting &gt; Opening Balances &amp; Reconciliation and set Cutover / report date to the date you want to review.</li>
+<li>Compare Subledger and GL for Receivables, Payables and Stock. Each Difference should be zero. Refer any difference to the accountant with the date and relevant invoices.</li>
+<li>Open Accounting &gt; Receivable &amp; Payable Aging to review overdue customer and supplier amounts for the selected report date.</li>
+<li>Open Accounting &gt; GST Reports and select the reporting dates. Review sales tax, purchase input tax and their ledger comparisons. Return notes reduce tax in their note period. Opening stock is excluded from new purchase input-tax reporting.</li>
+<li>Open Accounting &gt; Stock Movements to trace purchases, sales, customer returns, supplier returns and write-offs by date.</li>
+<li>Use Purchase &gt; Stock Inventory to review current availability, and the Bills &amp; Payments pages for current invoice balances.</li>
+</ol>
+<p>These reports support checking the recorded transactions. Have the accountant review the figures and required supporting records before preparing external returns or statements.</p>
+<h2 id='13-accountant-journals-periods-and-bank-reconciliation'>13. Accountant: journals, periods and bank reconciliation</h2>
+<h3 id='manual-journals'>Manual journals</h3>
+<ol>
+<li>Open Accounting &gt; General Ledger and review the Chart of Accounts.</li>
+<li>Under Post Journal, enter Journal date and Description.</li>
+<li>Add account lines with the approved debit or credit amounts and dimensions where needed.</li>
+<li>Check that total debits equal total credits, then post using the form&#39;s submit button.</li>
+<li>Verify the entry in the journal listing and review the affected reports.</li>
+</ol>
+<p>Purchase, sale, receipt, payment and return workflows create their own journals. Enter those transactions in their dedicated screens to keep stock and unpaid invoice balances consistent. An accountant should review any manual posting to control accounts.</p>
+<h3 id='accounting-periods'>Accounting periods</h3>
+<ol>
+<li>Open Accounting &gt; Accounting Periods, enter Period name, Start date and End date, then select Create period.</li>
+<li>Review completed transactions, bank matching, GST and control-account differences for the period.</li>
+<li>Select Year-end close only after the accountant confirms the period is ready for that closing. This closes revenue and expense balances to retained earnings as well as locking the dates; confirm the prompt after reviewing its period name and date range.</li>
+<li>If a closed-period transaction needs attention, ask the accountant to review how to correct it. The current screen does not provide a reopen button.</li>
+</ol>
+<p>Expected result: closed periods reject postings. Backdating a transaction will not bypass this control.</p>
+<h3 id='bank-reconciliation'>Bank reconciliation</h3>
+<ol>
+<li>Open Accounting &gt; Bank Reconciliation and choose the bank ledger account.</li>
+<li>Enter the statement reference, date range, opening balance and closing balance.</li>
+<li>Add statement lines with date, description, reference and signed amount: positive for money in, negative for money out.</li>
+<li>Select Import statement, then select the statement under Reconciliation.</li>
+<li>Match each statement line to the correct available ledger line after checking amount and direction. Investigate unmatched items.</li>
+<li>When every line is matched and the statement balances agree, select Finalize.</li>
+</ol>
+<p>Matching associates existing entries; it does not replace recording a missing receipt, payment or accountant-approved bank adjustment. Check whether a statement has already been imported before importing it again.</p>
+<h2 id='14-additional-accounting-controls'>14. Additional accounting controls</h2>
+<p>These tasks require the corresponding permission. Open Accounting &gt; Controls &amp; Budgets.</p>
+<ul>
+<li>Approvals: enter the Action, Resource ID, Summary and the exact action payload supplied by your accountant or administrator, then Submit for review. A different authorized user reviews with Approve or Reject; an approved request is executed using Apply. Approval alone does not apply the action.</li>
+<li>Supporting documents: enter the resource type/ID, File name, Content type, Storage reference and optional Description, then Link evidence. Store the document in the agreed document store first; this form links the reference rather than uploading the file.</li>
+<li>Reporting dimensions: choose Type, enter Code and Name, then Add dimension. Use the agreed branch, project or cost-center codes.</li>
+<li>Fixed assets: enter acquisition details, cost, salvage value, useful life and the accountant-approved accounts, then Record asset. Use Depreciate month or Dispose only after reviewing the dates, prior depreciation and disposal proceeds with the accountant.</li>
+<li>Budgets: select Account and optional Dimension, enter Budget amount, Start date, End date and Notes, then Save budget. Review Actual and Variance for the same period.</li>
+</ul>
+<h2 id='15-daily-checklist-and-practice-example'>15. Daily checklist and practice example</h2>
+<h3 id='daily-checks'>Daily checks</h3>
+<ol>
+<li>Match received and sold units to their serial numbers.</li>
+<li>Check that invoices and actual payments have both been recorded where appropriate.</li>
+<li>Review payment references and cash/bank totals against the day&#39;s evidence.</li>
+<li>Review returns and refunds separately; confirm the physical stock disposition.</li>
+<li>Review outstanding balances and reconcile control differences with the accountant.</li>
+<li>Keep invoice, payment and return documents in the agreed location, and sign out when finished.</li>
+</ol>
+<h3 id='practice-in-a-training-business'>Practice in a training business</h3>
+<ol>
+<li>Enter one purchased unit at 1,000 before GST with CGST 9% and SGST 9%; confirm purchase total 1,180.</li>
+<li>Record supplier payment 1,180; confirm no supplier balance remains.</li>
+<li>Sell the unit for 1,000 including GST; confirm displayed discount 180.</li>
+<li>Record customer payment 1,000; confirm Balance Due is zero and print the bill.</li>
+<li>Return the sale using Restock; confirm a credit note and available stock.</li>
+<li>Refund the customer 1,000; confirm the refund history on the printable note.</li>
+<li>Confirm receivables, payables and stock reconcile for the final report date. A restocked unit remains at its original net inventory cost.</li>
+</ol>
+<p>Use a training business for this exercise; each saved step creates real accounting records within the selected business.</p>
+<h2 id='16-common-problems-and-help'>16. Common problems and help</h2>
+<div class="table-wrap"><table><tbody>
+<tr><th>Message or symptom</th><th>What to do</th></tr>
+<tr><td>sales.manage permission required</td><td>Owner opens Staff Access and grants sales.manage to the active user; refresh and retry</td></tr>
+<tr><td>Other permission required</td><td>Send the exact code to the owner and request the access needed for your role</td></tr>
+<tr><td>Activation link expired or already used</td><td>Ask the owner to resend if still unverified; use the latest email. An already activated user should sign in</td></tr>
+<tr><td>Staff Access is missing</td><td>This menu is restricted to the designated owner</td></tr>
+<tr><td>Product not available for sale</td><td>Check it is active, unsold and not staged opening stock awaiting cutover</td></tr>
+<tr><td>Wrong or missing default GST rate</td><td>Verify purchase rates and ask the owner to configure the matching combination; review the sale before saving</td></tr>
+<tr><td>Duplicate serial number</td><td>Check both serial fields and existing stock history; confirm the physical serial before retrying</td></tr>
+<tr><td>Payment exceeds outstanding balance</td><td>Review previous payments and returns; enter only the remaining amount</td></tr>
+<tr><td>Refund exceeds available paid credit</td><td>Review the original payments and prior refunds; for supplier bills, review the remaining invoice units</td></tr>
+<tr><td>Closed accounting period</td><td>Ask the accountant to review the date and correction process; the current period screen does not provide reopening</td></tr>
+<tr><td>Posting date at/before cutover</td><td>Use the actual operational date after cutover; settle old invoices through Opening outstanding items</td></tr>
+<tr><td>Opening totals do not match</td><td>Reconcile detailed customer/vendor items and stock costs to 1100/2000/1200 before posting</td></tr>
+<tr><td>Opening import already exists</td><td>Do not repeat the import; ask the accountant to review existing opening records</td></tr>
+<tr><td>Legacy invoice has no source journal</td><td>Ask the accountant/administrator to reconcile the historical invoice before returning it</td></tr>
+<tr><td>Reconstructed details on an old note</td><td>Review against the original paper invoice; details available at upgrade cannot establish earlier master-data changes</td></tr>
+<tr><td>A posted record cannot be edited</td><td>Use the supported full-unit return workflow when appropriate, or ask the accountant to review</td></tr>
+<tr><td>Failed request or connection error</td><td>Check whether the record was saved before retrying; refresh its listing/history to avoid duplicate entry</td></tr>
+</tbody></table></div>
+<p>For help, provide the page name, exact message, invoice/note number, serial number, transaction date and steps taken. Share screenshots with customer details concealed where appropriate. Never share passwords or invitation tokens.</p>
+<h2 id='17-terms-used-in-this-guide'>17. Terms used in this guide</h2>
+<div class="table-wrap"><table><tbody>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td>Tenant</td><td>Your business&#39;s separate application workspace</td></tr>
+<tr><td>Serialized unit</td><td>One stock item identified by its serial number</td></tr>
+<tr><td>GST-inclusive price</td><td>The final amount including CGST and SGST</td></tr>
+<tr><td>Receivable</td><td>Money a customer still owes the business</td></tr>
+<tr><td>Payable</td><td>Money the business still owes a supplier</td></tr>
+<tr><td>Credit/debit note</td><td>A linked document reversing a supported invoice unit</td></tr>
+<tr><td>Refund</td><td>Actual money returned after a note; separate from posting the note</td></tr>
+<tr><td>Restock</td><td>Make a customer-returned unit available for resale</td></tr>
+<tr><td>Write-off</td><td>Remove stock value because the unit is no longer saleable</td></tr>
+<tr><td>Cutover</td><td>The date used to bring historical balances into the system</td></tr>
+<tr><td>Subledger</td><td>Detailed customer, supplier or stock balances</td></tr>
+<tr><td>GL</td><td>General Ledger, containing the accounting entries</td></tr>
+<tr><td>Reconciliation</td><td>Comparing detailed balances with their corresponding ledger totals</td></tr>
+</tbody></table></div>
+<p>Current scope: full serialized-unit returns and cancellations. Partial price adjustments and general multi-line sales invoices are not available in this workflow.</p>
+</main></body></html>

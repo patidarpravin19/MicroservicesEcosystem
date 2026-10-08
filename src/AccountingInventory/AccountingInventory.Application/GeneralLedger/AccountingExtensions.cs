@@ -74,7 +74,7 @@ public static class AccountingPermissionGate
     public static async Task EnsureAsync(IAccountingInventoryDbContext db, Guid? actor, string permission, CancellationToken ct)
     {
         if (!actor.HasValue) throw new ForbiddenException("An authenticated user identity is required.");
-        var owner = await db.Users.AsNoTracking().OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
+        var owner = await db.Users.AsNoTracking().Where(x => x.IsOwner && x.IsActive).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
         if (owner == actor) return;
         if (!await db.AccountingUserPermissions.AnyAsync(x => x.UserId == actor && x.PermissionCode == permission && x.IsActive, ct))
             throw new ForbiddenException($"The '{permission}' permission is required for this action.");
@@ -109,7 +109,7 @@ public sealed class AccountingPermissionHandler(IAccountingInventoryDbContext db
     private async Task EnsureOwner(Guid? actor, CancellationToken ct)
     {
         if (!actor.HasValue) throw new ForbiddenException("An authenticated user identity is required.");
-        var owner = await db.Users.AsNoTracking().OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
+        var owner = await db.Users.AsNoTracking().Where(x => x.IsOwner && x.IsActive).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
         if (owner != actor) throw new ForbiddenException("Only the tenant owner can manage accounting permissions.");
     }
 }
@@ -263,19 +263,31 @@ public sealed class AccountBudgetHandler(IAccountingInventoryDbContext db) :
     public async Task<IReadOnlyList<BudgetSummary>> Handle(GetBudgetVarianceQuery q, CancellationToken ct)
     {
         var budgets = await (from b in db.AccountBudgets.AsNoTracking()
-            join a in db.ChartAccounts.AsNoTracking() on b.AccountId equals a.Id
-            join d in db.AccountingDimensions.AsNoTracking() on b.DimensionId equals d.Id into dimensions
-            from d in dimensions.DefaultIfEmpty()
-            where (!q.FromDate.HasValue || b.EndDate >= q.FromDate) && (!q.ToDate.HasValue || b.StartDate <= q.ToDate)
-            select new { b.Id, b.AccountId, a.Code, AccountName = a.Name, b.DimensionId, DimensionCode = d == null ? null : d.Code,
-                b.StartDate, b.EndDate, b.Amount, b.Notes, a.NormalBalance }).ToListAsync(ct);
+                             join a in db.ChartAccounts.AsNoTracking() on b.AccountId equals a.Id
+                             join d in db.AccountingDimensions.AsNoTracking() on b.DimensionId equals d.Id into dimensions
+                             from d in dimensions.DefaultIfEmpty()
+                             where (!q.FromDate.HasValue || b.EndDate >= q.FromDate) && (!q.ToDate.HasValue || b.StartDate <= q.ToDate)
+                             select new
+                             {
+                                 b.Id,
+                                 b.AccountId,
+                                 a.Code,
+                                 AccountName = a.Name,
+                                 b.DimensionId,
+                                 DimensionCode = d == null ? null : d.Code,
+                                 b.StartDate,
+                                 b.EndDate,
+                                 b.Amount,
+                                 b.Notes,
+                                 a.NormalBalance
+                             }).ToListAsync(ct);
         var result = new List<BudgetSummary>();
         foreach (var b in budgets)
         {
             var actuals = await (from line in db.JournalLines.AsNoTracking()
-                join entry in db.JournalEntries.AsNoTracking() on line.JournalEntryId equals entry.Id
-                where line.AccountId == b.AccountId && line.DimensionId == b.DimensionId && entry.JournalDate >= b.StartDate && entry.JournalDate <= b.EndDate
-                select line.Debit - line.Credit).SumAsync(ct);
+                                 join entry in db.JournalEntries.AsNoTracking() on line.JournalEntryId equals entry.Id
+                                 where line.AccountId == b.AccountId && line.DimensionId == b.DimensionId && entry.JournalDate >= b.StartDate && entry.JournalDate <= b.EndDate
+                                 select line.Debit - line.Credit).SumAsync(ct);
             var actual = b.NormalBalance == LedgerBalanceSide.Debit ? actuals : -actuals;
             result.Add(new(b.Id, b.AccountId, b.Code, b.AccountName, b.DimensionId, b.DimensionCode,
                 b.StartDate, b.EndDate, b.Amount, actual, b.Amount - actual, b.Notes));

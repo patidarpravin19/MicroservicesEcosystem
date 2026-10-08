@@ -39,6 +39,11 @@ public interface IAccountingInventoryDbContext
     DbSet<FixedAsset> FixedAssets { get; }
     DbSet<AccountBudget> AccountBudgets { get; }
     DbSet<AccountingUserPermission> AccountingUserPermissions { get; }
+    DbSet<InvoiceCorrection> InvoiceCorrections { get; }
+    DbSet<CorrectionRefund> CorrectionRefunds { get; }
+    DbSet<InvoiceSnapshot> InvoiceSnapshots { get; }
+    DbSet<OpeningSubledgerBalance> OpeningSubledgerBalances { get; }
+    DbSet<OpeningSettlement> OpeningSettlements { get; }
     Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken);
 
     //DbSet<Role> Roles { get; }
