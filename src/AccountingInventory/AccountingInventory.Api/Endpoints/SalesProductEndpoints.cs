@@ -32,8 +32,8 @@ public static class SalesProductEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize,
-            [FromQuery] string? search, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetSalesProductsQuery(page ?? 1, pageSize ?? 20, search), ct)))
+            [FromQuery] string? search, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetSalesProductsQuery(page ?? 1, pageSize ?? 20, search, sortBy, sortDirection), ct)))
             .WithName("GetSalesProducts")
             .Produces<PagedResult<SalesProductSummary>>();
 

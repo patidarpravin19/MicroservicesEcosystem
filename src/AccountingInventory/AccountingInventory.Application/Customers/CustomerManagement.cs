@@ -32,18 +32,10 @@ public sealed class GetCustomersQueryHandler(IAccountingInventoryDbContext db)
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var sorted = (request.SortBy?.ToLowerInvariant(), descending) switch
+        var sorted = GridSorting.Apply(query, request.SortBy, request.SortDirection, selectors: new SortSelectors<Customer>
         {
-            ("mobile", false) => query.OrderBy(customer => customer.Mobile),
-            ("mobile", true) => query.OrderByDescending(customer => customer.Mobile),
-            ("email", false) => query.OrderBy(customer => customer.Email),
-            ("email", true) => query.OrderByDescending(customer => customer.Email),
-            ("salescount", false) => query.OrderBy(customer => db.SalesProducts.Count(sale => sale.CustomerId == customer.Id)),
-            ("salescount", true) => query.OrderByDescending(customer => db.SalesProducts.Count(sale => sale.CustomerId == customer.Id)),
-            (_, true) => query.OrderByDescending(customer => customer.Name),
-            _ => query.OrderBy(customer => customer.Name)
-        };
+            ["salesCount"] = customer => db.SalesProducts.Count(sale => sale.CustomerId == customer.Id),
+        });
         var customers = await sorted.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(customer => new CustomerRecord(customer.Id, customer.Name, customer.Mobile,
                 customer.Address, customer.Email, customer.IsActive,

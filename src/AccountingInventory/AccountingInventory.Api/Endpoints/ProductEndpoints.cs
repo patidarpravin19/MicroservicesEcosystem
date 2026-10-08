@@ -39,8 +39,8 @@ public static class ProductEndpoints
             .Produces<IEnumerable<GetProductsForDDLSummary>>();
 
         group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize,
-            [FromQuery] string? search, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetProductsQuery(page ?? 1, pageSize ?? 20, search), ct)))
+            [FromQuery] string? search, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetProductsQuery(page ?? 1, pageSize ?? 20, search, sortBy, sortDirection), ct)))
             .WithName("GetProducts");
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

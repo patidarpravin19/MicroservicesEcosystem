@@ -37,23 +37,24 @@ public sealed class GetStockQueryHandler(IAccountingInventoryDbContext db)
         var totalCount = await aggregates.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var groups = await (from aggregate in aggregates
+        var groupRows = (from aggregate in aggregates
             join brand in db.Brands.AsNoTracking() on aggregate.BrandId equals brand.Id
             join model in db.ProductModels.AsNoTracking() on aggregate.ProductModelId equals model.Id
             join variant in db.Variants.AsNoTracking() on aggregate.VariantId equals variant.Id
-            orderby brand.Name, model.Name, variant.Name
-            select new StockGroupSummary(
-                aggregate.BrandId,
-                aggregate.ProductModelId,
-                aggregate.VariantId,
-                brand.Name,
-                model.Name,
-                variant.Name,
-                aggregate.TotalProductCost,
-                aggregate.TotalQuantity))
+            select new
+            {
+                aggregate.BrandId, aggregate.ProductModelId, aggregate.VariantId,
+                BrandName = brand.Name, ModelName = model.Name, VariantName = variant.Name,
+                aggregate.TotalProductCost, aggregate.TotalQuantity
+            });
+        var rows = await GridSorting.Apply(groupRows, request.SortBy, request.SortDirection,
+            "BrandName,ModelName,VariantName,BrandId,ProductModelId,VariantId")
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        var groups = rows.Select(row => new StockGroupSummary(row.BrandId, row.ProductModelId,
+            row.VariantId, row.BrandName, row.ModelName, row.VariantName, row.TotalProductCost, row.TotalQuantity)).ToArray();
 
         return new PagedResult<StockGroupSummary>(groups, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
@@ -93,7 +94,7 @@ public sealed class GetAvailableStockProductsQueryHandler(IAccountingInventoryDb
         var totalCount = await products.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var rows = await products.OrderBy(item => item.SerialNumber)
+        var rows = await GridSorting.Apply(products, request.SortBy, request.SortDirection, "SerialNumber")
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

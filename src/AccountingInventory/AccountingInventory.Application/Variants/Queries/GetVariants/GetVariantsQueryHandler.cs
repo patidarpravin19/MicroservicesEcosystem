@@ -22,8 +22,7 @@ public sealed class GetVariantsQueryHandler(IAccountingInventoryDbContext accoun
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var items = await ApplySort(query, request.SortBy, descending)
+        var items = await GridSorting.Apply(query, request.SortBy, request.SortDirection)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(variant => new VariantSummary(
@@ -36,15 +35,4 @@ public sealed class GetVariantsQueryHandler(IAccountingInventoryDbContext accoun
         return new PagedResult<VariantSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
-
-    private static IOrderedQueryable<Variant> ApplySort(IQueryable<Variant> query, string? sortBy, bool descending)
-        => (sortBy?.Trim().ToLowerInvariant(), descending) switch
-        {
-            ("name", false) => query.OrderBy(v => v.Name),
-            ("name", true) => query.OrderByDescending(v => v.Name),
-            ("description", false) => query.OrderBy(v => v.Description),
-            ("description", true) => query.OrderByDescending(v => v.Description),
-            (_, true) => query.OrderByDescending(v => v.Name),
-            _ => query.OrderBy(v => v.Name)
-        };
 }

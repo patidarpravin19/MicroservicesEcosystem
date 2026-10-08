@@ -28,7 +28,7 @@ public sealed class GetSalesProductsQueryHandler(IAccountingInventoryDbContext d
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var sales = await query.OrderByDescending(x => x.SaleDate)
+        var sales = await SalesGridSorting.Apply(db, query, request.SortBy, request.SortDirection)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .ToListAsync(cancellationToken);
         var items = await SalesProductSummaryMapper.MapAsync(db, sales, cancellationToken);

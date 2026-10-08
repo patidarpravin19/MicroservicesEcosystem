@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AccountingInventory.Application.Sales.Accounting;
 
-public sealed record GetSalesBillsQuery(int Page = 1, int PageSize = 20, string? Search = null)
+public sealed record GetSalesBillsQuery(int Page = 1, int PageSize = 20, string? Search = null, string? SortBy = null, string? SortDirection = null)
     : IRequest<PagedResult<SalesBillSummary>>;
 
 public sealed record SalesBillSummary(
@@ -51,8 +51,7 @@ public sealed class GetSalesBillsQueryHandler(IAccountingInventoryDbContext db)
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var sales = await query.OrderByDescending(sale => sale.SaleDate)
-            .ThenByDescending(sale => sale.CreatedAt)
+        var sales = await SalesGridSorting.Apply(db, query, request.SortBy, request.SortDirection)
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
         var saleSummaries = await SalesProductSummaryMapper.MapAsync(db, sales, cancellationToken);
         var saleIds = sales.Select(sale => sale.Id).ToArray();

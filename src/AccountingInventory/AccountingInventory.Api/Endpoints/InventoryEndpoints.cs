@@ -17,16 +17,16 @@ public static class InventoryEndpoints
             .WithMetadata(new RequiresTenantIdHeaderAttribute());
 
         group.MapGet("/stock", async ([FromQuery] int? page, [FromQuery] int? pageSize,
-            [FromQuery] string? search, ISender sender, CancellationToken cancellationToken) =>
-            Results.Ok(await sender.Send(new GetStockQuery(page ?? 1, pageSize ?? 20, search), cancellationToken)))
+            [FromQuery] string? search, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken cancellationToken) =>
+            Results.Ok(await sender.Send(new GetStockQuery(page ?? 1, pageSize ?? 20, search, sortBy, sortDirection), cancellationToken)))
             .WithName("GetStockInventory")
             .Produces<PagedResult<StockGroupSummary>>();
 
         group.MapGet("/stock/products", async ([FromQuery] Guid brandId, [FromQuery] Guid productModelId,
             [FromQuery] Guid variantId, [FromQuery] int? page, [FromQuery] int? pageSize,
-            [FromQuery] string? search, ISender sender, CancellationToken cancellationToken) =>
+            [FromQuery] string? search, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetAvailableStockProductsQuery(brandId, productModelId,
-                variantId, page ?? 1, pageSize ?? 20, search), cancellationToken)))
+                variantId, page ?? 1, pageSize ?? 20, search, sortBy, sortDirection), cancellationToken)))
             .WithName("GetAvailableStockProducts")
             .Produces<PagedResult<AvailableStockProductSummary>>();
 

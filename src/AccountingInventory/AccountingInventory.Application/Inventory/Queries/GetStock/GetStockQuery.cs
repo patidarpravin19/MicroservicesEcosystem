@@ -3,7 +3,7 @@ using MediatR;
 
 namespace AccountingInventory.Application.Inventory.Queries.GetStock;
 
-public sealed record GetStockQuery(int Page = 1, int PageSize = 20, string? Search = null)
+public sealed record GetStockQuery(int Page = 1, int PageSize = 20, string? Search = null, string? SortBy = null, string? SortDirection = null)
     : IRequest<PagedResult<StockGroupSummary>>;
 
 public sealed record StockGroupSummary(
@@ -22,7 +22,7 @@ public sealed record GetAvailableStockProductsQuery(
     Guid VariantId,
     int Page = 1,
     int PageSize = 20,
-    string? Search = null) : IRequest<PagedResult<AvailableStockProductSummary>>;
+    string? Search = null, string? SortBy = null, string? SortDirection = null) : IRequest<PagedResult<AvailableStockProductSummary>>;
 
 public sealed record AvailableStockProductSummary(
     Guid Id,

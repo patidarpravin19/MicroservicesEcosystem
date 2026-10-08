@@ -22,8 +22,11 @@ public sealed class GetProductModelsQueryHandler(IAccountingInventoryDbContext a
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var items = await ApplySort(query, request.SortBy, descending)
+        var items = await GridSorting.Apply(query, request.SortBy, request.SortDirection, selectors: new SortSelectors<ProductModel>
+        {
+            ["brandName"] = model => accountingInventoryDbContext.Brands.Where(item => item.Id == model.BrandId).Select(item => item.Name).FirstOrDefault(),
+            ["productTypeName"] = model => accountingInventoryDbContext.ProductTypes.Where(item => item.Id == model.ProductTypeId).Select(item => item.Name).FirstOrDefault(),
+        })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(productModel => new ProductModelSummary(
@@ -49,19 +52,6 @@ public sealed class GetProductModelsQueryHandler(IAccountingInventoryDbContext a
         return new PagedResult<ProductModelSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
-
-    private static IOrderedQueryable<ProductModel> ApplySort(IQueryable<ProductModel> query, string? sortBy, bool descending)
-        => (sortBy?.Trim().ToLowerInvariant(), descending) switch
-        {
-            ("name", false) => query.OrderBy(v => v.Name),
-            ("name", true) => query.OrderByDescending(v => v.Name),
-            ("code", false) => query.OrderBy(v => v.Code),
-            ("code", true) => query.OrderByDescending(v => v.Code),
-            ("description", false) => query.OrderBy(v => v.Description),
-            ("description", true) => query.OrderByDescending(v => v.Description),
-            (_, true) => query.OrderByDescending(v => v.Name),
-            _ => query.OrderBy(v => v.Name)
-        };
 }
 
 
