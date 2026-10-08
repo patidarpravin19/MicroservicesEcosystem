@@ -10,6 +10,28 @@
 
 # To Migrate tables in Accounting and Inventory DB Context
 
+The API applies pending migrations to every active tenant schema on startup via
+`ApplyTenantSchemaMigrationsAsync`. Rebuild and restart the API after schema changes;
+updating only the `public` schema does not update tenant tables.
+
+`20261022120000_RepairExistingAccountingTables` repairs missing invoice accounting
+columns in `products` and `sales_products`, and reversal/dimension columns in the
+ledger tables. It backfills only missing values. Due dates use the invoice date
+plus payment terms, including inserts from older application versions that omit `due_date`.
+The database fallback also recalculates due dates when an older writer changes
+the invoice date or terms without supplying a new due date.
+
+Run the regression checks against local PostgreSQL from the repository root:
+
+```powershell
+dotnet run --project tests/AccountingInventory.SchemaChecks -- --local
+```
+
+Alternatively, set `SCHEMA_CHECK_CONNECTION_STRING` and omit `--local`. Checks
+reproduce the original constraint error, test legacy inserts/updates, backfills,
+repeat execution and retained invoice/tax values. They create a temporary schema
+inside a transaction and roll it back; tenant data is not changed.
+
 1. Open the terminal and navigate to the project directory. e.g. cd src/AccountingInventory
 2. Run the following command to apply migrations:
 		dotnet ef migrations add InitialCreate --project AccountingInventory.Infrastructure --startup-project AccountingInventory.API --context AccountingInventoryDbContext
