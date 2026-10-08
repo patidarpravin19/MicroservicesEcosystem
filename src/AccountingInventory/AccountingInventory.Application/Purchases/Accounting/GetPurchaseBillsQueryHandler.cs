@@ -48,13 +48,13 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
         var totalCount = await invoices.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var invoiceRows = (from invoice in invoices
-                           join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
-                           orderby invoice.BillDate descending, invoice.BillNumber
-                           select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+        var rows = await (from invoice in invoices
+                          join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
+                          orderby invoice.BillDate descending, invoice.BillNumber
+                          select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
+          .Skip((page - 1) * pageSize)
+          .Take(pageSize)
+          .ToListAsync(cancellationToken);
 
         var vendorIds = rows.Select(row => row.VendorId).Distinct().ToArray();
         var billNumbers = rows.Select(row => row.BillNumber.ToLower()).Distinct().ToArray();
