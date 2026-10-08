@@ -51,8 +51,10 @@ public sealed class GetProductsForDDLQueryHandler(IAccountingInventoryDbContext 
                 product.SerialNumber,
                 product.SerialNumber1!,
                 product.PurchasePrice,
-                product.PurchasePrice - product.Discount,
-                product.Discount))
+                product.TotalAmount,
+                product.Discount,
+                product.Cgst,
+                product.Sgst))
             .ToListAsync(cancellationToken);
 
         return products;
