@@ -4,6 +4,6 @@ namespace AccountingInventory.Application.ProductModels.Queries.GetProductModels
 
 public sealed record GetProductModelsForDDL() : IRequest<IEnumerable<GetProductModelsForDDLSummary>>;
 
-public sealed record GetProductModelsForDDLSummary(Guid Id, string Name);
+public sealed record GetProductModelsForDDLSummary(Guid Id, string Name, Guid BrandId, Guid ProductTypeId);
 
 

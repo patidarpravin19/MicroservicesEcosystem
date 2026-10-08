@@ -12,7 +12,7 @@ public sealed class GetProductModelsForDDLQueryHandler(IAccountingInventoryDbCon
         var ProductModels = await accountingInventoryDbContext.ProductModels
             .AsNoTracking()
             .Where(b => b.IsActive)
-            .Select(b => new GetProductModelsForDDLSummary(b.Id, b.Name))
+            .Select(b => new GetProductModelsForDDLSummary(b.Id, b.Name, b.BrandId, b.ProductTypeId))
             .ToListAsync(cancellationToken);
 
         return ProductModels;
