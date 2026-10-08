@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AccountingInventory.Application.Purchases.Accounting;
 
-public sealed record GetPurchaseBillsQuery(int Page = 1, int PageSize = 20, string? Search = null)
+public sealed record GetPurchaseBillsQuery(int Page = 1, int PageSize = 20, string? Search = null, string? SortBy = null, string? SortDirection = null)
     : IRequest<PagedResult<PurchaseBillSummary>>;
 
 public sealed record PurchaseBillSummary(
@@ -48,10 +48,10 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
         var totalCount = await invoices.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var rows = await (from invoice in invoices
-            join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
-            orderby invoice.BillDate descending, invoice.BillNumber
-            select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
+        var invoiceRows = (from invoice in invoices
+                           join vendor in db.Vendors.AsNoTracking() on invoice.VendorId equals vendor.Id
+                           orderby invoice.BillDate descending, invoice.BillNumber
+                           select new { invoice.VendorId, VendorName = vendor.Name, invoice.BillNumber, invoice.BillDate, invoice.PaymentTermsDays, invoice.DueDate, invoice.TotalAmount })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

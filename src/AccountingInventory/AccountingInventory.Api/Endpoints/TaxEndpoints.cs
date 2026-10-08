@@ -29,8 +29,8 @@ public static class TaxEndpoints
             .WithName("GetTaxesForDDL")
             .Produces<IEnumerable<TaxRateSummary>>();
 
-        group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetTaxesQuery(page ?? 1, pageSize ?? 20), ct))).WithName("GetTaxes")
+        group.MapGet("/", async ([FromQuery] int? page, [FromQuery] int? pageSize, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetTaxesQuery(page ?? 1, pageSize ?? 20, sortBy, sortDirection), ct))).WithName("GetTaxes")
             .Produces<PagedResult<TaxSummary>>();
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

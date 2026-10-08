@@ -3,7 +3,7 @@ using MediatR;
 
 namespace AccountingInventory.Application.Purchases.Products.Queries.GetProducts;
 
-public sealed record GetProductsQuery(int Page = 1, int PageSize = 20, string? Search = null)
+public sealed record GetProductsQuery(int Page = 1, int PageSize = 20, string? Search = null, string? SortBy = null, string? SortDirection = null)
     : IRequest<PagedResult<ProductSummary>>;
 
 public sealed record ProductSummary(Guid Id, Guid VendorId, Guid BrandId, Guid ProductTypeId,

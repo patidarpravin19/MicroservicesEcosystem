@@ -10,7 +10,7 @@ public sealed class GetTaxesQueryHandler(IAccountingInventoryDbContext db) : IRe
 {
     public async Task<PagedResult<TaxSummary>> Handle(GetTaxesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Taxes.AsNoTracking().OrderBy(x => x.Cgst).ThenBy(x => x.Sgst);
+        var query = GridSorting.Apply(db.Taxes.AsNoTracking(), request.SortBy, request.SortDirection, "Cgst,Sgst");
         var total = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);

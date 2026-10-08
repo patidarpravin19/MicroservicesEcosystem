@@ -24,8 +24,7 @@ public sealed class GetFinanceVendorsQueryHandler(IAccountingInventoryDbContext 
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var items = await ApplySort(query, request.SortBy, descending)
+        var items = await GridSorting.Apply(query, request.SortBy, request.SortDirection)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(x => new FinanceVendorSummary(x.Id, x.Name, x.Code, x.Mobile, x.Email,
                 x.ContactName, x.ContactMobile, x.Description, x.IsActive))
@@ -33,17 +32,4 @@ public sealed class GetFinanceVendorsQueryHandler(IAccountingInventoryDbContext 
         return new(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
-
-    private static IOrderedQueryable<FinanceVendor> ApplySort(
-        IQueryable<FinanceVendor> query, string? sortBy, bool descending)
-        => (sortBy?.Trim().ToLowerInvariant(), descending) switch
-        {
-            ("code", false) => query.OrderBy(x => x.Code), ("code", true) => query.OrderByDescending(x => x.Code),
-            ("mobile", false) => query.OrderBy(x => x.Mobile), ("mobile", true) => query.OrderByDescending(x => x.Mobile),
-            ("email", false) => query.OrderBy(x => x.Email), ("email", true) => query.OrderByDescending(x => x.Email),
-            ("contactname", false) => query.OrderBy(x => x.ContactName), ("contactname", true) => query.OrderByDescending(x => x.ContactName),
-            ("contactmobile", false) => query.OrderBy(x => x.ContactMobile), ("contactmobile", true) => query.OrderByDescending(x => x.ContactMobile),
-            ("description", false) => query.OrderBy(x => x.Description), ("description", true) => query.OrderByDescending(x => x.Description),
-            (_, true) => query.OrderByDescending(x => x.Name), _ => query.OrderBy(x => x.Name)
-        };
 }

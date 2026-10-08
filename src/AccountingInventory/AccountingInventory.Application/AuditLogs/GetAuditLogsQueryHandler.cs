@@ -58,8 +58,11 @@ public sealed class GetAuditLogsQueryHandler(IAccountingInventoryDbContext db)
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var sorted = ApplySort(query, request.SortBy, descending);
+        var sorted = GridSorting.Apply(query, request.SortBy, request.SortDirection, "CreatedDate", true,
+            new SortSelectors<AuditLog>
+            {
+                ["createdByName"] = log => db.Users.Where(user => user.Id == log.CreatedBy).Select(user => user.UserName).FirstOrDefault(),
+            });
         var rows = sorted.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(log => new AuditLogSummary(
             log.Id, log.TableName, log.RecordId, log.Action, log.OldValue, log.NewValue,
@@ -71,24 +74,6 @@ public sealed class GetAuditLogsQueryHandler(IAccountingInventoryDbContext db)
         return new PagedResult<AuditLogSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
-
-    private IOrderedQueryable<AuditLog> ApplySort(
-        IQueryable<AuditLog> query, string? sortBy, bool descending)
-        => (sortBy?.ToLowerInvariant(), descending) switch
-        {
-            ("tablename", false) => query.OrderBy(log => log.TableName),
-            ("tablename", true) => query.OrderByDescending(log => log.TableName),
-            ("recordid", false) => query.OrderBy(log => log.RecordId),
-            ("recordid", true) => query.OrderByDescending(log => log.RecordId),
-            ("action", false) => query.OrderBy(log => log.Action),
-            ("action", true) => query.OrderByDescending(log => log.Action),
-            ("createdbyname", false) => query.OrderBy(log => db.Users
-                .Where(user => user.Id == log.CreatedBy).Select(user => user.UserName).FirstOrDefault()),
-            ("createdbyname", true) => query.OrderByDescending(log => db.Users
-                .Where(user => user.Id == log.CreatedBy).Select(user => user.UserName).FirstOrDefault()),
-            (_, false) => query.OrderBy(log => log.CreatedDate),
-            _ => query.OrderByDescending(log => log.CreatedDate)
-        };
 }
 
 public sealed record GetAuditLogModulesQuery() : IRequest<IReadOnlyList<AuditLogModule>>;

@@ -17,8 +17,8 @@ public static class SalesAccountingEndpoints
             .WithMetadata(new RequiresTenantIdHeaderAttribute());
 
         group.MapGet("/bills", async ([FromQuery] int? page, [FromQuery] int? pageSize,
-            [FromQuery] string? search, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetSalesBillsQuery(page ?? 1, pageSize ?? 20, search), ct)))
+            [FromQuery] string? search, [FromQuery] string? sortBy, [FromQuery] string? sortDirection, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetSalesBillsQuery(page ?? 1, pageSize ?? 20, search, sortBy, sortDirection), ct)))
             .WithName("GetSalesBills")
             .Produces<PagedResult<SalesBillSummary>>();
 

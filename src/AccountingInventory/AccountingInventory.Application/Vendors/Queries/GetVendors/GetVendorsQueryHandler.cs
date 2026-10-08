@@ -25,8 +25,7 @@ public sealed class GetVendorsQueryHandler(IAccountingInventoryDbContext account
         var totalCount = await query.CountAsync(cancellationToken);
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        var items = await ApplySort(query, request.SortBy, descending)
+        var items = await GridSorting.Apply(query, request.SortBy, request.SortDirection)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(v => new VendorSummary(v.Id, v.Name, v.Code, v.Mobile, v.Email, v.Description!, v.Address!, v.IsActive))
@@ -35,21 +34,4 @@ public sealed class GetVendorsQueryHandler(IAccountingInventoryDbContext account
         return new PagedResult<VendorSummary>(items, page, pageSize, totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
-
-    private static IOrderedQueryable<Vendor> ApplySort(IQueryable<Vendor> query, string? sortBy, bool descending)
-        => (sortBy?.Trim().ToLowerInvariant(), descending) switch
-        {
-            ("code", false) => query.OrderBy(v => v.Code),
-            ("code", true) => query.OrderByDescending(v => v.Code),
-            ("mobile", false) => query.OrderBy(v => v.Mobile),
-            ("mobile", true) => query.OrderByDescending(v => v.Mobile),
-            ("email", false) => query.OrderBy(v => v.Email),
-            ("email", true) => query.OrderByDescending(v => v.Email),
-            ("description", false) => query.OrderBy(v => v.Description),
-            ("description", true) => query.OrderByDescending(v => v.Description),
-            ("address", false) => query.OrderBy(v => v.Address),
-            ("address", true) => query.OrderByDescending(v => v.Address),
-            (_, true) => query.OrderByDescending(v => v.Name),
-            _ => query.OrderBy(v => v.Name)
-        };
 }
