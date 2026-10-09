@@ -18,8 +18,26 @@ public sealed class Tenant : AggregateRoot
     public required string Slug { get; init; }
     public required string SchemaName { get; init; }
     public TenantStatus Status { get; private set; }
+    public string? OwnerName { get; private set; }
+    public string? OwnerEmail { get; private set; }
+    public string? OwnerMobile { get; private set; }
+    public string? InitialPasswordHash { get; private set; }
+    public string? StateCode { get; private set; }
+    public string? Gstin { get; private set; }
+    public string? Address { get; private set; }
+    public string? RejectionReason { get; private set; }
 
-    public static Tenant Create(string name, string slug)
+    public static Tenant Create(
+        string name,
+        string slug,
+        string? ownerName = null,
+        string? ownerEmail = null,
+        string? ownerMobile = null,
+        string? initialPasswordHash = null,
+        string? stateCode = null,
+        string? gstin = null,
+        string? address = null,
+        bool requireApproval = true)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -41,7 +59,14 @@ public sealed class Tenant : AggregateRoot
             Name = name.Trim(),
             Slug = normalizedSlug,
             SchemaName = schemaName,
-            Status = TenantStatus.PendingProvisioning,
+            Status = requireApproval ? TenantStatus.PendingApproval : TenantStatus.PendingProvisioning,
+            OwnerName = ownerName?.Trim(),
+            OwnerEmail = ownerEmail?.Trim().ToLowerInvariant(),
+            OwnerMobile = ownerMobile?.Trim(),
+            InitialPasswordHash = initialPasswordHash,
+            StateCode = stateCode?.Trim(),
+            Gstin = gstin?.Trim().ToUpperInvariant(),
+            Address = address?.Trim(),
         };
 
         //tenant.RaiseDomainEvent(new TenantCreatedDomainEvent(
@@ -69,6 +94,20 @@ public sealed class Tenant : AggregateRoot
 
         Status = TenantStatus.Active;
         IsActive = true;
+    }
+
+    public void Approve() => Activate();
+
+    public void Reject(string? reason)
+    {
+        if (Status != TenantStatus.PendingApproval)
+        {
+            throw new AccountingInventoryDomainException($"Tenant '{Name}' cannot be rejected in current status ({Status}).");
+        }
+
+        Status = TenantStatus.Rejected;
+        RejectionReason = reason?.Trim();
+        IsActive = false;
     }
 
     public void Suspend()

@@ -1,7 +1,10 @@
 using BuildingBlocks.Security;
+using AccountingInventory.Application.Tenants.Commands.ApproveTenant;
 using AccountingInventory.Application.Tenants.Commands.ReactivateTenant;
 using AccountingInventory.Application.Tenants.Commands.RegisterTenant;
+using AccountingInventory.Application.Tenants.Commands.RejectTenant;
 using AccountingInventory.Application.Tenants.Commands.SuspendTenant;
+using AccountingInventory.Application.Tenants.Queries.GetPendingTenants;
 using AccountingInventory.Application.Tenants.Queries.GetTenantBySlug;
 using AccountingInventory.Application.Tenants.Queries.GetTenants;
 using MediatR;
@@ -14,10 +17,7 @@ public static class TenantEndpoints
     {
         var group = app.MapGroup("/api/tenants").WithTags("Tenants");
 
-        // Deliberately anonymous — this is tenant self-service signup. In production,
-        // put rate-limiting and/or CAPTCHA in front of it (the Gateway's rate limiter
-        // already applies at the edge) and consider adding email verification before
-        // a tenant is marked Active.
+        // Self-service tenant signup: registers store and sends confirmation + approval emails
         group.MapPost("/register", async (RegisterTenantCommand command, ISender sender, CancellationToken ct) =>
             {
                 var result = await sender.Send(command, ct);
@@ -27,6 +27,27 @@ public static class TenantEndpoints
             .Produces<RegisterTenantResult>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // List stores waiting for administrator approval (Supports initial offline cold-start bootstrapping)
+        group.MapGet("/pending", async (ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetPendingTenantsQuery(), ct)))
+            .WithName("GetPendingTenants").AllowAnonymous()
+            .Produces<IReadOnlyList<PendingTenantDto>>();
+
+        // Administrator approval: triggers automatic schema creation, EF migrations & seed data
+        group.MapPost("/{id:guid}/approve", async (Guid id, ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new ApproveTenantCommand(id), ct)))
+            .WithName("ApproveTenant").AllowAnonymous()
+            .Produces<ApproveTenantResult>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // Administrator rejection with reason
+        group.MapPost("/{id:guid}/reject", async (Guid id, RejectTenantRequest request, ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new RejectTenantCommand(id, request?.Reason), ct)))
+            .WithName("RejectTenant").AllowAnonymous()
+            .Produces<RejectTenantResult>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/by-slug/{slug}", async (string slug, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetTenantBySlugQuery(slug), ct)))
@@ -49,3 +70,5 @@ public static class TenantEndpoints
         return group;
     }
 }
+
+public sealed record RejectTenantRequest(string? Reason = null);

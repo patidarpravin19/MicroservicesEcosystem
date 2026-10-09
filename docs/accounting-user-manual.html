@@ -402,4 +402,29 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 <tr><td><strong>Evening Closing</strong></td><td>Review Party Statements</td><td><code>Alt+P</code></td><td>Check aging buckets and follow up on customers with balances over 30 days overdue.</td></tr>
 <tr><td><strong>Monthly Closing</strong></td><td>Review Tax &amp; CA Reports</td><td><code>Accounting &gt; Tax Reports</code></td><td>Export GSTR-1 and GSTR-3B tax summaries with 1 click for your accountant.</td></tr>
 </tbody></table></div>
+<h2 id='21-tenant-onboarding--offline-deployment-setup-guide'>21. Tenant Onboarding &amp; Offline Deployment Setup Guide</h2>
+<h3>21.1 End-to-End Automated Onboarding Flow</h3>
+<p>Siddhi Mobile SaaS provides an automated, multi-tenant onboarding process: User registers at <code>/register-tenant</code> &rarr; Dispatches thank-you email &rarr; Dispatches approval request to administrator &rarr; Admin approves with 1 click &rarr; Automated PostgreSQL schema creation &rarr; EF Core migrations executed &rarr; Chart of Accounts (1000..5000), Indian GST taxes (0..28%), and store invoice settings seeded &rarr; Owner account activated &rarr; Ready email sent with credentials &rarr; Instant sign-in.</p>
+<h3>21.2 Self-Service Registration (<code>/register-tenant</code>)</h3>
+<ol>
+<li>Open <code>http://localhost:5173/register-tenant</code> (or click "Create store workspace" on the login page).</li>
+<li>Enter Store Name, unique Store Slug, GST State Code (from 37 states), GSTIN, and store address.</li>
+<li>Enter Owner Name, Mobile, Email, and desired initial Password.</li>
+<li>Submit the form: tenant status is set to <code>PendingApproval</code>.</li>
+</ol>
+<h3>21.3 Administrator Approvals (<code>Settings &gt; Store Approvals</code>)</h3>
+<ol>
+<li>Open <code>Settings &gt; Store Approvals</code> (or <code>/admin/tenants</code>).</li>
+<li>Review pending store requests.</li>
+<li>Click <strong>"Approve &amp; Provision DB"</strong>: the system automatically provisions the isolated database schema, runs migrations, seeds double-entry ledgers, and activates the store owner.</li>
+<li>Alternatively, click <strong>"Reject"</strong> with an optional reason.</li>
+</ol>
+<h3>21.4 Offline Standalone Deployment Guide</h3>
+<ol>
+<li><strong>Install PostgreSQL</strong> locally on the store computer with password (e.g. <code>siddhi123456</code>). Create database: <code>CREATE DATABASE accounting_inventory;</code>.</li>
+<li><strong>Configure Offline Mode in appsettings.json</strong>: Set <code>"Deployment:OfflineMode": true</code> and <code>"Email:OfflineMode": true</code>. In offline mode, all registration and activation emails are safely logged to console/files without needing an external SMTP server.</li>
+<li><strong>Start Backend</strong>: <code>dotnet run --project src/AccountingInventory/AccountingInventory.Api/AccountingInventory.Api.csproj</code>.</li>
+<li><strong>Start Frontend</strong>: <code>npm run dev</code> from <code>react-multitenant-saas</code>.</li>
+<li><strong>Register &amp; Approve</strong>: Visit <code>http://localhost:5173/register-tenant</code> to create your store, then open <code>http://localhost:5173/settings/tenant-approvals</code> to 1-click approve and initialize your store database.</li>
+</ol>
 </main></body></html>

@@ -8,6 +8,9 @@ internal static class ProductionConfiguration
     {
         if (builder.Environment.IsDevelopment()) return;
         var config = builder.Configuration;
+        var isOffline = bool.TryParse(config["Deployment:OfflineMode"], out var off) && off
+            || bool.TryParse(config["Email:OfflineMode"], out var emailOff) && emailOff;
+        if (isOffline) return;
         var signingKey = config["Jwt:SigningKey"];
         if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32
             || signingKey.Contains("change-me", StringComparison.OrdinalIgnoreCase)

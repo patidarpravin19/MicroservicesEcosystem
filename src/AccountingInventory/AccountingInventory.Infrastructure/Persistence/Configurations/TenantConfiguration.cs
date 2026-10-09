@@ -22,6 +22,14 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.Slug).IsRequired().HasMaxLength(48);
         builder.Property(t => t.SchemaName).IsRequired().HasMaxLength(63);
         builder.Property(t => t.Status).IsRequired().HasConversion<string>().HasMaxLength(32);
+        builder.Property(t => t.OwnerName).HasMaxLength(150);
+        builder.Property(t => t.OwnerEmail).HasMaxLength(150);
+        builder.Property(t => t.OwnerMobile).HasMaxLength(25);
+        builder.Property(t => t.InitialPasswordHash).HasMaxLength(255);
+        builder.Property(t => t.StateCode).HasMaxLength(10);
+        builder.Property(t => t.Gstin).HasMaxLength(20);
+        builder.Property(t => t.Address).HasMaxLength(500);
+        builder.Property(t => t.RejectionReason).HasMaxLength(500);
 
         builder.HasIndex(t => t.Slug).IsUnique();
         builder.HasIndex(t => t.SchemaName).IsUnique();

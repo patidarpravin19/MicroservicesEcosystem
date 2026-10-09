@@ -67,7 +67,18 @@ app.MapGet("/health/ready", async (TenantDbContext db, CancellationToken ct) =>
 
 using (var scope = app.Services.CreateScope())
 {
-    await scope.ServiceProvider.GetRequiredService<TenantDbContext>().Database.MigrateAsync();
+    var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+    await tenantDb.Database.MigrateAsync();
+    await tenantDb.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS owner_name character varying(150);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS owner_email character varying(150);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS owner_mobile character varying(25);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS initial_password_hash character varying(255);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS state_code character varying(10);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS gstin character varying(20);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS address character varying(500);
+        ALTER TABLE tenant.tenants ADD COLUMN IF NOT EXISTS rejection_reason character varying(500);
+    ");
 }
 
 await app.Services.ApplyTenantSchemaMigrationsAsync();

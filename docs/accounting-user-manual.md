@@ -28,6 +28,7 @@ To share this guide, send accounting-user-manual.html. Open that file in a brows
 - [18. Multi-line invoices and customer advances](#18-multi-line-invoices-and-customer-advances)
 - [19. Stocked accessories and integrity controls](#19-stocked-accessories-and-integrity-controls)
 - [20. Non-Accountant Store Operator Guide & Smart Suggestions](#20-non-accountant-store-operator-guide--smart-suggestions)
+- [21. Tenant Onboarding & Offline Deployment Setup Guide](#21-tenant-onboarding--offline-deployment-setup-guide)
 ## 1. Get started
 
 1. For a new account, open the invitation email and follow the activation link. Invitations expire after 24 hours and can be used once.
@@ -480,3 +481,157 @@ The real-time BI Dashboard gives shop owners a complete financial and operationa
 | **Evening Closing** | Collect Multi-Invoice Dues | `Alt+M` | Settle lumpsum customer payments using automatic FIFO allocation. |
 | **Evening Closing** | Review Party Statements | `Alt+P` | Check aging buckets and follow up on customers with balances over 30 days overdue. |
 | **Monthly Closing** | Review Tax & CA Reports | `Accounting > Tax Reports` | Export GSTR-1 and GSTR-3B tax summaries with 1 click for your accountant. |
+
+## 21. Tenant Onboarding & Offline Deployment Setup Guide
+
+### 21.1 End-to-End Automated Onboarding Flow
+
+Siddhi Mobile SaaS provides an automated, multi-tenant onboarding process:
+
+```
+[Store Owner]                                [Platform Admin]
+       |                                             |
+       |-- 1. Fills form at /register-tenant ------->|
+       |   (Store name, slug, email, mobile, GST)    |
+       |                                             |
+       |<-- 2. Receives "Thank You" Email -----------| (Dispatched / Logged)
+       |                                             |
+       |                                             |-- 3. Receives "Action Required" notification
+       |                                             |   (View at /settings/tenant-approvals)
+       |                                             |
+       |                                             |-- 4. Admin clicks "Approve & Provision DB"
+       |                                             |   * PostgreSQL schema created
+       |                                             |   * EF Core migrations executed (40+ tables)
+       |                                             |   * Chart of Accounts (1000..5000) seeded
+       |                                             |   * Indian GST rates (0, 5, 12, 18, 28%) seeded
+       |                                             |   * Store invoice settings initialized
+       |                                             |   * Store Owner account activated
+       |                                             |
+       |<-- 5. Receives "Store Workspace Ready" email|
+       |   (Slug, Username, Login instructions)      |
+       |                                             |
+       |-- 6. Signs in at /login ------------------->|
+       |   (Enters Tenant Slug, Username & Password) |
+```
+
+---
+
+### 21.2 Self-Service Registration (`/register-tenant`)
+
+1. Open the public registration link: `http://localhost:5173/register-tenant` (or click **"Create store workspace"** on the Sign In page).
+2. Enter the store information:
+   - **Store / Business Name**: e.g., `Siddhi Electronics & Mobiles`
+   - **Store Slug**: e.g., `siddhi-electronics` (Auto-generated from store name; this is your unique login identifier)
+   - **GST State Code**: Select from 37 Indian states (e.g., `27 - Maharashtra`)
+   - **GSTIN Number** *(Optional)*: 15-character GSTIN. The system automatically detects and selects your state code.
+   - **Store Address** *(Optional)*: Physical shop address printed on sales invoices.
+3. Enter Owner details:
+   - **Owner Full Name**: e.g., `Pravin Kumar`
+   - **Contact Mobile**: 10-digit mobile number
+   - **Notification Email**: Used to receive your approval and activation details.
+   - **Password & Confirm Password**: Set your desired password for immediate login upon approval.
+4. Click **"Submit Store Registration"**.
+   - The system validates slug uniqueness and registers the store in `PendingApproval` status.
+   - A confirmation notification is dispatched to your email address.
+   - Platform administration is notified to approve the new workspace.
+
+---
+
+### 21.3 Administrator Approvals (`Settings > Store Approvals` or `/admin/tenants`)
+
+Platform administrators / product owners can review and approve registered stores with one click:
+
+1. Sign in and navigate to **Settings > Store Approvals** (`/settings/tenant-approvals` or `/admin/tenants`).
+2. Review the list of stores under **Pending Approvals**:
+   - Verify store name, slug, owner contact information, and state/GSTIN.
+3. Click **"Approve & Provision DB"**:
+   - The system displays a live status indicator while performing automatic setup:
+     1. Creates the isolated PostgreSQL schema (e.g., `tenant_siddhi_electronics_3f2a1b4c`).
+     2. Runs all Entity Framework Core migrations to create business tables.
+     3. Seeds the standard Chart of Accounts (Cash `1000`, Bank `1010`, AR `1100`, Inventory `1200`, AP `2000`, GST `2100`, Sales `4000`, COGS `5000`).
+     4. Seeds GST tax rates: `0%`, `5%`, `12%`, `18%`, `28%`.
+     5. Creates store invoice template settings with state code and GSTIN.
+     6. Creates and activates the Store Owner user with full administrator accounting permissions.
+     7. Sends the **"Store Workspace Ready"** email with login credentials.
+4. If a registration is invalid or spam, click **"Reject"** and enter an optional reason. The applicant is notified accordingly.
+
+---
+
+### 21.4 Offline Standalone Deployment Guide
+
+To deploy this software offline (e.g., on a standalone shop counter PC, laptop, or local LAN server without an internet connection):
+
+#### Step 1: Install Local PostgreSQL
+1. Download and install **PostgreSQL 16 or 17** for Windows (or Linux).
+2. Set the default postgres password (e.g., `siddhi123456`).
+3. Create the database:
+   ```sql
+   CREATE DATABASE accounting_inventory;
+   ```
+
+#### Step 2: Configure `appsettings.json` for Offline Mode
+In `MicroservicesEcosystem/src/AccountingInventory/AccountingInventory.Api/appsettings.json`:
+```json
+{
+  "ConnectionStrings": {
+    "AccountingInventoryDb": "Host=localhost;Port=5432;Database=accounting_inventory;Username=postgres;Password=siddhi123456"
+  },
+  "Deployment": {
+    "Mode": "Offline",
+    "OfflineMode": true
+  },
+  "Email": {
+    "OfflineMode": true,
+    "SmtpHost": "offline",
+    "From": "noreply@siddhi-mobile.local",
+    "AdminEmail": "admin@siddhi-mobile.local"
+  },
+  "Frontend": {
+    "BaseUrl": "http://localhost:5173"
+  }
+}
+```
+> [!NOTE]
+> In Offline Mode (`OfflineMode: true`), email notifications are safely printed directly to application log files and console output. No internet SMTP server or network connection is required.
+
+#### Step 3: Run the Backend API
+Start the backend service:
+```powershell
+# From MicroservicesEcosystem directory
+dotnet run --project src/AccountingInventory/AccountingInventory.Api/AccountingInventory.Api.csproj
+```
+The API starts on `http://localhost:5000` (or configured port). On startup, it automatically migrates the control plane and creates required tables.
+
+#### Step 4: Run the Frontend Application
+Start the frontend web counter:
+```powershell
+# From react-multitenant-saas directory
+npm install
+npm run dev
+```
+The shop counter application is now available at `http://localhost:5173`.
+
+#### Step 5: Initial Offline Bootstrapping
+1. Open `http://localhost:5173/register-tenant` in the browser.
+2. Enter your shop details (e.g., Name: `Siddhi Electronics`, Slug: `siddhi`, Password: `Passw0rd!123`).
+3. Click **Submit Store Registration**.
+4. Open `http://localhost:5173/admin/tenants` (or `/settings/tenant-approvals`).
+5. Click **"Approve & Provision DB"**.
+   - Your local PostgreSQL database schema is immediately provisioned and seeded.
+6. Open `http://localhost:5173/login`, enter:
+   - **Tenant Slug:** `siddhi`
+   - **Username:** `pravin` (or `admin`)
+   - **Password:** `Passw0rd!123`
+7. Start billing phones, scanning IMEIs, managing inventory, and tracking GST offline!
+
+---
+
+### 21.5 Transitioning to Online Cloud SaaS (Future)
+
+When you are ready to transition from offline to online cloud hosting:
+1. **Database:** Point `AccountingInventoryDb` to a cloud-managed PostgreSQL instance (e.g., AWS RDS, DigitalOcean, or Azure Database for PostgreSQL).
+2. **SMTP Configuration:** Set `"OfflineMode": false`, enter real SMTP host, port, username, password, and verified sender email.
+3. **Frontend Domain:** Set `"Frontend:BaseUrl"` to your live domain (e.g., `https://app.siddhimobile.in`).
+4. **Reverse Proxy:** Deploy through `ApiGateway` with SSL/TLS certificate configured.
+All multi-tenant schema isolation, automated registration, and approval pipelines function identically in online mode.
+

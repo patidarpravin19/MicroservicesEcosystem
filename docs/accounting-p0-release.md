@@ -47,4 +47,8 @@ Deploy migration `20261027120000_AccessorySkuInventory` after MandatoryInvoiceIn
 
 Rehearse SKU creation, opening staging/cutover, supplier receipts and payments, mixed purchase bills, weighted-average sales, exact-cost customer returns, whole supplier receipt returns, refunds, write-offs and negative/backdated stock rejection. Compare stock, supplier and tax reports to the ledger. Downgrade refuses to remove used accessory movement history. Ordinary manual control-account postings are now rejected; historical control adjustments require approved FinancialCorrection journals.
 
+## Automated tenant onboarding & control-plane schema release
+
+Deploy migration `20261009120000_AddTenantRegistrationFields` for `TenantDbContext` (control-plane schema `tenant`). It adds the owner contact, GSTIN, store address, initial password hash and approval rejection reason columns to `tenant.tenants`. This migration is automatically applied at application boot via `TenantDbContext.Database.MigrateAsync()`, with idempotent fallback statements in `Program.cs`.
+
 Source validation does not certify the deployment environment. Production sign-off still requires the backup/restore and migration rehearsal, HTTPS/secrets/email configuration, permissions review, monitoring and accountant acceptance described above. No live database migration or deployment is performed by this task.
