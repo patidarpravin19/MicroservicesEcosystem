@@ -112,7 +112,7 @@ internal static class P0ApiChecks
     }
     private sealed class FixtureProvider(string schema):ITenantProvider { public string SchemaName=>schema; }
     private sealed class HttpActor(IHttpContextAccessor http):IRequestIdentity { public Guid? UserId=>Guid.TryParse(http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier),out var id)?id:null; }
-    private sealed class NoMail:IEmailSender { public Task SendAsync(string recipient,string subject,string htmlBody,CancellationToken cancellationToken)=>Task.CompletedTask; }
+    private sealed class NoMail:IEmailSender { public Task SendAsync(string recipient,string subject,string htmlBody,CancellationToken cancellationToken)=>Task.CompletedTask; public Task<bool> SendTestAsync(string recipient, CancellationToken cancellationToken) => Task.FromResult(false); }
     private sealed class FixtureDirectory(DbContextOptions<FixtureDirectory> options):DbContext(options),ITenantDirectoryContext
     {
         public DbSet<Tenant> Tenants=>Set<Tenant>();

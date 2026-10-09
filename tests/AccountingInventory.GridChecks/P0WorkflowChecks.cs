@@ -101,5 +101,5 @@ internal static class P0WorkflowChecks
     }
     private sealed class FixtureIdentity(Guid id) : IRequestIdentity { public Guid? UserId => id; }
     private sealed class FixtureTenant : ITenantContext { public Guid? TenantId => Guid.Parse("11111111-1111-1111-1111-111111111111"); public string? SchemaName => "fixture"; }
-    private sealed class FixtureEmail : IEmailSender { public string Body = ""; public Task SendAsync(string recipient,string subject,string body,CancellationToken ct) { Body=body;return Task.CompletedTask; } }
+    private sealed class FixtureEmail : IEmailSender { public string Body = ""; public Task SendAsync(string recipient,string subject,string body,CancellationToken ct) { Body=body;return Task.CompletedTask; } public Task<bool> SendTestAsync(string recipient, CancellationToken ct) => Task.FromResult(false); }
 }

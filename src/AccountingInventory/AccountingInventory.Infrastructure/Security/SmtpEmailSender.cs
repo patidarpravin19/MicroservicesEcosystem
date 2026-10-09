@@ -10,6 +10,18 @@ public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEm
 {
     public async Task SendAsync(string recipient, string subject, string htmlBody, CancellationToken cancellationToken)
     {
+        await SendCoreAsync(recipient, subject, htmlBody, cancellationToken, allowFallback: true);
+    }
+
+    public Task<bool> SendTestAsync(string recipient, CancellationToken cancellationToken) =>
+        SendCoreAsync(recipient, "Siddhi Mobile test email",
+            "<p>Your existing SMTP email settings successfully sent this test email.</p>",
+            cancellationToken, allowFallback: false);
+
+    private async Task<bool> SendCoreAsync(string recipient, string subject, string htmlBody,
+        CancellationToken cancellationToken, bool allowFallback)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         var section = configuration.GetSection("Email");
         var host = section["SmtpHost"];
         var from = section["From"] ?? "noreply@siddhi-mobile.local";
@@ -22,7 +34,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEm
                                   "To: {Recipient}\nSubject: {Subject}\n\n{HtmlBody}\n" +
                                   "==============================================================",
                                   recipient, subject, htmlBody);
-            return;
+            return false;
         }
 
         try
@@ -38,14 +50,16 @@ public sealed class SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEm
             using var message = new MailMessage(from, recipient, subject, htmlBody) { IsBodyHtml = true };
             cancellationToken.ThrowIfCancellationRequested();
             await client.SendMailAsync(message, cancellationToken);
+            return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (allowFallback && ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Failed to send email to {Recipient} via SMTP. Falling back to offline log.", recipient);
             logger.LogInformation("\n================== [OFFLINE EMAIL FALLBACK] ==================\n" +
                                   "To: {Recipient}\nSubject: {Subject}\n\n{HtmlBody}\n" +
                                   "==============================================================",
                                   recipient, subject, htmlBody);
+            return false;
         }
     }
 }

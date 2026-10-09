@@ -1,6 +1,6 @@
 # Accounting & Inventory User Manual
 
-Version: 1.3 | Updated: 9 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, and the Smart Suggestion Assistant for non-accountants
+Version: 1.4 | Updated: 9 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, and the Smart Suggestion Assistant for non-accountants
 
 For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.
 
@@ -543,6 +543,8 @@ Platform administrators / product owners can review and approve registered store
 
 1. Sign in and navigate to **Settings > Store Approvals** (`/settings/tenant-approvals` or `/admin/tenants`).
 2. Review the list of stores under **Pending Approvals**:
+   - After a successful store registration, click **Refresh** to load the latest requests. Stores awaiting approval or provisioning appear here; approved and rejected stores do not.
+   - If loading fails, review the displayed error and retry **Refresh**. A confirmation email alone does not mean the store has been approved.
    - Verify store name, slug, owner contact information, and state/GSTIN.
 3. Click **"Approve & Provision DB"**:
    - The system displays a live status indicator while performing automatic setup:

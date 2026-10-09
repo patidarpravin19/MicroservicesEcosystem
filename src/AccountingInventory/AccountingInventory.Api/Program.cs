@@ -31,6 +31,7 @@ app.UseSharedRequestLogging();
 app.UsePlatformSecurity();
 
 app.MapAuthEndpoints();
+app.MapEmailEndpoints();
 //app.MapRoleEndpoints();
 app.MapTenantEndpoints();
 app.MapVendorEndpoints();

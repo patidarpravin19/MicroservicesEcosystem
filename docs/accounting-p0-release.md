@@ -17,6 +17,22 @@ Give business users the [step-by-step user manual](accounting-user-manual.md) or
 4. Build/restart the API and deploy the frontend together. Pending migrations run per active tenant at startup; suspended tenants migrate when reactivated. Do not deploy the frontend against the old API. Grant existing staff permissions before they resume writes.
 5. Monitor `/health` for liveness and `/health/ready` for database/registry readiness. Alert on readiness failures, repeated 409 transaction conflicts, failed invitations, and nonzero GL reconciliation differences; retain structured request/correlation logs in your monitoring platform.
 
+## Test email delivery using the API
+
+With the API running, use Swagger or an HTTP client to call `POST /api/email/test`. Supply an `Authorization: Bearer <access-token>` header for a signed-in administrator with `Tenants.Manage`, and `Content-Type: application/json`. No tenant header is required. Request body:
+
+```json
+{ "to": "recipient@example.com" }
+```
+
+The endpoint uses the existing SMTP sender and API configuration, including environment overrides. It sends a fixed subject (`Siddhi Mobile test email`) and HTML message to one validated recipient. Invalid addresses return HTTP 400; missing authentication returns 401 and missing permission returns 403.
+
+HTTP 200 with `sent: true` and `status: "smtpAccepted"` means SMTP accepted the message; check the recipient inbox/spam folder to verify delivery. HTTP 200 with `sent: false` and `status: "offline"` means no email was sent. SMTP/configuration failures return HTTP 502 with a generic error; consult server logs for details. Existing invitation/password email fallback behavior is preserved.
+
+The checked-in settings use offline mode. Real sending requires both `Email__OfflineMode` and `Deployment__OfflineMode` to be false, a real SMTP host, and valid sender/TLS/credential settings. Restart the API after changing configuration supplied through environment variables.
+
+For SMTP submission on port 587, set `Email__EnableSsl=true`. The existing .NET SMTP client uses this setting to issue STARTTLS. A `5.7.0 Must issue a STARTTLS command first` response indicates that TLS is disabled in the effective configuration; check environment overrides as well as `Email:EnableSsl` in appsettings.json, restart the API, and retry the test endpoint.
+
 ## Recovery
 
 Stop writes during a deployment incident. Capture a fresh backup for investigation. Before new correction/opening data exists, schema downgrade can be rehearsed on the restore copy. After these workflows are used, the migration explicitly rejects dropping financial history; recover using the rehearsed pre-upgrade backup and compatible application build. Review and re-enter intervening transactions under accountant supervision. Set and verify your retention, RPO/RTO and backup schedule in the deployment platform.
