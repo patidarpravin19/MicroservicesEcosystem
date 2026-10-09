@@ -81,7 +81,9 @@ public sealed class ImportOpeningBalancesHandler(IAccountingInventoryDbContext d
         if (await db.Products.AnyAsync(x => x.IsOpeningStock && !x.IsActive && x.PurchaseDate > request.CutoverDate, ct))
             throw new ConflictException("All staged opening stock purchase dates must be on/before cutover.");
         var stock = await db.Products.Where(x => stockIds.Contains(x.Id) && (x.IsActive || x.IsOpeningStock) && !x.IsSold && x.PurchaseDate <= request.CutoverDate).ToListAsync(ct);
-        if (stock.Count != stockIds.Length || Net("1200") != stock.Sum(x => decimal.Round(x.PurchasePrice - x.Discount, 2, MidpointRounding.AwayFromZero)))
+        var openingSkus = await db.StockSkus.Where(s => !s.IsActive && db.SkuMovements.Any(m => m.SkuId == s.Id && m.Kind == "OpeningStock")).ToListAsync(ct);
+        if(openingSkus.Any(s => s.LastMovementDate > request.CutoverDate)) throw new ConflictException("Opening SKU stock dates must be on/before cutover.");
+        if (stock.Count != stockIds.Length || Net("1200") != openingSkus.Sum(s => s.InventoryValue) + stock.Sum(x => decimal.Round(x.PurchasePrice - x.Discount, 2, MidpointRounding.AwayFromZero)))
             throw new ConflictException("Opening stock must be available at cutover and exactly match the net cost in account 1200.");
         var existingStock = await db.Products.Where(x => (x.IsActive || x.IsOpeningStock) && !x.IsSold && x.PurchaseDate <= request.CutoverDate).Select(x => x.Id).ToArrayAsync(ct);
         if (existingStock.Except(stockIds).Any()) throw new ConflictException("Include every available stock unit at cutover in the opening reconciliation.");
@@ -102,6 +104,7 @@ public sealed class ImportOpeningBalancesHandler(IAccountingInventoryDbContext d
             rounded.Select(line => (line.AccountId, line.Debit, line.Credit, line.Memo)).ToArray());
         db.JournalEntries.Add(entry);
         db.JournalLines.AddRange(entry.Lines);
+        foreach(var sku in openingSkus) sku.ActivateOpening();
         foreach (var product in stock) product.ActivateOpeningStock();
         db.OpeningSubledgerBalances.AddRange(parties.Select(x => OpeningSubledgerBalance.Create(entry.Id, x.Kind,
             x.PartyId, request.CutoverDate, x.DueDate, x.Reference.ToLowerInvariant(), x.Amount)));

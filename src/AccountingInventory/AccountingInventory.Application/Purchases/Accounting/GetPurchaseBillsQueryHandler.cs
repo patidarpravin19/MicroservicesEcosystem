@@ -26,7 +26,7 @@ public sealed class GetPurchaseBillsQueryHandler(IAccountingInventoryDbContext d
 {
     public async Task<PagedResult<PurchaseBillSummary>> Handle(GetPurchaseBillsQuery request, CancellationToken cancellationToken)
     {
-        var products = db.Products.AsNoTracking().Where(product => product.BillNumber != null && !product.IsOpeningStock);
+        var products = AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db).Where(product => product.BillNumber != null && !product.IsOpeningStock);
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim().ToLower();
@@ -86,7 +86,7 @@ public sealed class GetPurchaseBillDetailsQueryHandler(IAccountingInventoryDbCon
     public async Task<PurchaseBillDetails> Handle(GetPurchaseBillDetailsQuery request, CancellationToken cancellationToken)
     {
         var normalizedBillNumber = request.BillNumber.Trim().ToLower();
-        var invoice = await db.Products.AsNoTracking()
+        var invoice = await AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db)
             .Where(product => product.VendorId == request.VendorId && !product.IsOpeningStock && product.BillNumber != null
                 && product.BillNumber.ToLower() == normalizedBillNumber)
             .GroupBy(product => new { product.VendorId, BillNumber = product.BillNumber!.Trim().ToLower() })

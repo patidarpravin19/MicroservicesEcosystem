@@ -17,6 +17,8 @@ public interface IAccountingInventoryDbContext
     DbSet<Color> Colors { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<ProductModel> ProductModels { get; }
+    DbSet<StockSku> StockSkus { get; }
+    DbSet<SkuMovement> SkuMovements { get; }
     DbSet<Product> Products { get; }
     DbSet<SalesProduct> SalesProducts { get; }
     DbSet<SalesInvoice> SalesInvoices { get; }

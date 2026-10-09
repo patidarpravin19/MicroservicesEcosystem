@@ -89,12 +89,12 @@ public static class LedgerPosting
         return lines.Count == 0 ? null : JournalEntry.Post(sale.SaleDate, "Product sale", "Sale", sale.Id.ToString(), lines);
     }
 
-    public static JournalEntry? ForSalesInvoice(SalesInvoice invoice, IReadOnlyList<Product> products, IReadOnlyDictionary<string, Guid> accounts)
+    public static JournalEntry? ForSalesInvoice(SalesInvoice invoice, IReadOnlyList<Product> products, IReadOnlyDictionary<string, Guid> accounts, decimal skuCost = 0m)
     {
         var grossRevenue = invoice.SubTotal;
         var discount = invoice.Discount;
         var receivable = invoice.TotalAmount;
-        var totalCost = products.Sum(p => decimal.Round(p.PurchasePrice - p.Discount, 2, MidpointRounding.AwayFromZero));
+        var totalCost = skuCost + products.Sum(p => decimal.Round(p.PurchasePrice - p.Discount, 2, MidpointRounding.AwayFromZero));
         if (receivable < 0 || totalCost < 0) throw new ConflictException("Sale amount and inventory cost cannot be negative.");
 
         var lines = new List<(Guid AccountId, decimal Debit, decimal Credit, string? Memo)>();

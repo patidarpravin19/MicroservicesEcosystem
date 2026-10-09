@@ -61,7 +61,7 @@ public sealed class GetDashboardSummaryQueryHandler(IAccountingInventoryDbContex
             .ToListAsync(ct);
 
         var inStockUnits = inStockProducts.Count;
-        var inventoryValuation = inStockProducts.Sum(p => p.Cost);
+        var inventoryValuation = inStockProducts.Sum(p => p.Cost) + (await db.StockSkus.Where(s => s.IsActive).SumAsync(s => (decimal?)s.InventoryValue, ct) ?? 0m);
 
         // 4. Low stock alerts (brands/models with <= 2 units)
         var lowStockGrouped = inStockProducts

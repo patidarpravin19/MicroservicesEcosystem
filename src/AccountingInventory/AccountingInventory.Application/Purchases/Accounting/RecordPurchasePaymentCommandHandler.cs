@@ -17,7 +17,7 @@ public sealed class RecordPurchasePaymentCommandHandler(IAccountingInventoryDbCo
 
         var billNumber = request.BillNumber.Trim();
         var normalized = billNumber.ToLower();
-        var products = db.Products.Where(product => product.VendorId == request.VendorId
+        var products = AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db).Where(product => product.VendorId == request.VendorId
             && product.BillNumber != null && product.BillNumber.ToLower() == normalized);
         if (await products.AnyAsync(x => x.IsOpeningStock, cancellationToken))
             throw new ConflictException("Opening supplier invoices must be settled through Opening Balances outstanding items.");

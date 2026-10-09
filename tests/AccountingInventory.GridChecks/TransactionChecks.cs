@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using AccountingInventory.Application.Sales.Invoices;
+using AccountingInventory.Application.Inventory;
 using AccountingInventory.Application.GeneralLedger;
 using Microsoft.AspNetCore.Http;
 
@@ -119,6 +120,32 @@ internal static class TransactionChecks
                 await Refund(staff.Id);
                 throw new Exception("Refund replay requires the source-specific permission.");
             } catch (ForbiddenException) { }
+            var stockSku = StockSku.Create("CONCURRENT", "Concurrency stock", "8504", "NOS");
+            stockSku.Receive(1, 10, new(2026, 2, 3));
+            verification.StockSkus.Add(stockSku); await verification.SaveChangesAsync();
+            var stockArrivals = 0;
+            var stockReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            async Task<bool> ConsumeStock()
+            {
+                await using var stockDb = new AccountingInventoryDbContext(options, provider);
+                var request = new WriteOffSkuStockCommand(stockSku.Id, new(2026, 2, 3), 1, "Concurrent stock issue");
+                try {
+                    await new BusinessTransactionBehavior<WriteOffSkuStockCommand, Guid>(stockDb, new ProbeIdentity(owner.Id))
+                        .Handle(request, async ct => {
+                            _ = await stockDb.StockSkus.SingleAsync(s => s.Id == stockSku.Id, ct);
+                            if (Interlocked.Increment(ref stockArrivals) == 2) stockReady.TrySetResult();
+                            await stockReady.Task.WaitAsync(TimeSpan.FromSeconds(20), ct);
+                            return await new SkuInventoryHandler(stockDb).Handle(request, ct);
+                        }, default);
+                    return true;
+                } catch (ConflictException) { return false; }
+            }
+            var stockOutcomes = await Task.WhenAll(ConsumeStock(), ConsumeStock());
+            var stockBalance = await verification.StockSkus.AsNoTracking().SingleAsync(s => s.Id == stockSku.Id);
+            if (stockOutcomes.Count(ok => ok) != 1 || stockBalance.Quantity != 0 || stockBalance.InventoryValue != 0
+                || await verification.SkuMovements.CountAsync(m => m.SkuId == stockSku.Id) != 1)
+                throw new Exception("Concurrent SKU deductions must consume stock once and roll back the rejected movement and journal.");
+            Console.WriteLine("PASS: concurrent SKU deductions preserve stock and atomic movement posting.");
             Console.WriteLine("PASS: concurrent transaction conflict, complete rollback and pipeline authorization.");
             Console.WriteLine("PASS: committed invoice/receipt replay, payload mismatch rejection and replay authorization.");
             Console.WriteLine("PASS: refund replay response, single cash posting and source permission denial.");

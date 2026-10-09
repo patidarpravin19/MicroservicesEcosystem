@@ -100,7 +100,7 @@ public sealed class SalesInvoice : AggregateRoot
                 draft.TaxId,
                 draft.CgstRate,
                 draft.SgstRate,
-                draft.IgstRate, draft.HsnSac, draft.UnitOfMeasure);
+                draft.IgstRate, draft.HsnSac, draft.UnitOfMeasure, draft.SkuId);
 
             invoice.Lines.Add(line);
             subTotal += line.TaxableAmount + line.Discount;
@@ -154,6 +154,7 @@ public sealed class SalesInvoiceLine : AggregateRoot
 {
     public Guid SalesInvoiceId { get; private set; }
     public int LineNumber { get; private set; }
+    public Guid? SkuId { get; private set; }
     public InvoiceItemType ItemType { get; private set; }
     public Guid? ProductId { get; private set; }
     public string ItemDescription { get; private set; } = null!;
@@ -190,7 +191,7 @@ public sealed class SalesInvoiceLine : AggregateRoot
         decimal sgstRate,
         decimal igstRate,
         string? hsnSac = null,
-        string unitOfMeasure = "NOS")
+        string unitOfMeasure = "NOS", Guid? skuId = null)
     {
         if (salesInvoiceId == Guid.Empty) throw new ArgumentException("Invoice ID is required.");
         if (string.IsNullOrWhiteSpace(itemDescription)) throw new ArgumentException("Item description is required.");
@@ -205,6 +206,7 @@ public sealed class SalesInvoiceLine : AggregateRoot
             throw new ArgumentException("A serialized line requires one inventory product.");
         if (itemType != InvoiceItemType.SerializedProduct && productId.HasValue && productId != Guid.Empty)
             throw new ArgumentException("Only serialized lines may reference serialized inventory.");
+        if (skuId.HasValue && itemType != InvoiceItemType.StandardProduct) throw new ArgumentException("Only standard lines may reference SKU stock.");
         if (cgstRate < 0 || sgstRate < 0 || igstRate < 0 || cgstRate + sgstRate + igstRate > 100)
             throw new ArgumentException("Invalid tax rates.");
         var grossAmount = decimal.Round(quantity * unitPrice, 2, MidpointRounding.AwayFromZero);
@@ -225,6 +227,7 @@ public sealed class SalesInvoiceLine : AggregateRoot
             LineNumber = lineNumber,
             ItemType = itemType,
             ProductId = productId,
+            SkuId = skuId,
             ItemDescription = itemDescription.Trim(),
             SerialNumber = string.IsNullOrWhiteSpace(serialNumber) ? null : serialNumber.Trim(),
             SerialNumber1 = string.IsNullOrWhiteSpace(serialNumber1) ? null : serialNumber1.Trim(),
@@ -260,4 +263,4 @@ public sealed record SalesInvoiceLineDraft(
     Guid? TaxId,
     decimal CgstRate,
     decimal SgstRate,
-    decimal IgstRate = 0m, string? HsnSac = null, string UnitOfMeasure = "NOS");
+    decimal IgstRate = 0m, string? HsnSac = null, string UnitOfMeasure = "NOS", Guid? SkuId = null);

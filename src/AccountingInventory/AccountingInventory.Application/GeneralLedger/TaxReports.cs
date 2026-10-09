@@ -119,10 +119,15 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
                 0m);
         }).OrderBy(row => row.CgstRate + row.SgstRate).ToList();
 
+        var skuPurchases = await db.SkuMovements.AsNoTracking().Where(m => m.Kind == "Purchase" && m.MovementDate >= fromDate && m.MovementDate <= to).ToListAsync(ct);
+        purchases.AddRange(skuPurchases.Select(m => new TaxReportRateSummary(m.CgstRate,m.SgstRate,m.InventoryValue,m.CgstAmount,m.SgstAmount,
+            m.CgstAmount+m.SgstAmount+m.IgstAmount,m.IgstRate,m.IgstAmount)));
         var notes = await db.InvoiceCorrections.AsNoTracking().Where(x => x.NoteDate >= fromDate && x.NoteDate <= to).ToListAsync(ct);
         var correctedInvoiceIds = notes.Where(n => n.Kind == "Sale").Select(n => n.SourceId).ToArray();
         var correctedInvoices = await db.SalesInvoices.AsNoTracking().Include(i => i.Lines)
             .Where(i => correctedInvoiceIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, ct);
+        var purchaseNoteIds=notes.Where(n => n.Kind == "Purchase").Select(n => n.SourceId).ToArray();
+        var correctedSkuPurchases=await db.SkuMovements.Where(m => purchaseNoteIds.Contains(m.Id) && m.Kind == "Purchase").ToDictionaryAsync(m => m.Id,ct);
         foreach (var note in notes)
         {
             if (note.Kind == "Sale" && correctedInvoices.TryGetValue(note.SourceId, out var invoice))
@@ -131,6 +136,11 @@ public sealed class GetTaxReportHandler(IAccountingInventoryDbContext db)
                 foreach (var line in invoice.Lines)
                     sales.Add(new(line.CgstRate, line.SgstRate, -line.TaxableAmount, -line.CgstAmount,
                         -line.SgstAmount, -(line.CgstAmount + line.SgstAmount + line.IgstAmount), line.IgstRate, -line.IgstAmount));
+                continue;
+            }
+            if(note.Kind == "Purchase" && correctedSkuPurchases.TryGetValue(note.SourceId,out var skuPurchase)) {
+                purchases.Add(new(skuPurchase.CgstRate,skuPurchase.SgstRate,-note.TaxableAmount,-note.CgstAmount,-note.SgstAmount,
+                    -(note.CgstAmount+note.SgstAmount+note.IgstAmount),skuPurchase.IgstRate,-note.IgstAmount));
                 continue;
             }
             var rows = note.Kind == "Sale" ? sales : purchases;

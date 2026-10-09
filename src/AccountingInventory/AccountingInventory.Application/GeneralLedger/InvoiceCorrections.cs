@@ -29,6 +29,10 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             throw new ConflictException("This invoice unit has already been returned or cancelled.");
         await LedgerPosting.EnsurePeriodOpenAsync(db, q.NoteDate, ct);
         var accounts = await LedgerPosting.EnsureSystemAccountsAsync(db, ct);
+        if(q.Kind == "Purchase") {
+            var skuPurchase = await db.SkuMovements.SingleOrDefaultAsync(m => m.Id == q.SourceId && m.Kind == "Purchase",ct);
+            if(skuPurchase is not null) return await ReturnSkuPurchase(q,skuPurchase,accounts,ct);
+        }
         Product? product = null;
         SalesInvoice? invoice = null;
         var invoiceProducts = new List<Product>();
@@ -49,6 +53,16 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
                 foreach (var item in invoiceProducts) item.MarkAvailable();
                 note = InvoiceCorrection.Create("Sale", invoice.Id, invoice.CustomerId, invoice.BillNumber, q.NoteDate, q.Reason,
                     q.Disposition, invoice.TaxableAmount, 0m, 0m, invoice.CgstAmount, invoice.SgstAmount, invoice.TotalAmount, invoice.IgstAmount);
+                var skuSales = await db.SkuMovements.Where(m => m.Kind == "Sale" && m.SourceId == invoice.Id).ToListAsync(ct);
+                foreach (var movement in skuSales) {
+                    var sku = await db.StockSkus.SingleAsync(s => s.Id == movement.SkuId,ct);
+                    if(q.Disposition == "Restock") sku.Receive(-movement.Quantity,-movement.InventoryValue,q.NoteDate);
+                    else {
+                        sku.RecordDiscardedReturn(-movement.Quantity,q.NoteDate);
+                        db.SkuMovements.Add(SkuMovement.Create(sku.Id,q.NoteDate,"ReturnWriteOff",note.Id,movement.Quantity,movement.InventoryValue,q.Reason));
+                    }
+                    db.SkuMovements.Add(SkuMovement.Create(sku.Id,q.NoteDate,"CustomerReturn",note.Id,-movement.Quantity,-movement.InventoryValue,q.Reason));
+                }
                 invoice.Cancel();
             }
             else
@@ -113,6 +127,27 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
         return note;
     }
 
+    private async Task<InvoiceCorrection> ReturnSkuPurchase(ReturnInvoiceCommand q,SkuMovement purchase,IReadOnlyDictionary<string,Guid> accounts,CancellationToken ct)
+    {
+        if(q.Disposition != "Supplier" || q.NoteDate < purchase.MovementDate) throw new ConflictException("Use Supplier disposition and a date on/after purchase.");
+        if(await db.PurchasePayments.AnyAsync(p => p.VendorId == purchase.VendorId && p.BillNumber.ToLower() == purchase.BillNumber!.ToLower() && p.PaymentDate > q.NoteDate,ct))
+            throw new ConflictException("Supplier return cannot precede bill payments.");
+        var sku=await db.StockSkus.SingleAsync(s => s.Id == purchase.SkuId,ct);
+        var cost=sku.Issue(purchase.Quantity,q.NoteDate);
+        var note=InvoiceCorrection.Create("Purchase",purchase.Id,purchase.VendorId!.Value,purchase.BillNumber!,q.NoteDate,q.Reason,"Supplier",
+            purchase.InventoryValue,purchase.CgstRate,purchase.SgstRate,purchase.CgstAmount,purchase.SgstAmount,purchase.TotalAmount,purchase.IgstAmount);
+        db.InvoiceCorrections.Add(note);
+        db.SkuMovements.Add(SkuMovement.Create(sku.Id,q.NoteDate,"SupplierReturn",note.Id,-purchase.Quantity,-cost,q.Reason));
+        var lines=new List<(Guid,decimal,decimal,string?)>();
+        if(purchase.TotalAmount>0) lines.Add((accounts["2000"],purchase.TotalAmount,0,"Supplier credit"));
+        if(cost>0) lines.Add((accounts["1200"],0,cost,"Accessory stock returned"));
+        var gst=purchase.CgstAmount+purchase.SgstAmount+purchase.IgstAmount;
+        if(gst>0) lines.Add((accounts["2200"],0,gst,"Input GST reversed"));
+        var variance=cost-purchase.InventoryValue;
+        if(variance!=0) lines.Add((accounts["5000"],Math.Max(variance,0),Math.Max(-variance,0),"Purchase return cost variance"));
+        if(lines.Count>0) LedgerPosting.Add(db,JournalEntry.Post(q.NoteDate,q.Reason,"InvoiceCorrection",note.Id.ToString(),lines));
+        await db.SaveChangesAsync(ct);return note;
+    }
     public async Task<CorrectionRefundSummary> Handle(RefundCorrectionCommand q, CancellationToken ct)
     {
         var note = await db.InvoiceCorrections.SingleOrDefaultAsync(x => x.Id == q.CorrectionId, ct)
@@ -155,7 +190,7 @@ public sealed class InvoiceCorrectionHandler(IAccountingInventoryDbContext db, I
             return Math.Max(0, Math.Min(n.TotalAmount, paid + invoicePaid) - refunded);
         }
         var bill = n.BillNumber.ToLower();
-        var total = await db.Products.Where(x => x.VendorId == n.PartyId && x.BillNumber != null && x.BillNumber.ToLower() == bill)
+        var total = await AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db).Where(x => x.VendorId == n.PartyId && x.BillNumber != null && x.BillNumber.ToLower() == bill)
             .SumAsync(x => (decimal?)x.TotalAmount, ct) ?? 0;
         var credits = await db.InvoiceCorrections.Where(x => x.Kind == "Purchase" && x.PartyId == n.PartyId && x.BillNumber.ToLower() == bill && x.NoteDate <= date)
             .SumAsync(x => (decimal?)x.TotalAmount, ct) ?? 0;

@@ -67,7 +67,8 @@ public sealed class OpeningReconciliationHandler(IAccountingInventoryDbContext d
         var settlements = await (from s in db.OpeningSettlements join o in db.OpeningSubledgerBalances on s.OpeningBalanceId equals o.Id
             where s.PaymentDate <= date select new { o.Kind, s.Amount }).ToArrayAsync(ct);
         var openingJournal = await db.JournalEntries.Where(x => x.SourceType == "OpeningBalances").Select(x => (DateOnly?)x.JournalDate).SingleOrDefaultAsync(ct);
-        var purchasePayable = purchases.Where(x => x.BillNumber != null && (!openingJournal.HasValue || x.PurchaseDate > openingJournal.Value)).Sum(x => x.TotalAmount);
+        var skuPurchases = await db.SkuMovements.Where(m => m.Kind == "Purchase" && m.MovementDate <= date).ToListAsync(ct);
+        var purchasePayable = skuPurchases.Sum(m => m.TotalAmount) + purchases.Where(x => x.BillNumber != null && (!openingJournal.HasValue || x.PurchaseDate > openingJournal.Value)).Sum(x => x.TotalAmount);
         var ar = sales.Sum(x => x.TotalAmount) + invoices.Sum(i => i.TotalAmount) - receipts - advanceAmount + advanceRefunds - notes.Where(x => x.Kind == "Sale").Sum(x => x.TotalAmount)
             + refunds.Where(x => x.Kind == "Sale").Sum(x => x.Amount) + opening.Where(x => x.Kind == "Customer").Sum(x => x.Amount)
             - settlements.Where(x => x.Kind == "Customer").Sum(x => x.Amount);
@@ -79,11 +80,16 @@ public sealed class OpeningReconciliationHandler(IAccountingInventoryDbContext d
             join account in db.ChartAccounts on line.AccountId equals account.Id
             where entry.SourceType == "SalesInvoice" && account.Code == "1200" && entry.JournalDate <= date
             select new { entry.SourceId, Cost = line.Credit - line.Debit }).ToListAsync(ct);
-        var stock = purchases.Sum(x => x.PurchasePrice - x.Discount)
+        var skuOpening = await db.SkuMovements.Where(m => m.Kind == "OpeningStock" && m.MovementDate <= date).SumAsync(m => (decimal?)m.InventoryValue,ct) ?? 0m;
+        var stock = skuOpening + skuPurchases.Sum(m => m.InventoryValue) + purchases.Sum(x => x.PurchasePrice - x.Discount)
             - sales.Sum(x => x.ProductPrice) - invoiceCosts.Sum(c => c.Cost)
             + notes.Where(x => x.Kind == "Sale" && x.Disposition == "Restock").Sum(x => sales.FirstOrDefault(s => s.Id == x.SourceId)?.ProductPrice ?? invoiceCosts.Where(c => c.SourceId == x.SourceId.ToString()).Sum(c => c.Cost))
             - notes.Where(x => x.Kind == "Purchase").Sum(x => x.TaxableAmount)
             - (await db.InventoryAdjustments.Where(x => x.AdjustmentDate <= date).SumAsync(x => (decimal?)x.Cost, ct) ?? 0);
+        stock -= await db.SkuMovements.Where(m => m.Kind == "WriteOff" && m.MovementDate <= date).SumAsync(m => (decimal?)-m.InventoryValue,ct) ?? 0m;
+        var skuPurchaseIds = skuPurchases.Select(m => m.Id).ToArray();
+        stock += notes.Where(n => n.Kind == "Purchase" && skuPurchaseIds.Contains(n.SourceId)).Sum(n => n.TaxableAmount);
+        stock += await db.SkuMovements.Where(m => m.Kind == "SupplierReturn" && m.MovementDate <= date).SumAsync(m => (decimal?)m.InventoryValue,ct) ?? 0m;
         async Task<decimal> Ledger(string code, bool credit)
         {
             var net = await (from l in db.JournalLines join e in db.JournalEntries on l.JournalEntryId equals e.Id

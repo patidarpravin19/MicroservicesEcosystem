@@ -36,6 +36,16 @@ internal static class P0Configurations
         model.Entity<SalesInvoiceReceipt>().HasOne<CustomerAdvance>().WithMany().HasForeignKey(x => x.AdvanceId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<CustomerAdvance>().HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<CustomerAdvanceRefund>().HasOne<CustomerAdvance>().WithMany().HasForeignKey(x => x.AdvanceId).OnDelete(DeleteBehavior.Restrict);
+        Configure<StockSku>(model, "stock_skus");
+        Configure<SkuMovement>(model, "sku_movements");
+        model.Entity<StockSku>().Property(s => s.Quantity).HasPrecision(18,4);
+        model.Entity<StockSku>().Property(s => s.Code).HasMaxLength(40);
+        model.Entity<StockSku>().HasIndex(s => s.Code).IsUnique();
+        model.Entity<SkuMovement>().Property(s => s.Quantity).HasPrecision(18,4);
+        model.Entity<SkuMovement>().HasOne<StockSku>().WithMany().HasForeignKey(s => s.SkuId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<SkuMovement>().HasOne<Vendor>().WithMany().HasForeignKey(s => s.VendorId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<SkuMovement>().HasIndex(s => new {s.SkuId,s.MovementDate});
+        model.Entity<SalesInvoiceLine>().HasOne<StockSku>().WithMany().HasForeignKey(s => s.SkuId).OnDelete(DeleteBehavior.Restrict);
         Configure<SalesInvoice>(model, "sales_invoices");
         Configure<SalesInvoiceLine>(model, "sales_invoice_lines");
         model.Entity<SalesInvoice>().HasIndex(x => x.BillNumber).IsUnique();

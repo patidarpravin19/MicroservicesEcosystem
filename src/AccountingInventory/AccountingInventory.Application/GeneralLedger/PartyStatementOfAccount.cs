@@ -364,7 +364,7 @@ public sealed class GetPartyStatementHandler(IAccountingInventoryDbContext db)
         }
 
         // 2. Vendor purchases (grouping by PurchaseDate & BillNumber)
-        var products = await db.Products.AsNoTracking()
+        var products = await AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db)
             .Where(p => p.VendorId == vendorId && !p.IsOpeningStock && !p.IsDeleted)
             .ToListAsync(ct);
 

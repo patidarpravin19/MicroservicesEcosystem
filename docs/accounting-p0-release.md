@@ -29,7 +29,7 @@ Stop writes during a deployment incident. Capture a fresh backup for investigati
 - Record a successful restore and upgrade rehearsal using your deployment backup/credentials; capture monitoring and alert evidence.
 - Obtain accountant review of opening balances, historical differences and credit/debit-note treatment, then business acceptance of the workflows. These approvals cannot be substituted by automated code checks.
 
-Full-unit returns are implemented. Whole multi-line invoice returns are also implemented. Partial invoice returns, partial price adjustments, SKU quantity inventory and statutory reporting expansion remain separately scoped work.
+Full-unit returns are implemented. Whole multi-line invoice returns are also implemented. Partial invoice returns, partial price adjustments and statutory reporting expansion remain separately scoped work.
 
 Operational postings and opening settlements must be dated after the cutover date. Opening stock is excluded from new purchase bills and input-tax reports; its historical balances belong in the cutover journal. Use View note to print credit/debit notes with frozen invoice details, tax reversals and recorded refund history.
 
@@ -40,3 +40,11 @@ Deploy migration `20261026120000_MandatoryInvoiceIntegrity` with this API and fr
 The downgrade rejects removing used receipts, advances, request records, IGST notes or invoice particulars that would lose financial history. Do not bypass this guard. No live tenant migration is performed as part of source-code validation.
 
 Acceptance must include multi-line mixed-rate and interstate invoices, duplicate serialized-product rejection, fractional quantities, customer allocation overpayments, advance application/refund, full invoice return, historical statement/aging, GST rate-bucket reversal and lost-response replay. The grid checks cover ledger/subledger reconciliation, authorization and actual committed invoice/receipt replay; browser checks cover frozen invoice printing and retained retry keys. These automated checks complement the restore rehearsal and business acceptance above.
+
+## Accessory inventory and integrity release
+
+Deploy migration `20261027120000_AccessorySkuInventory` after MandatoryInvoiceIntegrity, together with the updated API and frontend. It adds SKU balances, immutable quantity/value movements and optional invoice SKU references. Existing standard invoice lines remain historical untracked lines; new accessory lines must reference a SKU. Do not reconstruct stock from old accessory invoice descriptions: count and reconcile actual stock before staging opening quantities or recording a documented acquisition.
+
+Rehearse SKU creation, opening staging/cutover, supplier receipts and payments, mixed purchase bills, weighted-average sales, exact-cost customer returns, whole supplier receipt returns, refunds, write-offs and negative/backdated stock rejection. Compare stock, supplier and tax reports to the ledger. Downgrade refuses to remove used accessory movement history. Ordinary manual control-account postings are now rejected; historical control adjustments require approved FinancialCorrection journals.
+
+Source validation does not certify the deployment environment. Production sign-off still requires the backup/restore and migration rehearsal, HTTPS/secrets/email configuration, permissions review, monitoring and accountant acceptance described above. No live database migration or deployment is performed by this task.

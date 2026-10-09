@@ -114,10 +114,19 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 throw new ConflictException("The selected tax is inactive or does not exist.");
         }
 
+        var skuIds = request.Lines.Where(l => l.SkuId.HasValue).Select(l => l.SkuId!.Value).Distinct().ToArray();
+        var skus = await db.StockSkus.Where(s => skuIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, cancellationToken);
+        if (skus.Count != skuIds.Length) throw new NotFoundException("Selected SKU does not exist.");
+        foreach (var line in request.Lines.Where(l => l.ItemType == InvoiceItemType.StandardProduct))
+            if (!line.SkuId.HasValue) throw new ConflictException("Select stocked SKU for an accessory line; use Service for non-stock charges.");
         var billNumber = await db.GenerateSalesBillNumberAsync(request.InvoiceDate.Year, cancellationToken);
 
         var drafts = request.Lines.Select(l =>
         {
+            if (l.SkuId.HasValue) {
+                var sku = skus[l.SkuId.Value];
+                l = l with { ItemDescription = sku.Name, HsnSac = sku.HsnSac, UnitOfMeasure = sku.UnitOfMeasure };
+            }
             var product = l.ProductId.HasValue ? productsToRelieve.SingleOrDefault(p => p.Id == l.ProductId.Value) : null;
             var tax = l.TaxId.HasValue && taxes.TryGetValue(l.TaxId.Value, out var selectedTax) ? selectedTax : null;
             if (tax is null && (l.CgstRate != 0 || l.SgstRate != 0 || l.IgstRate != 0))
@@ -164,7 +173,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
                 l.TaxId,
                 cgstRate,
                 sgstRate,
-                igstRate, l.HsnSac, l.UnitOfMeasure);
+                igstRate, l.HsnSac, l.UnitOfMeasure, l.SkuId);
         }).ToList();
 
         var invoice = SalesInvoice.Create(
@@ -183,7 +192,12 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
 
         // General Ledger posting for the multi-line invoice
         var ledgerAccounts = await LedgerPosting.EnsureSystemAccountsAsync(db, cancellationToken);
-        var saleJournal = LedgerPosting.ForSalesInvoice(invoice, productsToRelieve, ledgerAccounts);
+        decimal skuCost = 0;
+        foreach (var line in invoice.Lines.Where(l => l.SkuId.HasValue)) {
+            var sku = skus[line.SkuId!.Value]; var cost = sku.Issue(line.Quantity, invoice.InvoiceDate); skuCost += cost;
+            db.SkuMovements.Add(SkuMovement.Create(sku.Id,invoice.InvoiceDate,"Sale",invoice.Id,-line.Quantity,-cost,invoice.BillNumber));
+        }
+        var saleJournal = LedgerPosting.ForSalesInvoice(invoice, productsToRelieve, ledgerAccounts, skuCost);
         if (saleJournal is not null)
         {
             LedgerPosting.Add(db, saleJournal);
@@ -315,7 +329,7 @@ public sealed class CreateSalesInvoiceCommandHandler(IAccountingInventoryDbConte
             l.CgstAmount,
             l.SgstAmount,
             l.IgstAmount,
-            l.TotalAmount, l.HsnSac, l.UnitOfMeasure)).ToList();
+            l.TotalAmount, l.HsnSac, l.UnitOfMeasure, l.SkuId)).ToList();
 
         var paymentDtos = receipt is not null
             ? new List<SalesInvoiceReceiptDto>

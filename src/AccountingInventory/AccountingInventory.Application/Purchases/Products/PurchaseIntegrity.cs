@@ -40,7 +40,7 @@ public static class PurchaseIntegrity
             var date = first.PurchaseDate ?? today;
             if (invoice.Any(row => (row.PurchaseDate ?? today) != date || row.PaymentTermsDays != first.PaymentTermsDays))
                 throw new ConflictException("All units on a vendor bill must have the same invoice date and payment terms.");
-            if (await db.Products.AnyAsync(row => row.VendorId == first.VendorId && row.BillNumber != null
+            if (await AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db).AnyAsync(row => row.VendorId == first.VendorId && row.BillNumber != null
                     && row.BillNumber.ToLower() == invoice.Key.Bill
                     && (row.PurchaseDate != date || row.PaymentTermsDays != first.PaymentTermsDays), ct))
                 throw new ConflictException("The invoice date and payment terms differ from this vendor's existing bill.");

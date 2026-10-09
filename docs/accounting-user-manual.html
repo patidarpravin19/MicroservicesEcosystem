@@ -12,12 +12,14 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 @media print{@page{size:A4;margin:18mm}body{background:white;font-size:11pt}main{margin:0;padding:0;max-width:none}.print-tools{display:none}h2,h3{break-after:avoid}tr{break-inside:avoid}a{color:inherit;text-decoration:none}table{font-size:9pt}}
 </style></head><body><main><div class="print-tools"><button onclick="window.print()">Print / Save PDF</button></div>
 <h1 id='accounting-inventory-user-manual'>Accounting &amp; Inventory User Manual</h1>
-<p>Version: 1.1 | Updated: 8 October 2026 | Covers the current accounting workflows</p>
+<p>Version: 1.3 | Updated: 9 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, and the Smart Suggestion Assistant for non-accountants</p>
 <p>For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.</p>
 <p>To share this guide, send accounting-user-manual.html. Open that file in a browser and choose Print / Save PDF for a paper or PDF copy. Keep the version and date with any distributed copy.</p>
 <h2 id='contents'>Contents</h2>
 <ul>
 <li><a href="#18-multi-line-invoices-and-customer-advances">18. Multi-line invoices and customer advances</a></li>
+<li><a href="#19-stocked-accessories-and-integrity-controls">19. Stocked accessories and integrity controls</a></li>
+<li><a href="#20-non-accountant-store-operator-guide--smart-suggestions">20. Non-Accountant Store Operator Guide &amp; Smart Suggestions</a></li>
 <li><a href="#1-get-started">1. Get started</a></li>
 <li><a href="#2-owner-invite-staff-and-grant-access">2. Owner: invite staff and grant access</a></li>
 <li><a href="#3-set-up-products-and-bill-details">3. Set up products and bill details</a></li>
@@ -298,7 +300,7 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 <p>Prerequisites: sales permission, available serialized stock where applicable, configured seller bill details and active tax rates. GST-registered sellers must provide their state, the place of supply and a valid HSN/SAC code for each line.</p>
 <ol>
 <li>Open Sale &gt; Invoices and create a new invoice. Select the customer and check the contact details, GSTIN and place of supply.</li>
-<li>Add serialized products, standard items or services. A serialized product can appear once with quantity 1. Standard and service quantities support four decimal places; these lines do not maintain SKU stock quantities.</li>
+<li>Add serialized products, standard items or services. A serialized product can appear once with quantity 1. Accessory and service quantities support four decimal places. Accessory lines require a stocked SKU and deduct quantity and inventory cost; service lines do not affect stock.</li>
 <li>Enter the tax-exclusive unit price, discount, HSN/SAC and unit of measure (for example NOS). Select an active tax rate. The seller state and place of supply determine CGST/SGST or IGST. Check the displayed totals before saving.</li>
 <li>If collecting an initial payment, enter its amount, method and date. Money supports two decimal places. Non-cash payments require a reference, except the Other method. Payments cannot predate the invoice.</li>
 <li>Save and print the invoice. Printed buyer, seller, serial numbers, HSN/SAC and amounts come from the saved invoice snapshot, even after master details change.</li>
@@ -308,4 +310,96 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 <p>For a whole invoice return, open Accounting &gt; Returns &amp; Corrections, select the invoice, date and reason, then choose whether serialized stock is restocked or written off. All invoice lines are reversed together. Record any customer refund separately, limited to credit already paid. The cancelled invoice remains available in history and cannot receive new payments. Partial line returns require a separately scoped workflow.</p>
 <p>Use customer statements and aging with an as-of date to check historical balances. Returns, receipts and refunds affect the report on their own dates; later cancellations do not erase an earlier outstanding balance. GST reports include original invoices and dated reversals, including IGST and mixed tax rates. Customer history opens each invoice using its corresponding bill page. Legacy single-product bills retain their existing payment workflow.</p>
 <p>If a payment request loses its response, repeat the same action in the same browser session with unchanged details. The saved retry key allows the API to return the committed result without posting twice. Changing details creates a different request; first check invoice or customer history when uncertain whether an earlier transaction succeeded.</p>
+<h2 id='19-stocked-accessories-and-integrity-controls'>19. Stocked accessories and integrity controls</h2>
+<p>Prerequisites: create active suppliers and GST rates. SKU creation requires catalog permission; purchases and supplier returns require purchase permission; write-offs require inventory permission; opening stock requires accounting permission. Multi-line sales require sales permission.</p>
+<ol>
+<li>Open Purchase &gt; Stock Movements and find Accessory SKU inventory. Enter a unique SKU code, accessory name, HSN and unit (such as NOS), then choose Create SKU.</li>
+<li>To enter a purchase, select the SKU and supplier, supplier bill number, stock date, quantity, tax-exclusive unit cost and payment terms. Select GST and tick Interstate purchase (IGST) only when appropriate for that supplier invoice. Choose Receive stock.</li>
+<li>The stock quantity and carrying value increase. The supplier bill appears in Purchase accounting, with its payable and GST recorded. Use the existing supplier payment page to pay it. All items on a supplier bill must use the same invoice date and payment terms. After payments or returns are recorded, enter further stock under a separate bill.</li>
+<li>To sell an accessory, add an item to a multi-line sales invoice, keep the line type Accessory, select its SKU and enter selling price, quantity and tax. Saving deducts stock and posts cost of goods sold. Select Service for a non-stock charge.</li>
+<li>A whole customer invoice return restores the original sold quantity and cost when Restock is chosen. WriteOff returns reverse the sale and expense the returned cost without making those items available again.</li>
+<li>To return purchased accessories, select the whole purchase receipt under Accessory supplier return, enter the date and reason and choose Return receipt to supplier. Available quantity must cover the receipt quantity. The credit reverses the original supplier amount and GST; any difference between original purchase cost and current carrying cost is posted as a cost variance. Record supplier refunds through Returns &amp; Corrections.</li>
+<li>To remove damaged or missing accessories, select the SKU, date, quantity and reason, then choose Write off quantity. Check the stock movement ledger and reconciliation report afterwards.</li>
+</ol>
+<p>Accessory costs use moving average. A sale or write-off consumes the proportionate carrying value, rounded to two decimals; issuing the final quantity consumes the exact remaining value. Customer returns restore the recorded original sale cost. Enter all movements in chronological order: dates cannot precede the latest movement for that SKU, and quantities cannot reduce stock below zero. Whole receipt and whole invoice returns are supported; partial returns, warehouse transfers and batch/expiry tracking require separately scoped workflows.</p>
+<p>For stock already held at cutover, create a new SKU and use Stage opening SKU stock before importing the opening journal. Enter the opening date, quantity and carrying unit cost. Staged stock is unavailable for sale or write-off. Include its value, together with serialized stock cost, in account 1200 in Opening Balances. The opening import checks the total and activates staged SKU stock. Opening stock is excluded from new supplier purchases and input GST reports; bring forward any supplier outstanding amounts using opening vendor items.</p>
+<p>Serialized write-offs must be dated on/after purchase and the customer return that restored the unit. Ordinary manual journals cannot post to accounts 1100, 1200 or 2000. Use customer, supplier or inventory workflows; historical ledger adjustments require an approved FinancialCorrection request and reconciliation review.</p>
+<p>Customer history now shows Net received: cash and bank receipts plus original advances, less customer and advance refunds. Applying an advance is not counted again as new money. Individual invoice payment histories still show the applied credit.</p>
+<p>For GST invoices, save Home State (GST) in Settings &gt; Customer Bill, then choose Place of Supply (State) on the invoice. Missing supplier settings are displayed explicitly rather than defaulting to Maharashtra.</p>
+<h2 id='20-non-accountant-store-operator-guide--smart-suggestions'>20. Non-Accountant Store Operator Guide &amp; Smart Suggestions</h2>
+<p>Designed for store owners, retail sales staff, and cashiers who do not possess formal bookkeeping or accounting training. This system automates double-entry accounting, Indian GST rate determinations, stock relieving, and ledger reconciliations behind the scenes while presenting an intuitive, self-explanatory retail interface.</p>
+<h3>20.1 Zero-accounting automation: what happens behind the scenes</h3>
+<p>In traditional software such as Tally Prime, operators must manually select voucher types (F4 Contra, F5 Payment, F6 Receipt, F7 Journal, F8 Sales, F9 Purchase), specify debit and credit account ledgers, and compute tax splits. In this system, all of that bookkeeping is completely automated:</p>
+<ol>
+<li><strong>Instant Sales Invoicing</strong>: Creating an invoice automatically posts <code>Accounts Receivable (1100)</code> and <code>Sales Revenue (4000)</code>.</li>
+<li><strong>Automated Indian GST</strong>: Automatically calculates and separates tax into <code>CGST (2100)</code> and <code>SGST (2100)</code> for local sales, or <code>IGST (2100)</code> for interstate sales based on Place of Supply.</li>
+<li><strong>Automated Stock Deduction &amp; Costing</strong>: Adding a serialized phone or stocked accessory automatically relieves <code>Inventory (1200)</code> and posts <code>Cost of Goods Sold (5000)</code> using real-time FIFO and moving average costs.</li>
+<li><strong>Receipts &amp; Ledgers</strong>: Payments automatically update Cash/Bank balances and reconcile customer balances in real time.</li>
+</ol>
+<h3>20.2 Smart billing assistant &amp; proactive customer suggestions (Sale &gt; Invoices)</h3>
+<p>When entering a new multi-line sales invoice, the interface provides intelligent assistive cards and one-click shortcuts:</p>
+<ul>
+<li><strong>💡 Plain-English Billing Assistant</strong>: Click <strong>"💡 How It Works (Quick Tour)"</strong> at the top of the invoice form at any time for an on-screen visual summary of customer balance checks, IMEI locking, GST splits, and payment entries.</li>
+<li><strong>Proactive Customer Dues &amp; Advance Suggestions</strong>:
+<ul>
+<li>As soon as you select a customer by typing their name or mobile number, the system automatically checks their historical account balance in the background.</li>
+<li>If the customer has unpaid bills from earlier purchases, a yellow suggestion banner alerts you immediately: <em>"💡 Smart Suggestion: Customer has ₹X unpaid balance across Y past bills. Consider collecting old dues together with this bill."</em></li>
+<li>If the customer holds unused advance store credit, a green suggestion banner informs you: <em>"✨ Advance Credit Available: Customer has ₹X in store credit. Can be applied to settle bills in Multi-Pay."</em></li>
+</ul></li>
+<li><strong>1-Click Smart Payment Shortcuts</strong>: Instead of manually checking boxes and typing exact rupee amounts, select any of the one-click preset buttons:
+<ul>
+<li><strong>💵 Full Cash</strong>: Instantly marks the invoice as collected in full and sets payment mode to Cash.</li>
+<li><strong>📱 Full UPI / QR</strong>: Automatically fills the exact bill total and sets payment mode to UPI (GPay / PhonePe / Paytm).</li>
+<li><strong>💳 Card Swipe</strong>: Automatically fills the exact bill total and sets payment mode to Card.</li>
+<li><strong>⏳ Pay Later (Credit Bill)</strong>: Marks the bill as sold on credit (₹0 paid today); the invoice balance is automatically logged to the customer's ledger for follow-up.</li>
+</ul></li>
+<li><strong>Quick-Add Stocked Accessories</strong>: If your shop has stocked accessories (screen guards, back covers, chargers), 1-click suggestion chips appear above the items table to add them instantly with stock availability counts.</li>
+<li><strong>Automatic Indian Place of Supply &amp; GST Split</strong>: The system checks your shop's registered state against the customer's state code. Local sales apply a 50/50 split between CGST and SGST; interstate sales apply 100% IGST. A color-coded status badge confirms the tax mode.</li>
+<li><strong>High-Speed Keyboard Entry (Tally-Speed Hotkeys)</strong>: <code>Alt+N</code> to add a phone, <code>Alt+A</code> to add an accessory, <code>Ctrl+Enter</code> or <code>Alt+S</code> to post and print, <code>Esc</code> to cancel.</li>
+</ul>
+<h3>20.3 Smart multi-invoice payment allocation (Sale &gt; Invoices &gt; Smart Multi-Pay)</h3>
+<p>When a customer pays a lumpsum amount against multiple past unpaid bills:</p>
+<ol>
+<li>Open <strong>Smart Multi-Pay</strong> (<code>Alt+M</code> or select <strong>Smart Multi-Pay</strong> from the invoice list).</li>
+<li>Select the customer from the dropdown. The system automatically lists all unpaid bills in chronological order (oldest to newest) with total balance due.</li>
+<li>Use the <strong>💡 Smart Suggested Payment Amounts</strong>: <code>Clear All Dues</code>, <code>Pay Half</code>, or <code>Round Figure</code>.</li>
+<li><strong>Auto-Allocate FIFO (Oldest First)</strong>: Keep FIFO selected. The system automatically settles the customer's oldest bills first. If the customer pays more than their total outstanding balance, the excess amount is <strong>safely saved as an Advance Store Credit</strong> on their account for future visits. A live preview confirms the exact breakdown.</li>
+</ol>
+<h3>20.4 Understanding customer and vendor ledgers (Accounting &gt; Party Statement)</h3>
+<p>To check a complete history of transactions for any customer or supplier without accounting confusion:</p>
+<ul>
+<li>Open <strong>Accounting &gt; Party Statement</strong> (<code>Alt+P</code>).</li>
+<li>Click <strong>"💡 How to Read Ledgers"</strong> at any time to view the plain-English explanation:
+<ul>
+<li><strong>Customer Statement</strong>: Debit (+) = Phones or accessories sold on bill; Credit (-) = Payments received (Cash, UPI, Card); Closing Balance Dr = Money customer owes you today; Closing Balance Cr = Customer advance store credit.</li>
+<li><strong>Vendor Statement</strong>: Credit (+) = Stock purchased from supplier; Debit (-) = Payments sent to supplier; Closing Balance Cr = Money you owe supplier; Closing Balance Dr = Advance money given to supplier.</li>
+</ul></li>
+<li><strong>Color-Coded Aging &amp; Overdue Insights</strong>: 0–30 Days (Green, normal cycle), 31–60 Days (Blue, due soon), 61–90 Days (Amber, overdue), 90+ Days (Rose, critical overdue).</li>
+<li><strong>Smart Next Action Suggestions</strong>: 1-click <code>Collect Payment via Multi-Pay</code> button appears when balance is due; <code>All Settled (Zero Balance)</code> badge appears when fully paid.</li>
+<li><strong>Export &amp; Print</strong>: Export the full chronological ledger to Excel/CSV with running balances, or print a formal stationery Statement of Account for customer sharing.</li>
+</ul>
+<h3>20.5 Daily operations from the Business Intelligence Dashboard (Dashboard / Home)</h3>
+<p>The real-time BI Dashboard gives shop owners a complete financial and operational overview with plain-English KPI explanations:</p>
+<ul>
+<li><strong>Monthly Revenue</strong>: Total sales billed during the current calendar month.</li>
+<li><strong>Receivables (AR)</strong>: Money customers currently owe your shop across all unpaid bills.</li>
+<li><strong>Payables (AP)</strong>: Money you owe to phone suppliers and distributors.</li>
+<li><strong>Net GST Due</strong>: Output GST collected minus Input GST paid on purchases (tax due to government).</li>
+<li><strong>Stock Valuation</strong>: Total wholesale purchase value of all phones and accessories currently in stock.</li>
+<li><strong>In-Stock Units</strong>: Total physical phone devices available for immediate sale.</li>
+<li><strong>💡 Shopkeeper's 4-Step Daily Workflow Banner</strong>: Click <strong>"💡 Shopkeeper's Guide"</strong> in the top header at any time for the four-step store routine: Buy &amp; Receive Stock, Fast Billing, Smart Multi-Pay, and Party Ledgers.</li>
+<li><strong>Smart Proactive Store Insights</strong>: Automatically notifies you whenever receivables are pending or when GST reports are ready for your CA.</li>
+</ul>
+<h3>20.6 Daily store routine checklist</h3>
+<div class="table-wrap"><table><tbody>
+<tr><th>Time of day</th><th>Task</th><th>Keyboard / Menu shortcut</th><th>Expected outcome</th></tr>
+<tr><td><strong>Morning Opening</strong></td><td>Check BI Dashboard</td><td><code>Home / Dashboard</code></td><td>Review yesterday's sales revenue, cash received, and pending customer dues.</td></tr>
+<tr><td><strong>Morning Opening</strong></td><td>Receive incoming phone stock</td><td><code>Purchase &gt; Products</code></td><td>Enter supplier bills and scan/enter IMEI serial numbers. Stock increases immediately.</td></tr>
+<tr><td><strong>During the Day</strong></td><td>Quick Customer Billing</td><td><code>Alt+I</code></td><td>Issue multi-line bills. System automatically verifies IMEI, calculates GST, and prints bills.</td></tr>
+<tr><td><strong>During the Day</strong></td><td>Customer Dues Notification</td><td>On Invoice Form</td><td>System automatically alerts if returning customer has old unpaid bills or advance credit.</td></tr>
+<tr><td><strong>During the Day</strong></td><td>Quick 1-Click Payments</td><td>Payment box</td><td>Click <code>Full Cash</code> or <code>Full UPI</code> for one-second payment recording.</td></tr>
+<tr><td><strong>Evening Closing</strong></td><td>Collect Multi-Invoice Dues</td><td><code>Alt+M</code></td><td>Settle lumpsum customer payments using automatic FIFO allocation.</td></tr>
+<tr><td><strong>Evening Closing</strong></td><td>Review Party Statements</td><td><code>Alt+P</code></td><td>Check aging buckets and follow up on customers with balances over 30 days overdue.</td></tr>
+<tr><td><strong>Monthly Closing</strong></td><td>Review Tax &amp; CA Reports</td><td><code>Accounting &gt; Tax Reports</code></td><td>Export GSTR-1 and GSTR-3B tax summaries with 1 click for your accountant.</td></tr>
+</tbody></table></div>
 </main></body></html>

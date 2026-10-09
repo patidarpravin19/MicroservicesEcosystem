@@ -3,6 +3,7 @@
 [Oo]bj/
 [Oo]ut/
 .artifacts/
+.validation/
 
 # Visual Studio
 .vs/

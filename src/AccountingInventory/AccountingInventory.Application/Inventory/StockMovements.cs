@@ -32,6 +32,13 @@ public sealed class WriteOffInventoryHandler(IAccountingInventoryDbContext db)
             ?? throw new NotFoundException("Product was not found.");
         if (!product.IsActive || product.IsSold)
             throw new ConflictException("Only active, unsold inventory can be written off.");
+        if (request.AdjustmentDate < product.PurchaseDate)
+            throw new ConflictException("Write-off cannot precede the purchase date.");
+        var legacySaleIds = await db.SalesProducts.Where(s => s.ProductId == product.Id.ToString()).Select(s => s.Id).ToArrayAsync(ct);
+        var invoiceIds = await db.SalesInvoiceLines.Where(l => l.ProductId == product.Id).Select(l => l.SalesInvoiceId).ToArrayAsync(ct);
+        if (await db.InvoiceCorrections.AnyAsync(n => n.Kind == "Sale"
+            && (legacySaleIds.Contains(n.SourceId) || invoiceIds.Contains(n.SourceId)) && n.NoteDate > request.AdjustmentDate, ct))
+            throw new ConflictException("Write-off cannot precede the customer return that restored this stock.");
         var cost = decimal.Round(product.PurchasePrice - product.Discount, 2, MidpointRounding.AwayFromZero);
         var adjustment = InventoryAdjustment.WriteOff(product.Id, request.AdjustmentDate, request.Reason, cost);
         var accounts = await LedgerPosting.EnsureSystemAccountsAsync(db, ct);
@@ -112,6 +119,9 @@ public sealed class GetStockMovementsHandler(IAccountingInventoryDbContext db)
                 movements.Add(new StockMovementSummary(adjustment.AdjustmentDate, "Write-off", product.Id,
                     product.SerialNumber, adjustment.Id.ToString(), -1, -adjustment.Cost, adjustment.Reason));
 
+        var skuNames = await db.StockSkus.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Code,ct);
+        foreach(var m in await db.SkuMovements.AsNoTracking().ToListAsync(ct))
+            movements.Add(new(m.MovementDate,m.Kind,m.SkuId,skuNames.GetValueOrDefault(m.SkuId,"SKU"),m.BillNumber ?? m.SourceId.ToString(),m.Quantity,m.InventoryValue,m.Description));
         if (request.FromDate.HasValue) movements = movements.Where(row => row.MovementDate >= request.FromDate.Value).ToList();
         if (request.ToDate.HasValue) movements = movements.Where(row => row.MovementDate <= request.ToDate.Value).ToList();
         if (!string.IsNullOrWhiteSpace(request.Search))

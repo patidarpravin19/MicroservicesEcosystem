@@ -214,7 +214,15 @@ public sealed class GetCustomerHistoryQueryHandler(IAccountingInventoryDbContext
             invoiceReceipts.Where(r => r.InvoiceId == i.Id).Select(r => new CustomerPaymentHistory(r.Id, r.Amount, r.PaymentMode, r.PaymentDate, r.ReferenceNumber, r.Note)).ToArray(), true)))
             .OrderByDescending(s => s.SaleDate).ToArray();
         customerRecord = customerRecord with { SalesCount = saleHistory.Length };
+        var advances = await db.CustomerAdvances.AsNoTracking().Where(a => a.CustomerId == customer.Id).ToListAsync(cancellationToken);
+        var advanceIds = advances.Select(a => a.Id).ToArray();
+        var advanceRefunds = await db.CustomerAdvanceRefunds.Where(r => advanceIds.Contains(r.AdvanceId))
+            .SumAsync(r => (decimal?)r.Amount, cancellationToken) ?? 0m;
+        var correctionRefunds = await (from r in db.CorrectionRefunds join n in db.InvoiceCorrections on r.CorrectionId equals n.Id
+            where n.Kind == "Sale" && n.PartyId == customer.Id select (decimal?)r.Amount).SumAsync(cancellationToken) ?? 0m;
+        var netReceived = receipts.Sum(r => r.Payment.Amount) + invoiceReceipts.Where(r => r.AdvanceId == null).Sum(r => r.Amount)
+            + advances.Sum(a => a.Amount) - advanceRefunds - correctionRefunds;
         return new CustomerHistory(customerRecord, saleHistory.Sum(sale => sale.TotalAmount),
-            saleHistory.Sum(sale => sale.AmountPaid), saleHistory.Sum(sale => sale.Balance), saleHistory);
+            netReceived, saleHistory.Sum(sale => sale.Balance), saleHistory);
     }
 }

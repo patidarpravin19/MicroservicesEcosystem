@@ -154,6 +154,8 @@ public sealed class PostJournalHandler(IAccountingInventoryDbContext db) : IRequ
             .ToDictionaryAsync(account => account.Id, ct);
         if (accounts.Count != accountIds.Length)
             throw new ConflictException("Every journal line must reference an active ledger account.");
+        if (!isCorrection && accounts.Values.Any(a => a.Code is "1100" or "1200" or "2000"))
+            throw new ConflictException("Receivables, payables and inventory require their source workflow or an approved FinancialCorrection journal.");
         var dimensionIds = request.Lines.Where(line => line.DimensionId.HasValue).Select(line => line.DimensionId!.Value).Distinct().ToArray();
         var dimensions = await db.AccountingDimensions.Where(x => dimensionIds.Contains(x.Id) && x.IsActive).Select(x => x.Id).ToListAsync(ct);
         if (dimensions.Count != dimensionIds.Length) throw new ConflictException("Every journal dimension must be active.");

@@ -90,6 +90,11 @@ internal static class InvoiceWorkflowChecks
         Check(taxReport.Sales.All(r => r.TotalTax == 0), "Returns must reverse the original tax rate buckets.");
         var history = await new GetCustomerHistoryQueryHandler(db).Handle(new(customer.Id), default);
         Check(history.Sales.Count == 2 && history.Customer.SalesCount == 2, "Customer history must include new invoices.");
+        Check(history.TotalReceived == 40m, "Net cash received must exclude advance applications and subtract refunds.");
+        await Reject(() => new PostJournalHandler(db).Handle(new PostJournalCommand(date.AddDays(4), "Invalid control posting", "Manual", null,
+            [new(accounts["1100"], 10, 0), new(accounts["4000"], 0, 10)]), default), "Ordinary journals must not bypass customer subledgers.");
+        await Reject(() => new WriteOffInventoryHandler(db).Handle(new(stock.Id, date.AddDays(-1), "Early writeoff"), default), "Writeoff must not predate purchase.");
+        await Reject(() => new WriteOffInventoryHandler(db).Handle(new(stock.Id, date.AddDays(1), "Before return"), default), "Writeoff must not predate stock restoration.");
         await Reject(() => new DeleteCustomerCommandHandler(db).Handle(new(customer.Id), default), "Customer with new invoice history cannot be deleted.");
         var snapshot = await db.InvoiceSnapshots.SingleAsync(s => s.SourceId == id);
         Check(JsonDocument.Parse(snapshot.DetailsJson).RootElement.GetProperty("seller").GetProperty("companyName").GetString() == "Frozen seller", "Snapshot must freeze seller identity.");
@@ -111,6 +116,7 @@ internal static class InvoiceWorkflowChecks
                 await db.Database.ExecuteSqlRawAsync(sql.CommandText);
         } catch (Npgsql.PostgresException e) when (e.SqlState == "P0001") { blocked = true; await tx.RollbackToSavepointAsync("invoice_down_guard"); }
         Check(blocked && await db.SalesInvoiceReceipts.AnyAsync(), "Used invoice history must block downgrade.");
+        await SkuWorkflowChecks.RunAsync(db,customer,vendor,tax,owner.Id,date.AddDays(10));
         Console.WriteLine($"PASS: {count} new invoice, advance, return, historical report and migration checks.");
     }
     private static async Task CheckUpgradeAsync(AccountingInventoryDbContext db)
@@ -120,6 +126,11 @@ internal static class InvoiceWorkflowChecks
         var tx = db.Database.CurrentTransaction!;
         await tx.CreateSavepointAsync("invoice_upgrade");
         var generator = db.GetService<IMigrationsSqlGenerator>();
+        foreach (var sql in generator.Generate(new AccessorySkuInventory().DownOperations,db.Model))
+            await db.Database.ExecuteSqlRawAsync(sql.CommandText);
+        foreach (var sql in generator.Generate(new AccessorySkuInventory().UpOperations,db.Model))
+            await db.Database.ExecuteSqlRawAsync(sql.CommandText);
+        if(await db.StockSkus.AnyAsync()) throw new Exception("Fresh accessory upgrade must preserve an empty stock balance.");
         foreach (var sql in generator.Generate(new MandatoryInvoiceIntegrity().DownOperations, db.Model))
             await db.Database.ExecuteSqlRawAsync(sql.CommandText);
         var customer = Customer.Create("Legacy advance", "8111111111", "Address", null);

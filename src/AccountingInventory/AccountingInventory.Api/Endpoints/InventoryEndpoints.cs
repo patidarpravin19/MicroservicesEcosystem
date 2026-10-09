@@ -41,6 +41,12 @@ public static class InventoryEndpoints
             Results.Ok(new { id = await sender.Send(command, cancellationToken) }))
             .WithName("WriteOffInventory");
 
+        group.MapPost("/skus/opening-stock", async (StageOpeningSkuStockCommand q,ISender sender,CancellationToken ct) => Results.Ok(new {id=await sender.Send(q,ct)}));
+        group.MapGet("/skus/purchases", async (ISender sender,CancellationToken ct) => Results.Ok(await sender.Send(new GetSkuPurchasesQuery(),ct)));
+        group.MapGet("/skus", async (ISender sender,CancellationToken ct) => Results.Ok(await sender.Send(new GetStockSkusQuery(),ct)));
+        group.MapPost("/skus", async (CreateStockSkuCommand q,ISender sender,CancellationToken ct) => Results.Ok(new {id=await sender.Send(q,ct)}));
+        group.MapPost("/skus/receipts", async (ReceiveSkuStockCommand q,ISender sender,CancellationToken ct) => Results.Ok(new {id=await sender.Send(q,ct)}));
+        group.MapPost("/skus/write-off", async (WriteOffSkuStockCommand q,ISender sender,CancellationToken ct) => Results.Ok(new {id=await sender.Send(q,ct)}));
         return group;
     }
 }

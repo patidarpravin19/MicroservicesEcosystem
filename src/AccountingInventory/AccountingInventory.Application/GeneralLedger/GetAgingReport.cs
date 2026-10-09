@@ -51,7 +51,7 @@ public sealed class GetAgingReportHandler(IAccountingInventoryDbContext db)
             i.TotalAmount - notes.Where(n => n.Kind == "Sale" && n.SourceId == i.Id).Sum(n => n.TotalAmount), invoiceReceipts.GetValueOrDefault(i.Id), asOf))
             .Where(r => r.Balance > 0)).ToArray();
 
-        var purchaseGroups = await db.Products.AsNoTracking()
+        var purchaseGroups = await AccountingInventory.Application.Purchases.Accounting.PurchaseStockRows.Query(db)
             .Where(product => product.BillNumber != null && product.PurchaseDate <= asOf && (!cutover.HasValue || product.PurchaseDate > cutover.Value))
             .GroupBy(product => new { product.VendorId, product.BillNumber })
             .Select(group => new

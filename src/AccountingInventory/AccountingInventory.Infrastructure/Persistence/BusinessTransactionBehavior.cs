@@ -48,7 +48,8 @@ public sealed class BusinessTransactionBehavior<TRequest, TResponse>(AccountingI
                 await AccountingPermissionGate.EnsureAsync(db, identity.UserId, note.Kind == "Sale" ? "sales.manage" : "purchases.manage", ct);
             }
             // Only responses with stable DTO/primitive contracts are replayed.
-            var replayable = requestNamespace.Contains(".Sales.Invoices", StringComparison.Ordinal)
+            var replayable = typeof(TRequest).Name is "StageOpeningSkuStockCommand" or "CreateStockSkuCommand" or "ReceiveSkuStockCommand" or "WriteOffSkuStockCommand"
+                || requestNamespace.Contains(".Sales.Invoices", StringComparison.Ordinal)
                 || typeof(TRequest).Name is "RecordSalesReceiptCommand" or "RecordPurchasePaymentCommand" or "RefundCorrectionCommand" or "SettleOpeningItemCommand";
             var header = http?.HttpContext?.Request.Headers["Idempotency-Key"].ToString();
             string? key = null;

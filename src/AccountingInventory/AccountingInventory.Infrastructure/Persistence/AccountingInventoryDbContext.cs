@@ -35,6 +35,8 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<Color> Colors => Set<Color>();
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<ProductModel> ProductModels => Set<ProductModel>();
+    public DbSet<StockSku> StockSkus => Set<StockSku>();
+    public DbSet<SkuMovement> SkuMovements => Set<SkuMovement>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<SalesProduct> SalesProducts => Set<SalesProduct>();
     public DbSet<SalesInvoice> SalesInvoices => Set<SalesInvoice>();
