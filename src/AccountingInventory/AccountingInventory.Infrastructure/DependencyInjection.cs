@@ -26,12 +26,13 @@ public static class DependencyInjection
         services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(BusinessTransactionBehavior<,>));
         services.AddScoped<ITenantProvider, DynamicTenantProvider>();
         services.AddScoped<TenantSchemaConnectionInterceptor>();
+        services.AddSingleton<IDatabaseConnectionManager, DatabaseConnectionManager>();
         services.AddDbContext<AccountingInventoryDbContext>((sp, options) =>
         {
             var tenantProvider = sp.GetRequiredService<ITenantProvider>();
+            var dbConnectionManager = sp.GetRequiredService<IDatabaseConnectionManager>();
 
-            var connectionString = configuration.GetConnectionString("AccountingInventoryDb")
-                ?? throw new InvalidOperationException("The AccountingInventoryDb connection string is not configured.");
+            var connectionString = dbConnectionManager.GetActiveConnectionString();
             var tenantConnectionString = TenantSchemaMigrator.CreateTenantConnectionString(connectionString, tenantProvider.SchemaName);
 
             options.UseNpgsql(
@@ -43,7 +44,18 @@ public static class DependencyInjection
         });
         services.AddScoped<IAccountingInventoryDbContext>(sp => sp.GetRequiredService<AccountingInventoryDbContext>());
 
-        services.AddControlPlaneDbContext<TenantDbContext>(configuration, connectionStringName: "AccountingInventoryDb", schema: "tenant");
+        services.AddScoped<BuildingBlocks.Persistence.AuditableEntitySaveChangesInterceptor>();
+        services.AddDbContext<TenantDbContext>((sp, options) =>
+        {
+            var dbConnectionManager = sp.GetRequiredService<IDatabaseConnectionManager>();
+            var connectionString = dbConnectionManager.GetActiveConnectionString();
+
+            options.UseNpgsql(
+                       connectionString,
+                       npgsql => npgsql.MigrationsHistoryTable("__ControlPlaneHistory", "tenant"))
+                    .UseSnakeCaseNamingConvention()
+                    .AddInterceptors(sp.GetRequiredService<BuildingBlocks.Persistence.AuditableEntitySaveChangesInterceptor>());
+        });
         services.AddScoped<ITenantDirectoryContext>(sp => sp.GetRequiredService<TenantDbContext>());
 
         services.AddScoped<ITenantSchemaProvisioner, TenantSchemaProvisionerAdapter>();

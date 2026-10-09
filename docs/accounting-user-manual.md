@@ -30,6 +30,12 @@ To share this guide, send accounting-user-manual.html. Open that file in a brows
 - [20. Non-Accountant Store Operator Guide & Smart Suggestions](#20-non-accountant-store-operator-guide--smart-suggestions)
 - [21. Tenant Onboarding & Offline Deployment Setup Guide](#21-tenant-onboarding--offline-deployment-setup-guide)
 - [22. Product Owner (Super Administrator) Console & Platform Management](#22-product-owner-super-administrator-console--platform-management)
+  - [22.1 Dedicated Product Owner Sign In](#221-dedicated-product-owner-sign-in)
+  - [22.2 Platform Overview Dashboard](#222-platform-overview-dashboard-admindashboard)
+  - [22.3 Tenant Directory & Store Approvals](#223-tenant-directory--store-approvals-admintenants)
+  - [22.4 Database Schema Migrations Hub](#224-database-schema-migrations-hub-admindatabase-migrations)
+  - [22.5 System Settings & Offline Configuration](#225-system-settings--offline-configuration-adminsystem-settings)
+  - [22.6 Dynamic Database Switching (Local PostgreSQL ↔ Cloud PostgreSQL)](#226-dynamic-database-switching-local-postgresql--cloud-postgresql)
 ## 1. Get started
 
 1. For a new account, open the invitation email and follow the activation link. Invitations expire after 24 hours and can be used once.
@@ -717,5 +723,60 @@ When new application features or schema changes are deployed:
 1. **Deployment Architecture Review:** View active PostgreSQL connection details, schema isolation settings, and API server status.
 2. **Offline vs. Online Dispatch:** In offline desktop mode, email verification is routed to internal log files (`logs/tenant-registrations.log`), enabling full software functionality without an active internet connection.
 3. **Setup Checklist:** Reference the built-in offline deployment checklist to ensure local PostgreSQL, backend API, and frontend counter apps are synchronized.
+
+---
+
+### 22.6 Dynamic Database Switching (Local PostgreSQL ↔ Cloud PostgreSQL)
+
+Siddhi features dual-database runtime agility, allowing the Product Owner to switch the entire application between a **Local PostgreSQL database** (for offline desktop or on-premise operation) and a **Cloud PostgreSQL database** (AWS RDS, Supabase, Neon, Azure PostgreSQL, or remote VPS) with zero backend downtime and zero manual database scripts.
+
+```mermaid
+flowchart LR
+    PO([Product Owner Console /admin/system-settings]) -->|1. Test Connection| Probe{Connectivity Probe}
+    Probe -->|Success| SwitchAct[2. Switch Target Request]
+    SwitchAct --> ConnMgr[IDatabaseConnectionManager]
+    ConnMgr -->|Target: Local| LocalDB[(Local PostgreSQL localhost:5432)]
+    ConnMgr -->|Target: Cloud| CloudDB[(Cloud PostgreSQL Hosted/RDS)]
+    ConnMgr -->|3. Auto-Migrate| Migrator[TenantSchemaMigrator Auto-Sync]
+    ConnMgr -->|4. Persist Target| FileStore[(database.config.json)]
+    Migrator -->|All Store Schemas Verified| Ready[Live Serving Requests]
+```
+
+#### Step-by-Step Instructions: Configure & Switch Databases
+
+1. **Open System Settings:**
+   - Log in as Product Owner at `/admin/login`.
+   - In the sidebar or top navigation, click **System Settings** (`/admin/system-settings`).
+
+2. **Inspect Current Target:**
+   - The **Database Target & Multi-Cloud Switcher** banner displays the current active target (e.g. `Active: Local PostgreSQL` or `Active: Cloud PostgreSQL`) with a live status indicator.
+
+3. **Configure Cloud Connection String:**
+   - In the **Cloud PostgreSQL** card, enter your cloud connection string:
+     ```text
+     Host=<cloud-host>;Port=5432;Database=accounting_inventory;Username=postgres;Password=<your_password>;SSL Mode=Require;Trust Server Certificate=true;
+     ```
+   - Use the **Presets** buttons (`AWS RDS`, `Supabase`, `Neon`) for instant boilerplate strings.
+   - Click **Show password / Mask password** to verify credentials.
+   - Click **Save String** to store the connection parameters without activating immediately.
+
+4. **Test Reachability (Probe):**
+   - Click **Test Connection** on either the Local or Cloud card.
+   - The backend opens a connection, executes `SELECT version();`, and returns the round-trip latency (e.g., `24ms • PostgreSQL 16.2`) or a detailed diagnostics error message if the host is unreachable.
+
+5. **Execute Live Switch:**
+   - Click **Switch to Cloud** (or **Switch to Local**).
+   - A confirmation dialog appears. Ensure the **"Auto-migrate database schema & synchronize tenant registry"** checkbox is checked (recommended).
+   - Click **Confirm & Switch Target**:
+     1. The backend verifies connectivity to the target database.
+     2. Automatically initializes the `tenant` schema and migrations if connecting to a new cloud database.
+     3. Provisions all active store schemas on the new target database.
+     4. Updates `IDatabaseConnectionManager` and writes the selection to `database.config.json`.
+     5. Subsequent API requests across the entire application immediately point to the new target database!
+
+6. **Verify Active Target:**
+   - The badge updates to `Active: Cloud PostgreSQL`.
+   - The Platform Dashboard (`/admin/dashboard`) and Migrations Hub (`/admin/database-migrations`) immediately reflect the new active database target.
+
 
 
