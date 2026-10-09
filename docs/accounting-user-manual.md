@@ -29,6 +29,7 @@ To share this guide, send accounting-user-manual.html. Open that file in a brows
 - [19. Stocked accessories and integrity controls](#19-stocked-accessories-and-integrity-controls)
 - [20. Non-Accountant Store Operator Guide & Smart Suggestions](#20-non-accountant-store-operator-guide--smart-suggestions)
 - [21. Tenant Onboarding & Offline Deployment Setup Guide](#21-tenant-onboarding--offline-deployment-setup-guide)
+- [22. Product Owner (Super Administrator) Console & Platform Management](#22-product-owner-super-administrator-console--platform-management)
 ## 1. Get started
 
 1. For a new account, open the invitation email and follow the activation link. Invitations expire after 24 hours and can be used once.
@@ -636,4 +637,85 @@ When you are ready to transition from offline to online cloud hosting:
 3. **Frontend Domain:** Set `"Frontend:BaseUrl"` to your live domain (e.g., `https://app.siddhimobile.in`).
 4. **Reverse Proxy:** Deploy through `ApiGateway` with SSL/TLS certificate configured.
 All multi-tenant schema isolation, automated registration, and approval pipelines function identically in online mode.
+
+---
+
+## 22. Product Owner (Super Administrator) Console & Platform Management
+
+The Product Owner (Super Administrator) oversees all business stores, approval queues, schema migrations, and system-level operations across the entire Siddhi platform.
+
+```mermaid
+graph TD
+    PO[Product Owner Admin] -->|1. Sign in via /admin/login| AdminAuth[Token Issued: Claim Role=ProductOwner]
+    AdminAuth --> POConsole[Product Owner Management Console]
+    POConsole --> PODash[Platform Overview Dashboard /admin/dashboard]
+    POConsole --> TenantDir[Tenant Store Directory /admin/tenants]
+    POConsole --> ApprQueue[Store Approvals Queue /admin/tenants/pending]
+    POConsole --> DBMig[Schema Migrations Hub /admin/database-migrations]
+    POConsole --> SysSet[System & Offline Settings /admin/system-settings]
+    TenantDir -->|Suspend / Reactivate| StoreStatus[Tenant Lifecycle Status Updated]
+    ApprQueue -->|Approve Store| AutoProvision[Automatic PostgreSQL Schema Creation & Ledger Seeding]
+    DBMig -->|Apply All Schema Migrations| EFRunner[TenantSchemaMigrator Across All Tenant Schemas]
+```
+
+### 22.1 Dedicated Product Owner Sign In
+
+- **URL:** `/admin/login` (or click "Product Owner / Platform Sign In" from the bottom of `/login`).
+- **No Workspace Slug Required:** Unlike individual store owners and staff who enter a store slug, the Product Owner signs directly into the control plane.
+- **Default Master Credentials:**
+  - **Username / Email:** `admin` or `developer.pravin666@gmail.com`
+  - **Master Password:** `Admin@123456`
+- **Security & Authorization:** Produces a JWT bearer token carrying `ClaimTypes.Role: "ProductOwner"` and `PermissionClaimTypes.Permission: "Tenants.Manage"`. The frontend attaches this token across all requests, bypassing individual tenant boundaries.
+
+---
+
+### 22.2 Platform Overview Dashboard (`/admin/dashboard`)
+
+When logged in as Product Owner, navigating to the home route `/` or `/admin/dashboard` renders the Platform Overview Console:
+
+1. **Platform KPI Metrics:**
+   - **Total Stores:** Overall count of businesses registered in the platform directory.
+   - **Pending Review:** Registrations waiting for Product Owner verification.
+   - **Active Stores:** Verified stores with live, provisioned PostgreSQL schemas.
+   - **Suspended Stores:** Stores frozen by administrator intervention.
+   - **Environment Status:** Offline desktop mode or cloud-hosted status.
+2. **Pending Registrations Quick Action:** Displays registrations waiting in the queue with a 1-click **"Approve & Provision"** button to immediately run schema migrations and seed master ledgers.
+3. **Public Signup Link Generator:** Quick copy button for `https://<domain>/register-tenant` to share with prospective store owners.
+
+---
+
+### 22.3 Tenant Directory & Lifecycle Management (`/admin/tenants`)
+
+The Tenant Directory gives the Product Owner total control over every registered store:
+
+1. **Filtering & Search:** Instant search by Store Name, Workspace Slug, Owner Email, or GSTIN, with status tabs (`All`, `Active`, `Pending`, `Suspended`, `Rejected`).
+2. **Tenant Actions:**
+   - **View Full Store Profile (Eye icon):** Inspect isolated schema name (e.g. `tenant_siddhi_...`), GSTIN, state code, business address, and owner contact details.
+   - **Suspend Store (Ban icon):** Freezes all logins and transactions for this store immediately (`POST /api/tenants/{id}/suspend`).
+   - **Reactivate Store (Play icon):** Restores store access to active status (`POST /api/tenants/{id}/reactivate`).
+   - **Approve / Reject:** For pending applicants, approve schema creation or provide a formal rejection reason.
+3. **Workspace Slug Copy:** Quick copy button for the store's unique workspace slug.
+
+---
+
+### 22.4 Database Schema Migrations Hub (`/admin/database-migrations`)
+
+Siddhi isolates each store inside its own PostgreSQL schema (`tenant_<slug>_<id>`) for complete data security and independent database operations.
+
+When new application features or schema changes are deployed:
+1. Open **Database Migrations** (`/admin/database-migrations`).
+2. Review the **Managed Schema Registry** displaying the master schema (`tenant`) and all individual store schemas.
+3. Click **"Apply All Schema Migrations"**.
+   - The backend runs `TenantSchemaMigrator.MigrateAsync` across all active schemas sequentially.
+   - Pending EF Core migrations (tables, columns, indexes, initial seed data) are applied to all store databases without downtime.
+4. **Live Execution Log:** Inspect real-time console events and schema verification timestamps.
+
+---
+
+### 22.5 System Settings & Offline Configuration (`/admin/system-settings`)
+
+1. **Deployment Architecture Review:** View active PostgreSQL connection details, schema isolation settings, and API server status.
+2. **Offline vs. Online Dispatch:** In offline desktop mode, email verification is routed to internal log files (`logs/tenant-registrations.log`), enabling full software functionality without an active internet connection.
+3. **Setup Checklist:** Reference the built-in offline deployment checklist to ensure local PostgreSQL, backend API, and frontend counter apps are synchronized.
+
 

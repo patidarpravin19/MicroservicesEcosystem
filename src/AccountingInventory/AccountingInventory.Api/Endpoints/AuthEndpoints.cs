@@ -45,6 +45,56 @@ public static class AuthEndpoints
             .Produces<LoginResult>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/admin-login", (AdminLoginRequest request, IConfiguration configuration,
+            ITokenService tokenService) =>
+        {
+            var adminUsername = configuration["ProductOwner:Username"] ?? "admin";
+            var adminEmail = configuration["Email:AdminEmail"] ?? "developer.pravin666@gmail.com";
+            var adminPassword = configuration["ProductOwner:Password"] ?? "Admin@123456";
+
+            var inputUsername = request.Username?.Trim() ?? "";
+            var isUserMatch = string.Equals(inputUsername, adminUsername, StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(inputUsername, adminEmail, StringComparison.OrdinalIgnoreCase);
+
+            if (!isUserMatch || request.Password != adminPassword)
+            {
+                return Results.Problem(
+                    title: "Invalid credentials",
+                    detail: "Invalid Product Owner username/email or password.",
+                    statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var systemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+            var systemTenantId = Guid.Parse("00000000-0000-0000-0000-000000000000");
+            var roleNames = new[] { "ProductOwner", "SuperAdmin" };
+            var permissionCodes = new[] { "Tenants.Manage", "System.Manage", "Database.Manage" };
+
+            var pair = tokenService.GenerateTokenPair(
+                systemUserId,
+                adminUsername,
+                systemTenantId,
+                "tenant",
+                roleNames,
+                permissionCodes);
+
+            return Results.Ok(new AdminLoginResult(
+                systemUserId,
+                systemTenantId,
+                pair.AccessToken,
+                pair.RefreshToken,
+                pair.AccessTokenExpiresAtUtc,
+                adminUsername,
+                adminEmail,
+                true,
+                roleNames,
+                permissionCodes
+            ));
+        })
+        .WithName("AdminLogin")
+        .AllowAnonymous()
+        .Produces<AdminLoginResult>()
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         group.MapPost("/refresh", async (RefreshTokenCommand command, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(command, ct)))
             .WithName("RefreshToken").AllowAnonymous()
@@ -155,3 +205,15 @@ public static class AuthEndpoints
 public sealed record ForgotPasswordRequest(string TenantSlug, string Email);
 public sealed record ResetPasswordRequest(string Token, string Password);
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public sealed record AdminLoginRequest(string Username, string Password);
+public sealed record AdminLoginResult(
+    Guid UserId,
+    Guid TenantId,
+    string AccessToken,
+    string RefreshToken,
+    DateTimeOffset AccessTokenExpiresAtUtc,
+    string Username,
+    string Email,
+    bool IsProductOwner,
+    string[] Roles,
+    string[] Permissions);
