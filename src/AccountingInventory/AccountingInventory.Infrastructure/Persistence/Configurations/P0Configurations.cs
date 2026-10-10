@@ -53,6 +53,18 @@ internal static class P0Configurations
         model.Entity<SalesInvoice>().HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
         model.Entity<SalesInvoiceLine>().Property(x => x.Quantity).HasPrecision(18, 4);
         model.Entity<SalesInvoiceLine>().HasOne<SalesInvoice>().WithMany(x => x.Lines).HasForeignKey(x => x.SalesInvoiceId).OnDelete(DeleteBehavior.Cascade);
+        Configure<MasterImportBatch>(model, "master_import_batches");
+        Configure<MasterImportStagingRow>(model, "master_import_staging_rows");
+        model.Entity<MasterImportBatch>().Property(x => x.BatchNumber).HasMaxLength(80).IsRequired();
+        model.Entity<MasterImportBatch>().Property(x => x.FileName).HasMaxLength(250).IsRequired();
+        model.Entity<MasterImportBatch>().Property(x => x.FileType).HasMaxLength(50);
+        model.Entity<MasterImportBatch>().HasIndex(x => x.BatchNumber).IsUnique();
+        model.Entity<MasterImportStagingRow>().Property(x => x.EntityType).HasMaxLength(50).IsRequired();
+        model.Entity<MasterImportStagingRow>().Property(x => x.EntityKey).HasMaxLength(150);
+        model.Entity<MasterImportStagingRow>().Property(x => x.EntityName).HasMaxLength(250);
+        model.Entity<MasterImportStagingRow>().HasOne<MasterImportBatch>().WithMany(b => b.Rows)
+            .HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<MasterImportStagingRow>().HasIndex(x => new { x.BatchId, x.RowIndex });
     }
     private static void Configure<T>(ModelBuilder model, string table) where T : AggregateRoot
     {

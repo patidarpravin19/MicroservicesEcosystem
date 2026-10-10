@@ -2,6 +2,7 @@ using AccountingInventory.Application.Abstractions;
 using AccountingInventory.Domain.Entities;
 using AccountingInventory.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace AccountingInventory.Infrastructure.Persistence;
 
@@ -20,6 +21,13 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options)
     : DbContext(options), ITenantDirectoryContext
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(warnings =>
+            warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+        base.OnConfiguring(optionsBuilder);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

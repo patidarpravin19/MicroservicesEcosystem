@@ -42,6 +42,7 @@ app.MapVariantEndpoints();
 app.MapColorEndpoints();
 app.MapProductTypeEndpoints();
 app.MapProductModelEndpoints();
+app.MapMasterImportEndpoints();
 app.MapProductEndpoints();
 app.MapInventoryEndpoints();
 app.MapPurchaseAccountingEndpoints();

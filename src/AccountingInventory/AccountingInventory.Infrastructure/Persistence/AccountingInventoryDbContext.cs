@@ -5,6 +5,7 @@ using AccountingInventory.Infrastructure.Persistence.MultiTenancy;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Text.Json;
 
 namespace AccountingInventory.Infrastructure.Persistence;
@@ -69,6 +70,8 @@ public sealed class AccountingInventoryDbContext(
     public DbSet<InvoiceSnapshot> InvoiceSnapshots => Set<InvoiceSnapshot>();
     public DbSet<OpeningSubledgerBalance> OpeningSubledgerBalances => Set<OpeningSubledgerBalance>();
     public DbSet<OpeningSettlement> OpeningSettlements => Set<OpeningSettlement>();
+    public DbSet<MasterImportBatch> MasterImportBatches => Set<MasterImportBatch>();
+    public DbSet<MasterImportStagingRow> MasterImportStagingRows => Set<MasterImportStagingRow>();
 
     public async Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken)
         => await Database.SqlQueryRaw<string>(
@@ -165,7 +168,12 @@ public sealed class AccountingInventoryDbContext(
             || propertyName.Contains("token", StringComparison.OrdinalIgnoreCase)
             || propertyName.Contains("secret", StringComparison.OrdinalIgnoreCase);
 
-    //public DbSet<Role> Roles => Set<Role>();
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(warnings =>
+            warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+        base.OnConfiguring(optionsBuilder);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

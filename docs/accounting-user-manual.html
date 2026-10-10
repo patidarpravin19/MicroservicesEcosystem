@@ -12,7 +12,7 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 @media print{@page{size:A4;margin:18mm}body{background:white;font-size:11pt}main{margin:0;padding:0;max-width:none}.print-tools{display:none}h2,h3{break-after:avoid}tr{break-inside:avoid}a{color:inherit;text-decoration:none}table{font-size:9pt}}
 </style></head><body><main><div class="print-tools"><button onclick="window.print()">Print / Save PDF</button></div>
 <h1 id='accounting-inventory-user-manual'>Accounting &amp; Inventory User Manual</h1>
-<p>Version: 1.4 | Updated: 9 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, and the Smart Suggestion Assistant for non-accountants</p>
+<p>Version: 1.7 | Updated: 10 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, Smart Suggestions, Multi-Cloud Database Switching, and Two-Stage Master Data Import &amp; Verification</p>
 <p>For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.</p>
 <p>To share this guide, send accounting-user-manual.html. Open that file in a browser and choose Print / Save PDF for a paper or PDF copy. Keep the version and date with any distributed copy.</p>
 <h2 id='contents'>Contents</h2>
@@ -38,6 +38,14 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 <li><a href="#19-stocked-accessories-and-integrity-controls">19. Stocked accessories and integrity controls</a></li>
 <li><a href="#20-non-accountant-store-operator-guide--smart-suggestions">20. Non-Accountant Store Operator Guide &amp; Smart Suggestions</a></li>
 <li><a href="#21-tenant-onboarding--offline-deployment-setup-guide">21. Tenant Onboarding &amp; Offline Deployment Setup Guide</a></li>
+<li><a href="#22-product-owner-super-administrator-console--platform-management">22. Product Owner (Super Administrator) Console &amp; Platform Management</a></li>
+<li><a href="#221-dedicated-product-owner-sign-in">22.1 Dedicated Product Owner Sign In</a></li>
+<li><a href="#222-platform-overview-dashboard-admindashboard">22.2 Platform Overview Dashboard</a></li>
+<li><a href="#223-tenant-directory--store-approvals-admintenants">22.3 Tenant Directory &amp; Store Approvals</a></li>
+<li><a href="#224-database-schema-migrations-hub-admindatabase-migrations">22.4 Database Schema Migrations Hub</a></li>
+<li><a href="#225-system-settings--offline-configuration-adminsystem-settings">22.5 System Settings &amp; Offline Configuration</a></li>
+<li><a href="#226-dynamic-database-switching-local-postgresql--cloud-postgresql">22.6 Dynamic Database Switching (Local PostgreSQL ↔ Cloud PostgreSQL)</a></li>
+<li><a href="#23-master-data-import--staging-verification-vendors-brands-categories-models-variants-colors">23. Master Data Import &amp; Staging Verification (Vendors, Brands, Categories, Models, Variants, Colors)</a></li>
 </ul>
 <h2 id='1-get-started'>1. Get started</h2>
 <ol>
@@ -617,4 +625,267 @@ th,td{border:1px solid #ccd5df;padding:10px;text-align:left;vertical-align:top}t
 <li><strong>Reverse Proxy:</strong> Deploy through <code>ApiGateway</code> with SSL/TLS certificate configured.</li>
 </ol>
 <p>All multi-tenant schema isolation, automated registration, and approval pipelines function identically in online mode.</p>
+<p>---</p>
+<h2 id='22-product-owner-super-administrator-console-platform-management'>22. Product Owner (Super Administrator) Console &amp; Platform Management</h2>
+<p>The Product Owner (Super Administrator) oversees all business stores, approval queues, schema migrations, and system-level operations across the entire Siddhi platform.</p>
+<p>```mermaid</p>
+<p>graph TD</p>
+<p>PO[Product Owner Admin] --&gt;|1. Sign in via /admin/login| AdminAuth[Token Issued: Claim Role=ProductOwner]</p>
+<p>AdminAuth --&gt; POConsole[Product Owner Management Console]</p>
+<p>POConsole --&gt; PODash[Platform Overview Dashboard /admin/dashboard]</p>
+<p>POConsole --&gt; TenantDir[Tenant Store Directory /admin/tenants]</p>
+<p>POConsole --&gt; ApprQueue[Store Approvals Queue /admin/tenants/pending]</p>
+<p>POConsole --&gt; DBMig[Schema Migrations Hub /admin/database-migrations]</p>
+<p>POConsole --&gt; SysSet[System &amp; Offline Settings /admin/system-settings]</p>
+<p>TenantDir --&gt;|Suspend / Reactivate| StoreStatus[Tenant Lifecycle Status Updated]</p>
+<p>ApprQueue --&gt;|Approve Store| AutoProvision[Automatic PostgreSQL Schema Creation &amp; Ledger Seeding]</p>
+<p>DBMig --&gt;|Apply All Schema Migrations| EFRunner[TenantSchemaMigrator Across All Tenant Schemas]</p>
+<p>```</p>
+<h3 id='221-dedicated-product-owner-sign-in'>22.1 Dedicated Product Owner Sign In</h3>
+<ul>
+<li><strong>URL:</strong> <code>/admin/login</code> (or click &quot;Product Owner / Platform Sign In&quot; from the bottom of <code>/login</code>).</li>
+<li><strong>No Workspace Slug Required:</strong> Unlike individual store owners and staff who enter a store slug, the Product Owner signs directly into the control plane.</li>
+<li><strong>Default Master Credentials:</strong></li>
+<li><strong>Username / Email:</strong> <code>admin</code> or <code>developer.pravin666@gmail.com</code></li>
+<li><strong>Master Password:</strong> <code>Admin@123456</code></li>
+<li><strong>Security &amp; Authorization:</strong> Produces a JWT bearer token carrying <code>ClaimTypes.Role: &quot;ProductOwner&quot;</code> and <code>PermissionClaimTypes.Permission: &quot;Tenants.Manage&quot;</code>. The frontend attaches this token across all requests, bypassing individual tenant boundaries.</li>
+</ul>
+<p>---</p>
+<h3 id='222-platform-overview-dashboard-admindashboard'>22.2 Platform Overview Dashboard (<code>/admin/dashboard</code>)</h3>
+<p>When logged in as Product Owner, navigating to the home route <code>/</code> or <code>/admin/dashboard</code> renders the Platform Overview Console:</p>
+<ol>
+<li><strong>Platform KPI Metrics:</strong></li>
+</ol>
+<ul>
+<li><strong>Total Stores:</strong> Overall count of businesses registered in the platform directory.</li>
+<li><strong>Pending Review:</strong> Registrations waiting for Product Owner verification.</li>
+<li><strong>Active Stores:</strong> Verified stores with live, provisioned PostgreSQL schemas.</li>
+<li><strong>Suspended Stores:</strong> Stores frozen by administrator intervention.</li>
+<li><strong>Environment Status:</strong> Offline desktop mode or cloud-hosted status.</li>
+</ul>
+<ol>
+<li><strong>Pending Registrations Quick Action:</strong> Displays registrations waiting in the queue with a 1-click <strong>&quot;Approve &amp; Provision&quot;</strong> button to immediately run schema migrations and seed master ledgers.</li>
+<li><strong>Public Signup Link Generator:</strong> Quick copy button for <code>https://&lt;domain&gt;/register-tenant</code> to share with prospective store owners.</li>
+</ol>
+<p>---</p>
+<h3 id='223-tenant-directory-lifecycle-management-admintenants'>22.3 Tenant Directory &amp; Lifecycle Management (<code>/admin/tenants</code>)</h3>
+<p>The Tenant Directory gives the Product Owner total control over every registered store:</p>
+<ol>
+<li><strong>Filtering &amp; Search:</strong> Instant search by Store Name, Workspace Slug, Owner Email, or GSTIN, with status tabs (<code>All</code>, <code>Active</code>, <code>Pending</code>, <code>Suspended</code>, <code>Rejected</code>).</li>
+<li><strong>Tenant Actions:</strong></li>
+</ol>
+<ul>
+<li><strong>View Full Store Profile (Eye icon):</strong> Inspect isolated schema name (e.g. <code>tenant_siddhi_...</code>), GSTIN, state code, business address, and owner contact details.</li>
+<li><strong>Suspend Store (Ban icon):</strong> Freezes all logins and transactions for this store immediately (<code>POST /api/tenants/{id}/suspend</code>).</li>
+<li><strong>Reactivate Store (Play icon):</strong> Restores store access to active status (<code>POST /api/tenants/{id}/reactivate</code>).</li>
+<li><strong>Approve / Reject:</strong> For pending applicants, approve schema creation or provide a formal rejection reason.</li>
+</ul>
+<ol>
+<li><strong>Workspace Slug Copy:</strong> Quick copy button for the store&#39;s unique workspace slug.</li>
+</ol>
+<p>---</p>
+<h3 id='224-database-schema-migrations-hub-admindatabase-migrations'>22.4 Database Schema Migrations Hub (<code>/admin/database-migrations</code>)</h3>
+<p>Siddhi isolates each store inside its own PostgreSQL schema (<code>tenant_&lt;slug&gt;_&lt;id&gt;</code>) for complete data security and independent database operations.</p>
+<p>When new application features or schema changes are deployed:</p>
+<ol>
+<li>Open <strong>Database Migrations</strong> (<code>/admin/database-migrations</code>).</li>
+<li>Review the <strong>Managed Schema Registry</strong> displaying the master schema (<code>tenant</code>) and all individual store schemas.</li>
+<li>Click <strong>&quot;Apply All Schema Migrations&quot;</strong>.</li>
+</ol>
+<ul>
+<li>The backend runs <code>TenantSchemaMigrator.MigrateAsync</code> across all active schemas sequentially.</li>
+<li>Pending EF Core migrations (tables, columns, indexes, initial seed data) are applied to all store databases without downtime.</li>
+</ul>
+<ol>
+<li><strong>Live Execution Log:</strong> Inspect real-time console events and schema verification timestamps.</li>
+</ol>
+<p>---</p>
+<h3 id='225-system-settings-offline-configuration-adminsystem-settings'>22.5 System Settings &amp; Offline Configuration (<code>/admin/system-settings</code>)</h3>
+<ol>
+<li><strong>Deployment Architecture Review:</strong> View active PostgreSQL connection details, schema isolation settings, and API server status.</li>
+<li><strong>Offline vs. Online Dispatch:</strong> In offline desktop mode, email verification is routed to internal log files (<code>logs/tenant-registrations.log</code>), enabling full software functionality without an active internet connection.</li>
+<li><strong>Setup Checklist:</strong> Reference the built-in offline deployment checklist to ensure local PostgreSQL, backend API, and frontend counter apps are synchronized.</li>
+</ol>
+<p>---</p>
+<h3 id='226-dynamic-database-switching-local-postgresql-cloud-postgresql'>22.6 Dynamic Database Switching (Local PostgreSQL ↔ Cloud PostgreSQL)</h3>
+<p>Siddhi features dual-database runtime agility, allowing the Product Owner to switch the entire application between a <strong>Local PostgreSQL database</strong> (for offline desktop or on-premise operation) and a <strong>Cloud PostgreSQL database</strong> (AWS RDS, Supabase, Neon, Azure PostgreSQL, or remote VPS) with zero backend downtime and zero manual database scripts.</p>
+<p>```mermaid</p>
+<p>flowchart LR</p>
+<p>PO([Product Owner Console /admin/system-settings]) --&gt;|1. Test Connection| Probe{Connectivity Probe}</p>
+<p>Probe --&gt;|Success| SwitchAct[2. Switch Target Request]</p>
+<p>SwitchAct --&gt; ConnMgr[IDatabaseConnectionManager]</p>
+<p>ConnMgr --&gt;|Target: Local| LocalDB[(Local PostgreSQL localhost:5432)]</p>
+<p>ConnMgr --&gt;|Target: Cloud| CloudDB[(Cloud PostgreSQL Hosted/RDS)]</p>
+<p>ConnMgr --&gt;|3. Auto-Migrate| Migrator[TenantSchemaMigrator Auto-Sync]</p>
+<p>ConnMgr --&gt;|4. Persist Target| FileStore[(database.config.json)]</p>
+<p>Migrator --&gt;|All Store Schemas Verified| Ready[Live Serving Requests]</p>
+<p>```</p>
+<h4 id='step-by-step-instructions-configure-switch-databases'>Step-by-Step Instructions: Configure &amp; Switch Databases</h4>
+<ol>
+<li><strong>Open System Settings:</strong></li>
+</ol>
+<ul>
+<li>Log in as Product Owner at <code>/admin/login</code>.</li>
+<li>In the sidebar or top navigation, click <strong>System Settings</strong> (<code>/admin/system-settings</code>).</li>
+</ul>
+<ol>
+<li><strong>Inspect Current Target:</strong></li>
+</ol>
+<ul>
+<li>The <strong>Database Target &amp; Multi-Cloud Switcher</strong> banner displays the current active target (e.g. <code>Active: Local PostgreSQL</code> or <code>Active: Cloud PostgreSQL</code>) with a live status indicator.</li>
+</ul>
+<ol>
+<li><strong>Configure Cloud Connection String:</strong></li>
+</ol>
+<ul>
+<li>In the <strong>Cloud PostgreSQL</strong> card, enter your cloud connection string:</li>
+</ul>
+<p>```text</p>
+<p>Host=&lt;cloud-host&gt;;Port=5432;Database=accounting_inventory;Username=postgres;Password=&lt;your_password&gt;;SSL Mode=Require;Trust Server Certificate=true;</p>
+<p>```</p>
+<ul>
+<li>Use the <strong>Presets</strong> buttons (<code>AWS RDS</code>, <code>Supabase</code>, <code>Neon</code>) for instant boilerplate strings.</li>
+<li>Click <strong>Show password / Mask password</strong> to verify credentials.</li>
+<li>Click <strong>Save String</strong> to store the connection parameters without activating immediately.</li>
+</ul>
+<ol>
+<li><strong>Test Reachability (Probe):</strong></li>
+</ol>
+<ul>
+<li>Click <strong>Test Connection</strong> on either the Local or Cloud card.</li>
+<li>The backend opens a connection, executes <code>SELECT version();</code>, and returns the round-trip latency (e.g., <code>24ms • PostgreSQL 16.2</code>) or a detailed diagnostics error message if the host is unreachable.</li>
+</ul>
+<ol>
+<li><strong>Execute Live Switch:</strong></li>
+</ol>
+<ul>
+<li>Click <strong>Switch to Cloud</strong> (or <strong>Switch to Local</strong>).</li>
+<li>A confirmation dialog appears. Ensure the <strong>&quot;Auto-migrate database schema &amp; synchronize tenant registry&quot;</strong> checkbox is checked (recommended).</li>
+<li>Click <strong>Confirm &amp; Switch Target</strong>:</li>
+</ul>
+<ol>
+<li>The backend verifies connectivity to the target database.</li>
+<li>Automatically initializes the <code>tenant</code> schema and migrations if connecting to a new cloud database.</li>
+<li>Provisions all active store schemas on the new target database.</li>
+<li>Updates <code>IDatabaseConnectionManager</code> and writes the selection to <code>database.config.json</code>.</li>
+<li>Subsequent API requests across the entire application immediately point to the new target database!</li>
+</ol>
+<ol>
+<li><strong>Verify Active Target:</strong></li>
+</ol>
+<ul>
+<li>The badge updates to <code>Active: Cloud PostgreSQL</code>.</li>
+<li>The Platform Dashboard (<code>/admin/dashboard</code>) and Migrations Hub (<code>/admin/database-migrations</code>) immediately reflect the new active database target.</li>
+</ul>
+<p>---</p>
+<h2 id='23-master-data-import-staging-verification-vendors-brands-categories-models-variants-colors'>23. Master Data Import &amp; Staging Verification (Vendors, Brands, Categories, Models, Variants, Colors)</h2>
+<p>Siddhi includes a <strong>Two-Stage Master Data Import &amp; Verification Hub</strong>, enabling store owners and administrators to bulk-import catalog data safely without risking database corruption or accidental duplicates.</p>
+<p>```mermaid</p>
+<p>flowchart TD</p>
+<p>User([Store Owner or Product Owner]) --&gt;|1. Download Template or Export| ExcelFile[Excel / CSV Master Spreadsheet]</p>
+<p>ExcelFile --&gt;|2. Fill Data &amp; Upload| UploadAPI[POST /api/masters/import/upload]</p>
+<p>UploadAPI --&gt; Validate{Automated Validation &amp; Logic Engine}</p>
+<p>Validate --&gt;|Inserts Into Staging| TempDB[(Temp Staging: master_import_batches &amp; staging_rows)]</p>
+<p>TempDB --&gt; ReviewUI[3. Staging Review &amp; Verification Workspace /products/import-masters]</p>
+<p>ReviewUI --&gt;|Inspect Valid / Invalid / Warnings| ToggleRows{Reviewer Excludes or Approves Rows}</p>
+<p>ToggleRows --&gt;|4. Click &#39;Approve &amp; Import&#39;| TxnImport[5. Atomic Dependency Resolution &amp; Production Insert]</p>
+<p>TxnImport --&gt;|Brands &amp; Types First| ProdMasters1[(Main Catalog: Brands &amp; ProductTypes)]</p>
+<p>TxnImport --&gt;|Models Linked Second| ProdMasters2[(Main Catalog: ProductModels)]</p>
+<p>TxnImport --&gt;|Variants, Colors &amp; Vendors| ProdMasters3[(Main Catalog: Variants, Colors, Vendors)]</p>
+<p>TxnImport --&gt; AuditLog[(AuditableEntity SaveChanges Log)]</p>
+<p>```</p>
+<h3 id='231-key-architectural-principles'>23.1 Key Architectural Principles</h3>
+<ol>
+<li><strong>Two-Stage Safety Guarantee:</strong></li>
+</ol>
+<ul>
+<li>Uploaded rows are <strong>never</strong> inserted directly into live production tables.</li>
+<li>All parsed rows are first staged in dedicated PostgreSQL temporary tables (<code>master_import_batches</code> and <code>master_import_staging_rows</code>) within the store&#39;s isolated tenant schema.</li>
+<li>The reviewer (Store Owner or Product Owner) can inspect each record&#39;s status, action (<code>+ Create</code> vs <code>↺ Update</code>), and error explanations before giving final approval.</li>
+</ul>
+<ol>
+<li><strong>Automated Upsert Logic (Create vs Update):</strong></li>
+</ol>
+<ul>
+<li><strong>New Records:</strong> If a code or name does not exist in the store catalog, it is flagged as <code>+ Create</code>.</li>
+<li><strong>Existing Records:</strong> If a code or unique name matches an existing entity, it is flagged as <code>↺ Update</code>. The system updates its description, contact details, or status without duplicating the master item.</li>
+</ul>
+<ol>
+<li><strong>Hierarchical Dependency Resolution:</strong></li>
+</ol>
+<ul>
+<li>When approving a batch, the system automatically imports parent entities before child entities:</li>
+</ul>
+<ol>
+<li><strong>Brands &amp; Product Types</strong> are committed first.</li>
+<li><strong>Product Models</strong> are committed second, dynamically resolving foreign keys (<code>BrandId</code> and <code>ProductTypeId</code>) from the newly created or matched parents.</li>
+<li><strong>Variants</strong>, <strong>Colors</strong>, and <strong>Vendors</strong> are committed with complete integrity checks.</li>
+</ol>
+<p>---</p>
+<h3 id='232-step-by-step-instructions-import-master-data'>23.2 Step-by-Step Instructions: Import Master Data</h3>
+<h4 id='step-1-download-template-or-export-existing-catalog'>Step 1: Download Template or Export Existing Catalog</h4>
+<ol>
+<li>Navigate to <strong>Product &gt; Import Master Data</strong> (<code>/products/import-masters</code>) from the sidebar.</li>
+<li>Choose one of two options:</li>
+</ol>
+<ul>
+<li><strong>Download Excel Template (.xlsx):</strong> Downloads <code>siddhi_master_import_template.xlsx</code> containing column headers and sample records in six worksheets: Vendors, Brands, ProductTypes, Models, Variants, and Colors.</li>
+<li><strong>Export Master Catalog (.xlsx):</strong> Exports the selected store&#39;s existing master records, including inactive records, in the same six-worksheet format for re-importing.</li>
+</ul>
+<ol>
+<li>Open the downloaded workbook in Microsoft Excel. It should open without a file-format or extension warning. If you downloaded an unreadable file before the export fix, download a fresh copy after the updated API is running; previously downloaded files are not repaired automatically.</li>
+<li>If the page reports that the server did not return a valid Excel workbook, the download is stopped. Have the administrator restart the updated AccountingInventory API, then retry the download.</li>
+</ol>
+<p>Prerequisites: Sign in with access to the import page. Product Owners must select a store before downloading its template or catalog.</p>
+<h4 id='step-2-fill-the-excel-workbook'>Step 2: Fill the Excel Workbook</h4>
+<p>Open the file in <strong>Microsoft Excel</strong>, <strong>Google Sheets</strong>, or <strong>LibreOffice</strong>. The spreadsheet supports all six master entities:</p>
+<div class="table-wrap"><table><tbody>
+<tr><th>Column</th><th>Supported Values</th><th>Required For</th><th>Description &amp; Example</th></tr>
+<tr><td>Worksheet</td><td><code>Vendors</code>, <code>Brands</code>, <code>ProductTypes</code>, <code>Models</code>, <code>Variants</code>, <code>Colors</code></td><td><strong>All</strong></td><td>The worksheet name identifies the entity; keep worksheet names and column headers unchanged.</td></tr>
+<tr><td><code>Name</code></td><td>Free text (e.g. <code>Apple</code>, <code>iPhone 15 Pro</code>, <code>128GB</code>, <code>Titanium</code>)</td><td><strong>All</strong></td><td>Display name of the item.</td></tr>
+<tr><td><code>Code</code></td><td>Alphanumeric (e.g. <code>VEN-APP-001</code>, <code>IPH15P</code>)</td><td><code>Vendor</code>, <code>Model</code></td><td>Unique item or supplier code.</td></tr>
+<tr><td><code>Mobile</code></td><td>7 to 20 digits (e.g. <code>9876543210</code>)</td><td><code>Vendor</code></td><td>Primary contact number.</td></tr>
+<tr><td><code>Email</code></td><td>Valid email (e.g. <code>distro@apple.in</code>)</td><td><code>Vendor</code></td><td>Billing / order email address.</td></tr>
+<tr><td><code>Brand</code></td><td>Brand Name (e.g. <code>Apple</code>)</td><td><code>Model</code></td><td>Linked brand for the model.</td></tr>
+<tr><td><code>ProductType</code></td><td>Product Type Name (e.g. <code>Smartphone</code>)</td><td><code>Model</code></td><td>Linked category/type for the model.</td></tr>
+<tr><td><code>Description</code></td><td>Free text (e.g. <code>6.1-inch Super Retina display</code>)</td><td>Optional</td><td>Narrative description.</td></tr>
+<tr><td><code>Address</code></td><td>Free text (e.g. <code>BKC Mumbai</code>)</td><td><code>Vendor</code></td><td>Supplier physical address.</td></tr>
+<tr><td><code>IsActive</code></td><td><code>TRUE</code> or <code>FALSE</code></td><td>Optional</td><td>Defaults to <code>TRUE</code> if omitted.</td></tr>
+</tbody></table></div>
+<h4 id='step-3-upload-and-stage-data'>Step 3: Upload and Stage Data</h4>
+<ol>
+<li>On the <strong>Master Data Import Hub</strong> page, click <strong>&quot;Browse &amp; Upload Excel (.xlsx)&quot;</strong>.</li>
+<li>Select your populated <code>.xlsx</code> file. CSV and text files are not supported by this page. Replace or remove template sample rows before uploading your own records.</li>
+<li>The system parses the file, executes business rule validation, assigns a unique batch tracking number (<code>IMP-YYYYMMDD-XXXX</code>), and inserts all records into the staging database.</li>
+</ol>
+<h4 id='step-4-verify-staged-records-in-review-workspace'>Step 4: Verify Staged Records in Review Workspace</h4>
+<p>The <strong>Review Workspace</strong> displays:</p>
+<ul>
+<li><strong>KPI Summary Cards:</strong> Total Rows, Valid Records, New Creates, Existing Updates, Warnings, and Errors.</li>
+<li><strong>Entity Filter Tabs:</strong> Click <code>Vendors</code>, <code>Brands</code>, <code>Product Types</code>, <code>Models</code>, <code>Variants</code>, or <code>Colors</code> to inspect subsets.</li>
+<li><strong>Status Filter:</strong> Filter by <code>Valid Only</code> or <code>Errors Only</code>.</li>
+<li><strong>Search:</strong> Search across names, codes, brands, and validation notes.</li>
+<li><strong>Row Inclusion Checkboxes:</strong> If any row has a typo or validation error, uncheck its <strong>Include</strong> checkbox to exclude it from the final import without discarding the entire batch.</li>
+</ul>
+<h4 id='step-5-approve-import-to-main-database'>Step 5: Approve &amp; Import to Main Database</h4>
+<ol>
+<li>When satisfied with the staged records, click <strong>&quot;Approve &amp; Import to Main Database&quot;</strong>.</li>
+<li>A confirmation modal displays the number of new records to be created and existing records to be updated.</li>
+<li>Click <strong>&quot;Confirm &amp; Import Now&quot;</strong>:</li>
+</ol>
+<ul>
+<li>The transaction commits all approved records into the production catalog tables.</li>
+<li>Staging records are marked as <code>Imported</code>.</li>
+<li>The batch status changes to <code>Approved</code>.</li>
+<li>A success banner itemizes counts: <code>e.g. 5 Brands, 3 Product Types, 12 Models, 4 Variants, 6 Colors, 2 Vendors imported.</code></li>
+</ul>
+<p>---</p>
+<h3 id='233-product-owner-master-import-console-adminmasters-import'>23.3 Product Owner Master Import Console (<code>/admin/masters-import</code>)</h3>
+<p>The <strong>Product Owner</strong> (Super Administrator) can oversee and manage master imports across all stores:</p>
+<ol>
+<li>Sign in to the Product Owner console at <code>/admin/login</code>.</li>
+<li>In the sidebar, click <strong>Master Data Import</strong> (<code>/admin/masters-import</code>).</li>
+<li>Select any store from the <strong>Select Tenant Store</strong> dropdown.</li>
+<li>Review that store&#39;s staged batches, inspect validation notes, and click <strong>&quot;Approve &amp; Import&quot;</strong> or <strong>&quot;Reject Batch&quot;</strong> on behalf of the store.</li>
+</ol>
 </main></body></html>

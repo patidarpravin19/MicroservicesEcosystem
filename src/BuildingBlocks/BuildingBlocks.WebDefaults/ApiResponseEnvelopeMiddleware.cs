@@ -38,6 +38,17 @@ public sealed class ApiResponseEnvelopeMiddleware(RequestDelegate next)
         var bytes = buffer.ToArray();
         response.Body = originalBody;
 
+        // File results must keep their original bytes; decoding a workbook as UTF-8
+        // and wrapping it in JSON corrupts the downloaded OpenXML ZIP package.
+        if (headers.Keys.Any(key => key.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase))
+            || (statusCode is >= 200 and < 300
+                && !string.IsNullOrWhiteSpace(contentType)
+                && !contentType.Contains("json", StringComparison.OrdinalIgnoreCase)))
+        {
+            await ReplayAsync(response, originalBody, statusCode, headers, contentType, bytes);
+            return;
+        }
+
         var data = ParseBody(bytes, contentType);
         if (IsEnvelope(data))
         {

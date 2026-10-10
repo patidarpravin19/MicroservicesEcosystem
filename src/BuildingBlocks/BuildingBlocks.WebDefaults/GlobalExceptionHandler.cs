@@ -63,6 +63,7 @@ public sealed class GlobalExceptionHandler(
                     .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray())),
 
             DomainException domainException => (StatusCodes.Status400BadRequest, domainException.Message, null),
+            BadRequestException badRequest => (StatusCodes.Status400BadRequest, badRequest.Message, null),
             NotFoundException notFound => (StatusCodes.Status404NotFound, notFound.Message, null),
             ConflictException conflict => (StatusCodes.Status409Conflict, conflict.Message, null),
             UnauthorizedException unauthorized => (StatusCodes.Status401Unauthorized, unauthorized.Message, null),

@@ -7,6 +7,7 @@ using AccountingInventory.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace AccountingInventory.Infrastructure;
@@ -40,6 +41,7 @@ public static class DependencyInjection
                    npgsql => npgsql.MigrationsHistoryTable("__TenantSchemaHistory", tenantProvider.SchemaName))
                    .UseSnakeCaseNamingConvention()
                    .ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>()
+                   .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
                    .AddInterceptors(sp.GetRequiredService<TenantSchemaConnectionInterceptor>());
         });
         services.AddScoped<IAccountingInventoryDbContext>(sp => sp.GetRequiredService<AccountingInventoryDbContext>());
@@ -54,6 +56,7 @@ public static class DependencyInjection
                        connectionString,
                        npgsql => npgsql.MigrationsHistoryTable("__ControlPlaneHistory", "tenant"))
                     .UseSnakeCaseNamingConvention()
+                    .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
                     .AddInterceptors(sp.GetRequiredService<BuildingBlocks.Persistence.AuditableEntitySaveChangesInterceptor>());
         });
         services.AddScoped<ITenantDirectoryContext>(sp => sp.GetRequiredService<TenantDbContext>());

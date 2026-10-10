@@ -51,6 +51,8 @@ public interface IAccountingInventoryDbContext
     DbSet<InvoiceSnapshot> InvoiceSnapshots { get; }
     DbSet<OpeningSubledgerBalance> OpeningSubledgerBalances { get; }
     DbSet<OpeningSettlement> OpeningSettlements { get; }
+    DbSet<MasterImportBatch> MasterImportBatches { get; }
+    DbSet<MasterImportStagingRow> MasterImportStagingRows { get; }
     Task<string> GenerateSalesBillNumberAsync(int year, CancellationToken cancellationToken);
 
     //DbSet<Role> Roles { get; }

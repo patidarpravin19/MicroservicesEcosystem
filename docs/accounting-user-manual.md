@@ -1,6 +1,6 @@
 # Accounting & Inventory User Manual
 
-Version: 1.4 | Updated: 9 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, and the Smart Suggestion Assistant for non-accountants
+Version: 1.7 | Updated: 10 October 2026 | Covers modern multi-line billing, automated Indian GST, FIFO payments, Party Statements, Business Intelligence, Smart Suggestions, Multi-Cloud Database Switching, and Two-Stage Master Data Import & Verification
 
 For business owners, purchase staff, sales staff and accountants. Menu names below match the application. Your owner provides your website address and Tenant slug. Available actions depend on your permissions.
 
@@ -36,6 +36,7 @@ To share this guide, send accounting-user-manual.html. Open that file in a brows
   - [22.4 Database Schema Migrations Hub](#224-database-schema-migrations-hub-admindatabase-migrations)
   - [22.5 System Settings & Offline Configuration](#225-system-settings--offline-configuration-adminsystem-settings)
   - [22.6 Dynamic Database Switching (Local PostgreSQL ↔ Cloud PostgreSQL)](#226-dynamic-database-switching-local-postgresql--cloud-postgresql)
+- [23. Master Data Import & Staging Verification (Vendors, Brands, Categories, Models, Variants, Colors)](#23-master-data-import--staging-verification-vendors-brands-categories-models-variants-colors)
 ## 1. Get started
 
 1. For a new account, open the invitation email and follow the activation link. Invitations expire after 24 hours and can be used once.
@@ -777,6 +778,107 @@ flowchart LR
 6. **Verify Active Target:**
    - The badge updates to `Active: Cloud PostgreSQL`.
    - The Platform Dashboard (`/admin/dashboard`) and Migrations Hub (`/admin/database-migrations`) immediately reflect the new active database target.
+
+---
+
+## 23. Master Data Import & Staging Verification (Vendors, Brands, Categories, Models, Variants, Colors)
+
+Siddhi includes a **Two-Stage Master Data Import & Verification Hub**, enabling store owners and administrators to bulk-import catalog data safely without risking database corruption or accidental duplicates.
+
+```mermaid
+flowchart TD
+    User([Store Owner or Product Owner]) -->|1. Download Template or Export| ExcelFile[Excel / CSV Master Spreadsheet]
+    ExcelFile -->|2. Fill Data & Upload| UploadAPI[POST /api/masters/import/upload]
+    UploadAPI --> Validate{Automated Validation & Logic Engine}
+    Validate -->|Inserts Into Staging| TempDB[(Temp Staging: master_import_batches & staging_rows)]
+    TempDB --> ReviewUI[3. Staging Review & Verification Workspace /products/import-masters]
+    ReviewUI -->|Inspect Valid / Invalid / Warnings| ToggleRows{Reviewer Excludes or Approves Rows}
+    ToggleRows -->|4. Click 'Approve & Import'| TxnImport[5. Atomic Dependency Resolution & Production Insert]
+    TxnImport -->|Brands & Types First| ProdMasters1[(Main Catalog: Brands & ProductTypes)]
+    TxnImport -->|Models Linked Second| ProdMasters2[(Main Catalog: ProductModels)]
+    TxnImport -->|Variants, Colors & Vendors| ProdMasters3[(Main Catalog: Variants, Colors, Vendors)]
+    TxnImport --> AuditLog[(AuditableEntity SaveChanges Log)]
+```
+
+### 23.1 Key Architectural Principles
+
+1. **Two-Stage Safety Guarantee:**
+   - Uploaded rows are **never** inserted directly into live production tables.
+   - All parsed rows are first staged in dedicated PostgreSQL temporary tables (`master_import_batches` and `master_import_staging_rows`) within the store's isolated tenant schema.
+   - The reviewer (Store Owner or Product Owner) can inspect each record's status, action (`+ Create` vs `↺ Update`), and error explanations before giving final approval.
+
+2. **Automated Upsert Logic (Create vs Update):**
+   - **New Records:** If a code or name does not exist in the store catalog, it is flagged as `+ Create`.
+   - **Existing Records:** If a code or unique name matches an existing entity, it is flagged as `↺ Update`. The system updates its description, contact details, or status without duplicating the master item.
+
+3. **Hierarchical Dependency Resolution:**
+   - When approving a batch, the system automatically imports parent entities before child entities:
+     1. **Brands & Product Types** are committed first.
+     2. **Product Models** are committed second, dynamically resolving foreign keys (`BrandId` and `ProductTypeId`) from the newly created or matched parents.
+     3. **Variants**, **Colors**, and **Vendors** are committed with complete integrity checks.
+
+---
+
+### 23.2 Step-by-Step Instructions: Import Master Data
+
+#### Step 1: Download Template or Export Existing Catalog
+1. Navigate to **Product > Import Master Data** (`/products/import-masters`) from the sidebar.
+2. Choose one of two options:
+   - **Download Excel Template (.xlsx):** Downloads `siddhi_master_import_template.xlsx` containing column headers and sample records in six worksheets: Vendors, Brands, ProductTypes, Models, Variants, and Colors.
+   - **Export Master Catalog (.xlsx):** Exports the selected store's existing master records, including inactive records, in the same six-worksheet format for re-importing.
+3. Open the downloaded workbook in Microsoft Excel. It should open without a file-format or extension warning. If you downloaded an unreadable file before the export fix, download a fresh copy after the updated API is running; previously downloaded files are not repaired automatically.
+4. If the page reports that the server did not return a valid Excel workbook, the download is stopped. Have the administrator restart the updated AccountingInventory API, then retry the download.
+
+Prerequisites: Sign in with access to the import page. Product Owners must select a store before downloading its template or catalog.
+
+#### Step 2: Fill the Excel Workbook
+Open the file in **Microsoft Excel**, **Google Sheets**, or **LibreOffice**. The spreadsheet supports all six master entities:
+
+| Column | Supported Values | Required For | Description & Example |
+| :--- | :--- | :--- | :--- |
+| Worksheet | `Vendors`, `Brands`, `ProductTypes`, `Models`, `Variants`, `Colors` | **All** | The worksheet name identifies the entity; keep worksheet names and column headers unchanged. |
+| `Name` | Free text (e.g. `Apple`, `iPhone 15 Pro`, `128GB`, `Titanium`) | **All** | Display name of the item. |
+| `Code` | Alphanumeric (e.g. `VEN-APP-001`, `IPH15P`) | `Vendor`, `Model` | Unique item or supplier code. |
+| `Mobile` | 7 to 20 digits (e.g. `9876543210`) | `Vendor` | Primary contact number. |
+| `Email` | Valid email (e.g. `distro@apple.in`) | `Vendor` | Billing / order email address. |
+| `Brand` | Brand Name (e.g. `Apple`) | `Model` | Linked brand for the model. |
+| `ProductType` | Product Type Name (e.g. `Smartphone`) | `Model` | Linked category/type for the model. |
+| `Description`| Free text (e.g. `6.1-inch Super Retina display`) | Optional | Narrative description. |
+| `Address` | Free text (e.g. `BKC Mumbai`) | `Vendor` | Supplier physical address. |
+| `IsActive` | `TRUE` or `FALSE` | Optional | Defaults to `TRUE` if omitted. |
+
+#### Step 3: Upload and Stage Data
+1. On the **Master Data Import Hub** page, click **"Browse & Upload Excel (.xlsx)"**.
+2. Select your populated `.xlsx` file. CSV and text files are not supported by this page. Replace or remove template sample rows before uploading your own records.
+3. The system parses the file, executes business rule validation, assigns a unique batch tracking number (`IMP-YYYYMMDD-XXXX`), and inserts all records into the staging database.
+
+#### Step 4: Verify Staged Records in Review Workspace
+The **Review Workspace** displays:
+- **KPI Summary Cards:** Total Rows, Valid Records, New Creates, Existing Updates, Warnings, and Errors.
+- **Entity Filter Tabs:** Click `Vendors`, `Brands`, `Product Types`, `Models`, `Variants`, or `Colors` to inspect subsets.
+- **Status Filter:** Filter by `Valid Only` or `Errors Only`.
+- **Search:** Search across names, codes, brands, and validation notes.
+- **Row Inclusion Checkboxes:** If any row has a typo or validation error, uncheck its **Include** checkbox to exclude it from the final import without discarding the entire batch.
+
+#### Step 5: Approve & Import to Main Database
+1. When satisfied with the staged records, click **"Approve & Import to Main Database"**.
+2. A confirmation modal displays the number of new records to be created and existing records to be updated.
+3. Click **"Confirm & Import Now"**:
+   - The transaction commits all approved records into the production catalog tables.
+   - Staging records are marked as `Imported`.
+   - The batch status changes to `Approved`.
+   - A success banner itemizes counts: `e.g. 5 Brands, 3 Product Types, 12 Models, 4 Variants, 6 Colors, 2 Vendors imported.`
+
+---
+
+### 23.3 Product Owner Master Import Console (`/admin/masters-import`)
+
+The **Product Owner** (Super Administrator) can oversee and manage master imports across all stores:
+1. Sign in to the Product Owner console at `/admin/login`.
+2. In the sidebar, click **Master Data Import** (`/admin/masters-import`).
+3. Select any store from the **Select Tenant Store** dropdown.
+4. Review that store's staged batches, inspect validation notes, and click **"Approve & Import"** or **"Reject Batch"** on behalf of the store.
+
 
 
 
